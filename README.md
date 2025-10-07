@@ -1,2 +1,2 @@
-# ARM-Game-Console-Emulator
+# RISC-V Game-Ready Emulator
 -
