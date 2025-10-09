@@ -2,6 +2,157 @@
 import random
 from enum import IntEnum
 
+def sign_extend(value: int, length: int) -> int:
+    if value >> (length - 1) == 0:
+        return value
+    upper_bits = ((1 << (32 - length)) - 1) << length
+    return value | upper_bits
+
+def to_signed(data: int) -> int:
+    if data >> 31:
+        data -= 0x100000000
+    return data
+
+class Instruction:
+    def __init__(self, data):
+        self.data = data
+        self.opcode = data & 0x7F
+
+    def _extract_bits(self, lower: int, upper: int) -> int:
+        mask = (1 << (upper - lower + 1)) - 1
+        return (self.data >> lower) & mask
+
+    def execute(self, cpu):
+        pass
+
+class RInstruction(Instruction):
+    def __init__(self, data):
+        super().__init__(data)
+        self._decode()
+
+    def _decode(self):
+        self.rd     = self._extract_bits(7, 11)
+        self.funct3 = self._extract_bits(12, 14)
+        self.rs1    = self._extract_bits(15, 19)
+        self.rs2    = self._extract_bits(20, 24)
+        self.funct7 = self._extract_bits(25, 31)
+
+    def execute(self, cpu):
+        ...
+
+class IInstruction(Instruction):
+    def __init__(self, data):
+        super().__init__(data)
+        self._decode()
+
+    def _decode(self):
+        self.rd         = self._extract_bits(7, 11)
+        self.funct3     = self._extract_bits(12, 14)
+        self.rs1        = self._extract_bits(15, 19)
+        imm_11_0        = self._extract_bits(20, 31)
+        self.immediate  = sign_extend(imm_11_0, 12)
+
+    def execute(self, cpu):
+        ...
+
+class SInstruction(Instruction):
+    def __init__(self, data):
+        super().__init__(data)
+        self._decode()
+
+    def _decode(self):
+        imm_4_0     = self._extract_bits(7, 11)
+        self.funct3 = self._extract_bits(12, 14)
+        self.rs1    = self._extract_bits(15, 19)
+        self.rs2    = self._extract_bits(20, 24)
+        imm_11_5    = self._extract_bits(25, 31)
+        imm = (imm_11_5 << 5) | imm_4_0
+        self.immediate = sign_extend(imm, 12)
+
+    def execute(self, cpu):
+        ...
+
+class BInstruction(Instruction):
+    def __init__(self, data):
+        super().__init__(data)
+        self._decode()
+
+    def _decode(self):
+        imm_11      = self._extract_bits(7, 7)
+        imm_4_1     = self._extract_bits(8, 11)
+        self.funct3 = self._extract_bits(12, 14)
+        self.rs1    = self._extract_bits(15, 19)
+        self.rs2    = self._extract_bits(20, 24)
+        imm_10_5    = self._extract_bits(25, 30)
+        imm_12      = self._extract_bits(31, 31)
+        imm = (imm_12 << 12) | (imm_11 << 11) | (imm_10_5 << 5) | (imm_4_1 << 1)
+        self.immediate = sign_extend(imm, 13)
+
+    def execute(self, cpu):
+        ...
+
+class UInstruction(Instruction):
+    def __init__(self, data):
+        super().__init__(data)
+        self._decode()
+
+    def _decode(self):
+        self.rd     = self._extract_bits(7, 11)
+        imm_31_12   = self._extract_bits(12, 31)
+        self.immediate = imm_31_12 << 12
+
+    def execute(self, cpu):
+        ...
+
+class JInstruction(Instruction):
+    def __init__(self, data):
+        super().__init__(data)
+        self._decode()
+
+    def _decode(self):
+        self.rd     = self._extract_bits(7, 11)
+        imm_19_12   = self._extract_bits(12, 19)
+        imm_11      = self._extract_bits(20, 20)
+        imm_10_1    = self._extract_bits(21, 30)
+        imm_20      = self._extract_bits(31, 31)
+        imm = (imm_20 << 20) | (imm_19_12 << 12) | (imm_11 << 11) | (imm_10_1 << 1)
+        self.immediate = sign_extend(imm, 21)
+
+    def execute(self, cpu):
+        ...
+
+class REG:
+    def __init__(self):
+        self._values: list[int] = [0]
+        for _ in range(31):
+            self._values.append(random.getrandbits(32))
+
+    def __getitem__(self, index: int):
+        if 0 <= index < 32:
+            # TODO: Raise Error
+            ...
+        if index == 0:
+            return 0
+        return self._values[index] & 0xFFFFFFFF
+
+    def __setitem__(self, index: int, value):
+        if 0 <= index < 32:
+            # TODO: Raise Error
+            ...
+        if index == 0:
+            return
+        self._values[index] = value & 0xFFFFFFFF
+        
+class PC:
+    def __init__(self):
+        self._value = 0
+
+    def get(self) -> int:
+        return self._value & 0xFFFFFFFF
+
+    def set(self, value: int):
+        self._value = value & 0xFFFFFFFF
+
 class Opcode(IntEnum):
     LOAD        = 0b00_000_11
     LOAD_FP     = 0b00_001_11
@@ -100,104 +251,56 @@ SRAI =  0b1
 
 class CPU:
     def __init__(self):
-        self.reg: list[int] = [0]
-        for _ in range(31):
-            self.reg.append(random.getrandbits(32))
-        self.pc: int = random.getrandbits(32)
+        self.reg = REG()
+        self._pc = PC()
+
+    @property
+    def pc(self):
+        return self._pc.get()
+
+    @pc.setter
+    def pc(self, value):
+        self._pc.set(value)
+
+    def step(self):
+        data = self.fetch()
+        instruction: Instruction = self.decode(data)
+        instruction.execute(self)
+
+    def fetch(self):
+        # TODO: Implement fetch
+        return 0xFFFFFFFF
 
     @staticmethod
-    def _extract_bits(data: int, lower: int, upper: int) -> int:
-        mask = (1 << (upper - lower + 1)) - 1
-        return (data >> lower) & mask
+    def decode(data: int) -> Instruction:
+        opcode = data & 0x7F
 
-    @staticmethod
-    def _sign_extend(data: int, length: int) -> int:
-        if data >> (length - 1) == 0:
-            return data
-        upper_bits = ((1 << (32 - length)) - 1) << length
-        return data | upper_bits
+        if opcode == Opcode.OP_IMM:
+            return IInstruction(data)
+        elif opcode == Opcode.LUI:
+            return UInstruction(data)
+        elif opcode == Opcode.AUIPC:
+            return UInstruction(data)
+        elif opcode == Opcode.OP:
+            return RInstruction(data)
+        elif opcode == Opcode.JAL:
+            return JInstruction(data)
+        elif opcode == Opcode.JALR:
+            return IInstruction(data)
+        elif opcode == Opcode.BRANCH:
+            return BInstruction(data)
+        elif opcode == Opcode.LOAD:
+            return IInstruction(data)
+        elif opcode == Opcode.STORE:
+            return SInstruction(data)
+        elif opcode == Opcode.MISC_MEM:
+            return IInstruction(data)
+        elif opcode == Opcode.SYSTEM:
+            return IInstruction(data)
 
-    @staticmethod
-    def _to_signed(data: int) -> int:
-        if data >> 31:
-            data -= 0x100000000
-        return data
+        return Instruction(data)
 
-    def _set_pc(self, value: int) -> None:
-        self.pc = value & 0xFFFFFFFF
-
-    def _get_pc(self) -> int:
-        return self.pc & 0xFFFFFFFF
-
-    def _set_reg(self, reg_num: int, value: int) -> None:
-        if reg_num == 0:
-            return
-        if not 0 <= reg_num < 32:
-            # TODO: Raise Error
-            ...
-        self.reg[reg_num] = value & 0xFFFFFFFF
-
-    def _get_reg(self, reg_num: int) -> int:
-        if reg_num == 0:
-            return 0
-        if not 0 <= reg_num < 32:
-            # TODO: Raise Error
-            ...
-        return self.reg[reg_num] & 0xFFFFFFFF
-
-    def _extract_b_type(self, data: int):
-        imm_11 = self._extract_bits(data, 7, 7)
-        imm_4_1 = self._extract_bits(data, 8, 11)
-        funct3 = self._extract_bits(data, 12, 14)
-        rs1 = self._extract_bits(data, 15, 19)
-        rs2 = self._extract_bits(data, 20, 24)
-        imm_10_5 = self._extract_bits(data, 25, 30)
-        imm_12 = self._extract_bits(data, 31, 31)
-
-        immediate = (imm_4_1 << 1) | (imm_10_5 << 5) | (imm_11 << 11) | (imm_12 << 12)
-        immediate = self._sign_extend(immediate, 13)
-
-        return immediate, funct3, rs1, rs2
-
-    def _extract_r_type(self, data: int):
-        rd = self._extract_bits(data, 7, 11)
-        funct3 = self._extract_bits(data, 12, 14)
-        rs1 = self._extract_bits(data, 15, 19)
-        rs2 = self._extract_bits(data, 20, 24)
-        funct7 = self._extract_bits(data, 25, 31)
-
-        return rd, funct3, rs1, rs2, funct7
-
-    def _extract_u_type(self, data: int):
-        rd = self._extract_bits(data, 7, 11)
-        imm_31_12 = self._extract_bits(data, 12, 31)
-
-        immediate = imm_31_12 << 12
-
-        return rd, immediate
-
-    def _extract_j_type(self, data: int):
-        rd = self._extract_bits(data, 7, 11)
-        imm_19_12 = self._extract_bits(data, 12, 19)
-        imm_11 = self._extract_bits(data, 20, 20)
-        imm_10_1 = self._extract_bits(data, 21, 30)
-        imm_20 = self._extract_bits(data, 31, 31)
-
-        immediate = (imm_10_1 << 1) | (imm_11 << 11) | (imm_19_12 << 12) | (imm_20 << 20)
-        immediate = self._sign_extend(immediate, 21)
-        return rd, immediate
-
-    def _extract_i_type(self, data: int):
-        rd = self._extract_bits(data, 7, 11)
-        funct3 = self._extract_bits(data, 12, 14)
-        rs1 = self._extract_bits(data, 15, 19)
-        imm_11_0 = self._extract_bits(data, 20, 31)
-
-        immediate = self._sign_extend(imm_11_0, 12)
-
-        return rd, funct3, rs1, immediate
-
-    def decode(self, data: int):
+    def _decode(self, data: int):
         update_pc = True
 
         opcode = self._extract_bits(data, 0, 6)
