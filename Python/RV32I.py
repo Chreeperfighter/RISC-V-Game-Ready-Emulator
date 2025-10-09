@@ -13,146 +13,6 @@ def to_signed(data: int) -> int:
         data -= 0x100000000
     return data
 
-class Instruction:
-    def __init__(self, data):
-        self.data = data
-        self.opcode = data & 0x7F
-
-    def _extract_bits(self, lower: int, upper: int) -> int:
-        mask = (1 << (upper - lower + 1)) - 1
-        return (self.data >> lower) & mask
-
-    def execute(self, cpu):
-        pass
-
-class RInstruction(Instruction):
-    def __init__(self, data):
-        super().__init__(data)
-        self._decode()
-
-    def _decode(self):
-        self.rd     = self._extract_bits(7, 11)
-        self.funct3 = self._extract_bits(12, 14)
-        self.rs1    = self._extract_bits(15, 19)
-        self.rs2    = self._extract_bits(20, 24)
-        self.funct7 = self._extract_bits(25, 31)
-
-    def execute(self, cpu):
-        ...
-
-class IInstruction(Instruction):
-    def __init__(self, data):
-        super().__init__(data)
-        self._decode()
-
-    def _decode(self):
-        self.rd         = self._extract_bits(7, 11)
-        self.funct3     = self._extract_bits(12, 14)
-        self.rs1        = self._extract_bits(15, 19)
-        imm_11_0        = self._extract_bits(20, 31)
-        self.immediate  = sign_extend(imm_11_0, 12)
-
-    def execute(self, cpu):
-        ...
-
-class SInstruction(Instruction):
-    def __init__(self, data):
-        super().__init__(data)
-        self._decode()
-
-    def _decode(self):
-        imm_4_0     = self._extract_bits(7, 11)
-        self.funct3 = self._extract_bits(12, 14)
-        self.rs1    = self._extract_bits(15, 19)
-        self.rs2    = self._extract_bits(20, 24)
-        imm_11_5    = self._extract_bits(25, 31)
-        imm = (imm_11_5 << 5) | imm_4_0
-        self.immediate = sign_extend(imm, 12)
-
-    def execute(self, cpu):
-        ...
-
-class BInstruction(Instruction):
-    def __init__(self, data):
-        super().__init__(data)
-        self._decode()
-
-    def _decode(self):
-        imm_11      = self._extract_bits(7, 7)
-        imm_4_1     = self._extract_bits(8, 11)
-        self.funct3 = self._extract_bits(12, 14)
-        self.rs1    = self._extract_bits(15, 19)
-        self.rs2    = self._extract_bits(20, 24)
-        imm_10_5    = self._extract_bits(25, 30)
-        imm_12      = self._extract_bits(31, 31)
-        imm = (imm_12 << 12) | (imm_11 << 11) | (imm_10_5 << 5) | (imm_4_1 << 1)
-        self.immediate = sign_extend(imm, 13)
-
-    def execute(self, cpu):
-        ...
-
-class UInstruction(Instruction):
-    def __init__(self, data):
-        super().__init__(data)
-        self._decode()
-
-    def _decode(self):
-        self.rd     = self._extract_bits(7, 11)
-        imm_31_12   = self._extract_bits(12, 31)
-        self.immediate = imm_31_12 << 12
-
-    def execute(self, cpu):
-        ...
-
-class JInstruction(Instruction):
-    def __init__(self, data):
-        super().__init__(data)
-        self._decode()
-
-    def _decode(self):
-        self.rd     = self._extract_bits(7, 11)
-        imm_19_12   = self._extract_bits(12, 19)
-        imm_11      = self._extract_bits(20, 20)
-        imm_10_1    = self._extract_bits(21, 30)
-        imm_20      = self._extract_bits(31, 31)
-        imm = (imm_20 << 20) | (imm_19_12 << 12) | (imm_11 << 11) | (imm_10_1 << 1)
-        self.immediate = sign_extend(imm, 21)
-
-    def execute(self, cpu):
-        ...
-
-class REG:
-    def __init__(self):
-        self._values: list[int] = [0]
-        for _ in range(31):
-            self._values.append(random.getrandbits(32))
-
-    def __getitem__(self, index: int):
-        if 0 <= index < 32:
-            # TODO: Raise Error
-            ...
-        if index == 0:
-            return 0
-        return self._values[index] & 0xFFFFFFFF
-
-    def __setitem__(self, index: int, value):
-        if 0 <= index < 32:
-            # TODO: Raise Error
-            ...
-        if index == 0:
-            return
-        self._values[index] = value & 0xFFFFFFFF
-        
-class PC:
-    def __init__(self):
-        self._value = 0
-
-    def get(self) -> int:
-        return self._value & 0xFFFFFFFF
-
-    def set(self, value: int):
-        self._value = value & 0xFFFFFFFF
-
 class Opcode(IntEnum):
     LOAD        = 0b00_000_11
     LOAD_FP     = 0b00_001_11
@@ -232,11 +92,234 @@ class Funct3(IntEnum):
     AND =       0b111
 
 class Funct7(IntEnum):
+    # OP_IMM
+    SLLI =  0b0000000
+    SRLI =  0b0000000
+    SRAI =  0b0100000
+
     # OP
     ADD =   0b0000000
     SUB =   0b0100000
     SRL =   0b0000000
     SRA =   0b0100000
+
+class Instruction:
+    def __init__(self, data):
+        self.data = data
+        self.opcode = data & 0x7F
+
+    def _extract_bits(self, lower: int, upper: int) -> int:
+        mask = (1 << (upper - lower + 1)) - 1
+        return (self.data >> lower) & mask
+
+    def execute(self, cpu):
+        pass
+
+class RInstruction(Instruction):
+    def __init__(self, data):
+        super().__init__(data)
+        self._decode()
+
+    def _decode(self):
+        self.rd     = self._extract_bits(7, 11)
+        self.funct3 = self._extract_bits(12, 14)
+        self.rs1    = self._extract_bits(15, 19)
+        self.rs2    = self._extract_bits(20, 24)
+        self.funct7 = self._extract_bits(25, 31)
+
+    def execute(self, cpu):
+        rs1_value = cpu.reg[self.rs1]
+        rs2_value = cpu.reg[self.rs2]
+        if self.opcode == Opcode.OP:
+            if self.funct3 == Funct3.ADD_SUB:
+                if self.funct7 == Funct7.ADD:
+                    cpu.reg[self.rd] = rs1_value + rs2_value
+                elif self.funct7 == Funct7.SUB:
+                    cpu.reg[self.rd] = rs1_value - rs2_value
+            elif self.funct3 == Funct3.SLT:
+                rs1_value_signed = to_signed(rs1_value)
+                rs2_value_signed = to_signed(rs2_value)
+                if rs1_value_signed < rs2_value_signed:
+                    cpu.reg[self.rd] = 1
+                else:
+                    cpu.reg[self.rd] = 0
+            elif self.funct3 == Funct3.SLTU:
+                if rs1_value < rs2_value:
+                    cpu.reg[self.rd] = 1
+                else:
+                    cpu.reg[self.rd] = 0
+            elif self.funct3 == Funct3.AND:
+                cpu.reg[self.rd] = rs1_value & rs2_value
+            elif self.funct3 == Funct3.OR:
+                cpu.reg[self.rd] = rs1_value | rs2_value
+            elif self.funct3 == Funct3.XOR:
+                cpu.reg[self.rd] = rs1_value ^ rs2_value
+            elif self.funct3 == Funct3.SLL:
+                shift_amount = rs2_value & 0x1F
+                cpu.reg[self.rd] = rs1_value << shift_amount
+            elif self.funct3 == Funct3.SRL_SRA:
+                shift_amount = rs2_value & 0x1F
+                if self.funct7 == Funct7.SRL:
+                    cpu.reg[self.rd] = rs1_value>> shift_amount
+                elif self.funct7 == Funct7.SRA:
+                    rs1_value_signed = to_signed(rs1_value)
+                    cpu.reg[self.rd] = rs1_value_signed >> shift_amount
+
+class IInstruction(Instruction):
+    def __init__(self, data):
+        super().__init__(data)
+        self._decode()
+
+    def _decode(self):
+        self.rd         = self._extract_bits(7, 11)
+        self.funct3     = self._extract_bits(12, 14)
+        self.rs1        = self._extract_bits(15, 19)
+        imm_11_0        = self._extract_bits(20, 31)
+        self.immediate  = sign_extend(imm_11_0, 12)
+
+    def execute(self, cpu: "CPU"):
+        rs1_value = cpu.reg[self.rs1]
+        if self.opcode == Opcode.OP_IMM:
+            if self.funct3 == Funct3.ADDI:
+                cpu.reg[self.rd] = rs1_value + self.immediate
+            elif self.funct3 == Funct3.SLTI:
+                rs1_value_signed = to_signed(rs1_value)
+                immediate_signed = to_signed(self.immediate)
+                if rs1_value_signed < immediate_signed:
+                    cpu.reg[self.rd] = 1
+                else:
+                    cpu.reg[self.rd] = 0
+            elif self.funct3 == Funct3.SLTIU:
+                if rs1_value < self.immediate:
+                    cpu.reg[self.rd] = 1
+                else:
+                    cpu.reg[self.rd] = 0
+            elif self.funct3 == Funct3.ANDI:
+                cpu.reg[self.rd] = rs1_value & self.immediate
+            elif self.funct3 == Funct3.ORI:
+                cpu.reg[self.rd] = rs1_value | self.immediate
+            elif self.funct3 == Funct3.XORI:
+                cpu.reg[self.rd] = rs1_value ^ self.immediate
+            elif self.funct3 == Funct3.SLLI:
+                shift_amount = self.immediate & 0x1F
+                funct7 = self._extract_bits(25, 31)
+                if funct7 == Funct7.SLLI:
+                    cpu.reg[self.rd] = rs1_value << shift_amount
+                else:
+                    # TODO: ERROR
+                    ...
+            elif self.funct3 == Funct3.SRLI_SRAI:
+                shift_amount = self.immediate & 0x1F
+                funct7 = self._extract_bits(25, 31)
+                if funct7 == Funct7.SRLI:
+                    cpu.reg[self.rd] = rs1_value >> shift_amount
+                elif funct7 == Funct7.SRAI:
+                    rs1_value_signed = to_signed(rs1_value)
+                    cpu.reg[self.rd] = rs1_value_signed >> shift_amount
+                else:
+                    # TODO: ERROR
+                    ...
+
+class SInstruction(Instruction):
+    def __init__(self, data):
+        super().__init__(data)
+        self._decode()
+
+    def _decode(self):
+        imm_4_0     = self._extract_bits(7, 11)
+        self.funct3 = self._extract_bits(12, 14)
+        self.rs1    = self._extract_bits(15, 19)
+        self.rs2    = self._extract_bits(20, 24)
+        imm_11_5    = self._extract_bits(25, 31)
+        imm = (imm_11_5 << 5) | imm_4_0
+        self.immediate = sign_extend(imm, 12)
+
+    def execute(self, cpu):
+        ...
+
+class BInstruction(Instruction):
+    def __init__(self, data):
+        super().__init__(data)
+        self._decode()
+
+    def _decode(self):
+        imm_11      = self._extract_bits(7, 7)
+        imm_4_1     = self._extract_bits(8, 11)
+        self.funct3 = self._extract_bits(12, 14)
+        self.rs1    = self._extract_bits(15, 19)
+        self.rs2    = self._extract_bits(20, 24)
+        imm_10_5    = self._extract_bits(25, 30)
+        imm_12      = self._extract_bits(31, 31)
+        imm = (imm_12 << 12) | (imm_11 << 11) | (imm_10_5 << 5) | (imm_4_1 << 1)
+        self.immediate = sign_extend(imm, 13)
+
+    def execute(self, cpu):
+        ...
+
+class UInstruction(Instruction):
+    def __init__(self, data):
+        super().__init__(data)
+        self._decode()
+
+    def _decode(self):
+        self.rd     = self._extract_bits(7, 11)
+        imm_31_12   = self._extract_bits(12, 31)
+        self.immediate = imm_31_12 << 12
+
+    def execute(self, cpu):
+        if self.opcode == Opcode.LUI:
+            cpu.reg[self.rd] = self.immediate
+        elif self.opcode == Opcode.AUIPC:
+            cpu.reg[self.rd] = self.immediate + cpu.pc
+
+class JInstruction(Instruction):
+    def __init__(self, data):
+        super().__init__(data)
+        self._decode()
+
+    def _decode(self):
+        self.rd     = self._extract_bits(7, 11)
+        imm_19_12   = self._extract_bits(12, 19)
+        imm_11      = self._extract_bits(20, 20)
+        imm_10_1    = self._extract_bits(21, 30)
+        imm_20      = self._extract_bits(31, 31)
+        imm = (imm_20 << 20) | (imm_19_12 << 12) | (imm_11 << 11) | (imm_10_1 << 1)
+        self.immediate = sign_extend(imm, 21)
+
+    def execute(self, cpu):
+        ...
+
+class REG:
+    def __init__(self):
+        self._values: list[int] = [0]
+        for _ in range(31):
+            self._values.append(random.getrandbits(32))
+
+    def __getitem__(self, index: int):
+        if 0 <= index < 32:
+            # TODO: Raise Error
+            ...
+        if index == 0:
+            return 0
+        return self._values[index] & 0xFFFFFFFF
+
+    def __setitem__(self, index: int, value):
+        if 0 <= index < 32:
+            # TODO: Raise Error
+            ...
+        if index == 0:
+            return
+        self._values[index] = value & 0xFFFFFFFF
+
+class PC:
+    def __init__(self):
+        self._value = 0
+
+    def get(self) -> int:
+        return self._value & 0xFFFFFFFF
+
+    def set(self, value: int):
+        self._value = value & 0xFFFFFFFF
 
 # MISC
 # MISC_MEM
@@ -269,7 +352,7 @@ class CPU:
 
     def fetch(self):
         # TODO: Implement fetch
-        return 0xFFFFFFFF
+        return (0 << 12) | (11 << 7) | Opcode.LUI
 
     @staticmethod
     def decode(data: int) -> Instruction:
@@ -299,129 +382,3 @@ class CPU:
             return IInstruction(data)
 
         return Instruction(data)
-
-    def _decode(self, data: int):
-        update_pc = True
-
-        opcode = self._extract_bits(data, 0, 6)
-        # 2.4.1. Integer Register-Immediate Instructions
-        # Page 48
-        if opcode == Opcode.OP_IMM:
-            rd, funct3, rs1, immediate = self._extract_i_type(data)
-
-            if funct3 == Funct3.ADDI:
-                self._set_reg(rd, self._get_reg(rs1) + immediate)
-            elif funct3 == Funct3.SLTI:
-                if self._to_signed(self._get_reg(rs1)) < self._to_signed(immediate):
-                    self._set_reg(rd, 1)
-                else:
-                    self._set_reg(rd, 0)
-            elif funct3 == Funct3.SLTIU:
-                if self._get_reg(rs1) < immediate:
-                    self._set_reg(rd, 1)
-                else:
-                    self._set_reg(rd, 0)
-            elif funct3 == Funct3.ANDI:
-                self._set_reg(rd, self._get_reg(rs1) & immediate)
-            elif funct3 == Funct3.ORI:
-                self._set_reg(rd, self._get_reg(rs1) | immediate)
-            elif funct3 == Funct3.XORI:
-                self._set_reg(rd, self._get_reg(rs1) ^ immediate)
-            elif funct3 == Funct3.SLLI:
-                shamt_4_0 = immediate & 0x1F
-                self._set_reg(rd, self._get_reg(rs1) << shamt_4_0)
-            elif funct3 == Funct3.SRLI_SRAI:
-                shift_type = (data >> 30) & 0x1
-                shamt_4_0 = immediate & 0x1F
-                if shift_type == SRLI:
-                    self._set_reg(rd, self._get_reg(rs1) >> shamt_4_0)
-                elif shift_type == SRAI:
-                    self._set_reg(rd, self._to_signed(self._get_reg(rs1)) >> shamt_4_0)
-        elif opcode == Opcode.LUI:
-            rd, immediate = self._extract_u_type(data)
-            self._set_reg(rd, immediate)
-        elif opcode == Opcode.AUIPC:
-            rd, immediate = self._extract_u_type(data)
-            self._set_reg(rd, self.pc + immediate)
-        # 2.4.2. Integer Register-Register Operations
-        # Page 49
-        elif opcode == Opcode.OP:
-            rd, funct3, rs1, rs2, funct7 = self._extract_r_type(data)
-            if funct3 == Funct3.ADD_SUB:
-                if funct7 == Funct7.ADD:
-                    self._set_reg(rd, self._get_reg(rs1) + self._get_reg(rs2))
-                elif funct7 == Funct7.SUB:
-                    self._set_reg(rd, self._get_reg(rs1) - self._get_reg(rs2))
-            elif funct3 == Funct3.SLT:
-                if self._to_signed(self._get_reg(rs1)) < self._to_signed(self._get_reg(rs2)):
-                    self._set_reg(rd, 1)
-                else:
-                    self._set_reg(rd, 0)
-            elif funct3 == Funct3.SLTU:
-                if self._get_reg(rs1) < self._get_reg(rs2):
-                    self._set_reg(rd, 1)
-                else:
-                    self._set_reg(rd, 0)
-            elif funct3 == Funct3.AND:
-                self._set_reg(rd, self._get_reg(rs1) & self._get_reg(rs2))
-            elif funct3 == Funct3.OR:
-                self._set_reg(rd, self._get_reg(rs1) | self._get_reg(rs2))
-            elif funct3 == Funct3.XOR:
-                self._set_reg(rd, self._get_reg(rs1) ^ self._get_reg(rs2))
-            elif funct3 == Funct3.SLL:
-                shamt_4_0 = self._get_reg(rs2) & 0x1F
-                self._set_reg(rd, self._get_reg(rs1) << shamt_4_0)
-            elif funct3 == Funct3.SRL_SRA:
-                if funct7 == Funct7.SRL:
-                    shamt_4_0 = self._get_reg(rs2) & 0x1F
-                    self._set_reg(rd, self._get_reg(rs1) >> shamt_4_0)
-                elif funct7 == Funct7.SRA:
-                    shamt_4_0 = self._get_reg(rs2) & 0x1F
-                    self._set_reg(rd, self._to_signed(self._get_reg(rs1)) >> shamt_4_0)
-        # 2.5.1. Unconditional Jumps
-        # Page 50
-        # TODO: The JAL and JALR instructions will generate an instruction-address-misaligned exception if the target
-        #       address is not aligned to a four-byte boundary.
-        elif opcode == Opcode.JAL:
-            rd, immediate = self._extract_j_type(data)
-            self._set_reg(rd, self._get_pc() + 4)
-            self._set_pc(self._get_pc() + immediate)
-            update_pc = False
-        elif opcode == Opcode.JALR:
-            rd, funct3, rs1, immediate = self._extract_i_type(data)
-            self._set_reg(rd, self._get_pc() + 4)
-            destination = (self._get_reg(rs1) + immediate) & ~1
-            self._set_pc(destination)
-            update_pc = False
-        # 2.5.2. Conditional Branches
-        # Page 52
-        elif opcode == Opcode.BRANCH:
-            immediate, funct3, rs1, rs2 = self._extract_b_type(data)
-            destination = self._get_pc() + immediate
-            if funct3 == Funct3.BEQ:
-                if self._get_reg(rs1) == self._get_reg(rs2):
-                    self._set_pc(destination)
-                    update_pc = False
-            elif funct3 == Funct3.BNE:
-                if self._get_reg(rs1) != self._get_reg(rs2):
-                    self._set_pc(destination)
-                    update_pc = False
-            elif funct3 == Funct3.BLT:
-                if self._to_signed(self._get_reg(rs1)) < self._to_signed(self._get_reg(rs2)):
-                    self._set_pc(destination)
-                    update_pc = False
-            elif funct3 == Funct3.BLTU:
-                if self._get_reg(rs1) < self._get_reg(rs2):
-                    self._set_pc(destination)
-                    update_pc = False
-            elif funct3 == Funct3.BGE:
-                if self._to_signed(self._get_reg(rs1)) >= self._to_signed(self._get_reg(rs2)):
-                    self._set_pc(destination)
-                    update_pc = False
-            elif funct3 == Funct3.BGEU:
-                if self._get_reg(rs1) >= self._get_reg(rs2):
-                    self._set_pc(destination)
-                    update_pc = False
-            return update_pc
-        # 2.6. Load and Store Instructions
-        # Page 54

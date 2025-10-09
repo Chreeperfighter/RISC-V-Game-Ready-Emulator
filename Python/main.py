@@ -3,8 +3,7 @@ from RV32I import CPU
 
 def main():
     rv32i = CPU()
-    print(rv32i.reg)
-    print("Hello World")
+    rv32i.step()
 
 if __name__ == "__main__":
     main()
