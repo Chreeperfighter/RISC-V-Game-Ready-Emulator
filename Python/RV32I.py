@@ -205,9 +205,6 @@ class IInstruction(Instruction):
                 funct7 = self._extract_bits(25, 31)
                 if funct7 == Funct7.SLLI:
                     cpu.reg[self.rd] = rs1_value << shift_amount
-                else:
-                    # TODO: ERROR
-                    ...
             elif self.funct3 == Funct3.SRLI_SRAI:
                 shift_amount = self.immediate & 0x1F
                 funct7 = self._extract_bits(25, 31)
@@ -216,9 +213,47 @@ class IInstruction(Instruction):
                 elif funct7 == Funct7.SRAI:
                     rs1_value_signed = to_signed(rs1_value)
                     cpu.reg[self.rd] = rs1_value_signed >> shift_amount
-                else:
-                    # TODO: ERROR
+        elif self.opcode == Opcode.JALR:
+            offset = (self.immediate + rs1_value) & 0xFFFFFFFE
+            cpu.reg[self.rd] = cpu.pc + 4
+            cpu.pc = cpu.pc + offset
+        elif self.opcode == Opcode.LOAD:
+            address = rs1_value + self.immediate
+            if self.funct3 == Funct3.LW:
+                cpu.reg[self.rd] = cpu.mcu.read(address, 4)
+            elif self.funct3 == Funct3.LH:
+                value = cpu.mcu.read(address, 2)
+                cpu.reg[self.rd] = sign_extend(value, 16)
+            elif self.funct3 == Funct3.LHU:
+                cpu.reg[self.rd] = cpu.mcu.read(address, 2)
+            elif self.funct3 == Funct3.LB:
+                value = cpu.mcu.read(address, 1)
+                cpu.reg[self.rd] = sign_extend(value, 8)
+            elif self.funct3 == Funct3.LBU:
+                cpu.reg[self.rd] = cpu.mcu.read(address, 1)
+        elif self.opcode == Opcode.MISC_MEM:
+            if self.funct3 == 0b000:
+                fm = (self.data >> 28) & 0xF
+                # TODO: Understand ts
+                # PAUSE / FENCE
+                if fm == 0x0:
                     ...
+                # FENCE.TSO
+                elif fm == 0x8:
+                    ...
+            else:
+                # TODO: Error
+                ...
+        elif self.opcode == Opcode.SYSTEM:
+            priv = self.funct3
+            func12 = self.immediate & 0xFFF
+            # TODO: Implement ts
+            # ECALL
+            if func12 == 0x0:
+                ...
+            # EBREAK
+            elif func12 == 0x1:
+                ...
 
 class SInstruction(Instruction):
     def __init__(self, data):
@@ -235,7 +270,16 @@ class SInstruction(Instruction):
         self.immediate = sign_extend(imm, 12)
 
     def execute(self, cpu):
-        ...
+        rs1_value = cpu.reg[self.rs1]
+        rs2_value = cpu.reg[self.rs2]
+        if self.opcode == Opcode.STORE:
+            address = rs1_value + self.immediate
+            if self.funct3 == Funct3.SW:
+                cpu.mcu.write(address, rs2_value, 4)
+            elif self.funct3 == Funct3.SH:
+                cpu.mcu.write(address, rs2_value, 2)
+            elif self.funct3 == Funct3.SB:
+                cpu.mcu.write(address, rs2_value, 1)
 
 class BInstruction(Instruction):
     def __init__(self, data):
@@ -254,7 +298,31 @@ class BInstruction(Instruction):
         self.immediate = sign_extend(imm, 13)
 
     def execute(self, cpu):
-        ...
+        rs1_value = cpu.reg[self.rs1]
+        rs2_value = cpu.reg[self.rs2]
+        if self.opcode == Opcode.BRANCH:
+            if self.funct3 == Funct3.BEQ:
+                if rs1_value == rs2_value:
+                    cpu.pc = cpu.pc + self.immediate
+            elif self.funct3 == Funct3.BNE:
+                if rs1_value != rs2_value:
+                    cpu.pc = cpu.pc + self.immediate
+            elif self.funct3 == Funct3.BLT:
+                rs1_value_signed = to_signed(rs1_value)
+                rs2_value_signed = to_signed(rs2_value)
+                if rs1_value_signed < rs2_value_signed:
+                    cpu.pc = cpu.pc + self.immediate
+            elif self.funct3 == Funct3.BLTU:
+                if rs1_value < rs2_value:
+                    cpu.pc = cpu.pc + self.immediate
+            elif self.funct3 == Funct3.BGE:
+                rs1_value_signed = to_signed(rs1_value)
+                rs2_value_signed = to_signed(rs2_value)
+                if rs1_value_signed >= rs2_value_signed:
+                    cpu.pc = cpu.pc + self.immediate
+            elif self.funct3 == Funct3.BGEU:
+                if rs1_value >= rs2_value:
+                    cpu.pc = cpu.pc + self.immediate
 
 class UInstruction(Instruction):
     def __init__(self, data):
@@ -287,7 +355,9 @@ class JInstruction(Instruction):
         self.immediate = sign_extend(imm, 21)
 
     def execute(self, cpu):
-        ...
+        if self.opcode == Opcode.JAL:
+            cpu.pc = cpu.pc + self.immediate
+            cpu.reg[self.rd] = cpu.pc + 4
 
 class REG:
     def __init__(self):
@@ -321,6 +391,62 @@ class PC:
     def set(self, value: int):
         self._value = value & 0xFFFFFFFF
 
+class RAM:
+    def __init__(self, size: int):
+        self._size = size
+        self._values = [random.getrandbits(32) for _ in range(size)]
+
+    def read(self, address: int, length: int):
+        value = 0
+        for i in range(length, 0, -1):
+            value = value << 8
+            value |= self._values[address + (i - 1)]
+
+        return value
+
+    def write(self, address: int, value: int, length: int):
+        for i in range(length):
+            self._values[address + i] = value & 0xFF
+            value = value >> 8
+
+class ROM:
+    def __init__(self, data: bytes, size: int):
+        self._size = size
+        self._values = list(data)
+        self._values.extend([0] * (size - len(data)))
+
+    def read(self, address: int, length: int):
+        value = 0
+        for i in range(length, 0, -1):
+            value = value << 8
+            value |= self._values[address + (i - 1)]
+
+        return value
+
+
+class MCU:
+    def __init__(self):
+        self._rom = ROM(b"", size= 0x10000)
+        self._ram = RAM(size=0x20000)
+
+    def read(self, address: int, length: int):
+        if 0x00000000 <= address < 0x00010000:
+            return self._rom.read(address, length)
+        elif 0x80000000 <= address < 0x8020000:
+            return self._ram.read(address, length)
+        else:
+            # TODO: Error
+            ...
+
+    def write(self, address: int, value: int, length: int):
+        if 0x00000000 <= address < 0x00010000:
+            # TODO: Error
+            ...
+        elif 0x80000000 <= address < 0x8020000:
+            self._ram.write(address, value, length)
+        else:
+            # TODO: Error
+            ...
 # MISC
 # MISC_MEM
 # TODO: Figure this shit out
@@ -336,6 +462,7 @@ class CPU:
     def __init__(self):
         self.reg = REG()
         self._pc = PC()
+        self.mcu = MCU()
 
     @property
     def pc(self):
@@ -351,8 +478,7 @@ class CPU:
         instruction.execute(self)
 
     def fetch(self):
-        # TODO: Implement fetch
-        return (0 << 12) | (11 << 7) | Opcode.LUI
+        return self.mcu.read(self.pc, 4)
 
     @staticmethod
     def decode(data: int) -> Instruction:
