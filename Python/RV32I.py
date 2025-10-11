@@ -1,6 +1,8 @@
 # TODO: Instruction Classes, REG Class, PC Class, separate DECODE and EXECUTE
 import random
 from enum import IntEnum
+from typing import Union
+
 
 def sign_extend(value: int, length: int) -> int:
     if value >> (length - 1) == 0:
@@ -102,6 +104,12 @@ class Funct7(IntEnum):
     SUB =   0b0100000
     SRL =   0b0000000
     SRA =   0b0100000
+
+class Syscall(IntEnum):
+    PRINT = 1
+    # a0 -> number to print
+
+    EXIT =  10
 
 class Instruction:
     def __init__(self, data):
@@ -214,11 +222,12 @@ class IInstruction(Instruction):
                     rs1_value_signed = to_signed(rs1_value)
                     cpu.reg[self.rd] = rs1_value_signed >> shift_amount
         elif self.opcode == Opcode.JALR:
-            offset = (self.immediate + rs1_value) & 0xFFFFFFFE
+            address = (self.immediate + rs1_value) & 0xFFFFFFFE
             cpu.reg[self.rd] = cpu.pc + 4
-            cpu.pc = cpu.pc + offset
+            cpu.pc = address
+            cpu.update_pc = False
         elif self.opcode == Opcode.LOAD:
-            address = rs1_value + self.immediate
+            address = (rs1_value + self.immediate) & 0xFFFFFFFF
             if self.funct3 == Funct3.LW:
                 cpu.reg[self.rd] = cpu.mcu.read(address, 4)
             elif self.funct3 == Funct3.LH:
@@ -250,7 +259,12 @@ class IInstruction(Instruction):
             # TODO: Implement ts
             # ECALL
             if func12 == 0x0:
-                ...
+                syscall_id = cpu.reg["a7"]
+                if syscall_id == Syscall.EXIT:
+                    cpu.running = False
+                elif syscall_id == Syscall.PRINT:
+                    data = cpu.reg["a0"]
+                    print(hex(data))
             # EBREAK
             elif func12 == 0x1:
                 ...
@@ -304,25 +318,31 @@ class BInstruction(Instruction):
             if self.funct3 == Funct3.BEQ:
                 if rs1_value == rs2_value:
                     cpu.pc = cpu.pc + self.immediate
+                    cpu.update_pc = False
             elif self.funct3 == Funct3.BNE:
                 if rs1_value != rs2_value:
                     cpu.pc = cpu.pc + self.immediate
+                    cpu.update_pc = False
             elif self.funct3 == Funct3.BLT:
                 rs1_value_signed = to_signed(rs1_value)
                 rs2_value_signed = to_signed(rs2_value)
                 if rs1_value_signed < rs2_value_signed:
                     cpu.pc = cpu.pc + self.immediate
+                    cpu.update_pc = False
             elif self.funct3 == Funct3.BLTU:
                 if rs1_value < rs2_value:
                     cpu.pc = cpu.pc + self.immediate
+                    cpu.update_pc = False
             elif self.funct3 == Funct3.BGE:
                 rs1_value_signed = to_signed(rs1_value)
                 rs2_value_signed = to_signed(rs2_value)
                 if rs1_value_signed >= rs2_value_signed:
                     cpu.pc = cpu.pc + self.immediate
+                    cpu.update_pc = False
             elif self.funct3 == Funct3.BGEU:
                 if rs1_value >= rs2_value:
                     cpu.pc = cpu.pc + self.immediate
+                    cpu.update_pc = False
 
 class UInstruction(Instruction):
     def __init__(self, data):
@@ -356,27 +376,66 @@ class JInstruction(Instruction):
 
     def execute(self, cpu):
         if self.opcode == Opcode.JAL:
-            cpu.pc = cpu.pc + self.immediate
             cpu.reg[self.rd] = cpu.pc + 4
+            cpu.pc = cpu.pc + self.immediate
+            cpu.update_pc = False
 
 class REG:
+    reg_map = {
+        "zero": 0,
+        "ra": 1,
+        "sp": 2,
+        "gp": 3,
+        "tp": 4,
+        "t0": 5,
+        "t1": 6,
+        "t2": 7,
+        "s0": 8,
+        "s1": 9,
+        "a0": 10,
+        "a1": 11,
+        "a2": 12,
+        "a3": 13,
+        "a4": 14,
+        "a5": 15,
+        "a6": 16,
+        "a7": 17,
+        "s2": 18,
+        "s3": 19,
+        "s4": 20,
+        "s5": 21,
+        "s6": 22,
+        "s7": 23,
+        "s8": 24,
+        "s9": 25,
+        "s10": 26,
+        "s11": 27,
+        "t3": 28,
+        "t4": 29,
+        "t5": 30,
+        "t6": 31
+    }
+
     def __init__(self):
         self._values: list[int] = [0]
         for _ in range(31):
             self._values.append(random.getrandbits(32))
 
-    def __getitem__(self, index: int):
-        if 0 <= index < 32:
-            # TODO: Raise Error
-            ...
+    def __getitem__(self, index: Union[int, str]) -> int:
+        if isinstance(index, str):
+            try:
+                index = self.reg_map[index]
+            except KeyError:
+                raise IndexError(f"{index} is not a valid register.")
+        if not 0 <= index < 32:
+            raise IndexError(f"Register index: {index} out of range")
         if index == 0:
             return 0
         return self._values[index] & 0xFFFFFFFF
 
     def __setitem__(self, index: int, value):
-        if 0 <= index < 32:
-            # TODO: Raise Error
-            ...
+        if not 0 <= index < 32:
+            raise IndexError(f"Register index: {index} out of range")
         if index == 0:
             return
         self._values[index] = value & 0xFFFFFFFF
@@ -423,46 +482,36 @@ class ROM:
 
         return value
 
-
 class MCU:
-    def __init__(self):
-        self._rom = ROM(b"", size= 0x10000)
+    def __init__(self, rom: bytes):
+        self._rom = ROM(rom, size= 0x10000)
         self._ram = RAM(size=0x20000)
 
     def read(self, address: int, length: int):
+        address = address & 0xFFFFFFFF
         if 0x00000000 <= address < 0x00010000:
             return self._rom.read(address, length)
-        elif 0x80000000 <= address < 0x8020000:
-            return self._ram.read(address, length)
+        elif 0x80000000 <= address < 0x80020000:
+            return self._ram.read(address - 0x80000000, length)
         else:
-            # TODO: Error
-            ...
+            raise IndexError(f"Invalid read address: {hex(address)}")
 
     def write(self, address: int, value: int, length: int):
+        address = address & 0xFFFFFFFF
         if 0x00000000 <= address < 0x00010000:
-            # TODO: Error
-            ...
-        elif 0x80000000 <= address < 0x8020000:
-            self._ram.write(address, value, length)
+            raise RuntimeError("Writing to ROM not supported")
+        elif 0x80000000 <= address < 0x80020000:
+            self._ram.write(address - 0x80000000, value, length)
         else:
-            # TODO: Error
-            ...
-# MISC
-# MISC_MEM
-# TODO: Figure this shit out
-
-# SYSTEM
-# TODO: Figure this shit out
-
-# OP_IMM
-SRLI =  0b0
-SRAI =  0b1
+            raise IndexError(f"Invalid write address: {hex(address)}")
 
 class CPU:
-    def __init__(self):
+    def __init__(self, rom_data: bytes):
         self.reg = REG()
         self._pc = PC()
-        self.mcu = MCU()
+        self.mcu = MCU(rom_data)
+        self.update_pc = None
+        self.running = True
 
     @property
     def pc(self):
@@ -473,9 +522,12 @@ class CPU:
         self._pc.set(value)
 
     def step(self):
+        self.update_pc = True
         data = self.fetch()
         instruction: Instruction = self.decode(data)
         instruction.execute(self)
+        if self.update_pc:
+            self.pc = self.pc + 4
 
     def fetch(self):
         return self.mcu.read(self.pc, 4)

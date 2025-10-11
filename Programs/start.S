@@ -1,0 +1,6 @@
+.globl _start
+_start:
+    li sp, 0x8000FFF0   # Set stack pointer
+    call main           # Call C main()
+    li a7, 10
+    ecall               # Exit
