@@ -9,13 +9,20 @@ SECTIONS {
 		*(.text) 
 	} > ROM
 	
+	.rodata : {
+		*(.rodata*)
+	} > ROM
+
 	.data : {
-		*(.data)
-		*(.rodata)
-	} > RAM
-	
+		__data_start = .;
+        	*(.data*)
+        	__data_end = .;
+	} > RAM AT > ROM
+
 	.bss : {
-		*(.bss)
-		*(COMMON)
+        	__bss_start = .;
+        	*(.bss*)
+        	*(COMMON)
+        	__bss_end = .;
 	} > RAM
 }

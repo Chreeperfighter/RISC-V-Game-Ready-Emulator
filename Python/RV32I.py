@@ -110,6 +110,7 @@ class Syscall(IntEnum):
     # a0 -> number to print
 
     EXIT =  10
+    # a0 -> exit code
 
 class Instruction:
     def __init__(self, data):
@@ -261,10 +262,12 @@ class IInstruction(Instruction):
             if func12 == 0x0:
                 syscall_id = cpu.reg["a7"]
                 if syscall_id == Syscall.EXIT:
+                    exit_code = cpu.reg["a0"]
+                    print(f"Process finished with exit code {to_signed(exit_code)}")
                     cpu.running = False
                 elif syscall_id == Syscall.PRINT:
                     data = cpu.reg["a0"]
-                    print(hex(data))
+                    print(f"dec: {to_signed(data)}, hex: {hex(data)}")
             # EBREAK
             elif func12 == 0x1:
                 ...
