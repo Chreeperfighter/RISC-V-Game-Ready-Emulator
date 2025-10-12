@@ -1,0 +1,12 @@
+# ninja log v6
+220	351	1760262853957831449	test.elf	843ee75477dad4ef
+137	191	1760223360337974604	test	eb7b2f24a2ec1707
+4	220	1760262853741892973	CMakeFiles/test.dir/main.c.obj	498401ffdc46f6d7
+0	137	1760224238438587435	CMakeFiles/test.dir/Users/mark.verbeek/CLionProjects/RISC-V-Game-Ready-Emulator/Programs/start.S.obj	12a30f53e3228216
+2	30	1760262935845118927	build.ninja	d00afb3918c446f3
+1	8	1760224238376853376	clean	ad90e366ad70d77b
+1	74	1760262938906248930	CMakeFiles/test.dir/Users/mark.verbeek/CLionProjects/RISC-V-Game-Ready-Emulator/Programs/start.S.obj	51f3bb36003d8bec
+1	140	1760262938906462015	CMakeFiles/test.dir/main.c.obj	b2443143462e84b
+140	258	1760262939045427813	test.elf	b7766122df6e2070
+1	193	1760263565657010173	CMakeFiles/test.dir/main.c.obj	b2443143462e84b
+193	304	1760263565849005647	test.elf	b7766122df6e2070

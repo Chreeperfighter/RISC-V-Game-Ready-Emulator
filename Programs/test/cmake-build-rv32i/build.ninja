@@ -51,13 +51,13 @@ build cmake_object_order_depends_target_test: phony || .
 
 build CMakeFiles/test.dir/Users/mark.verbeek/CLionProjects/RISC-V-Game-Ready-Emulator/Programs/start.S.obj: ASM_COMPILER__test_unscanned_Debug /Users/mark.verbeek/CLionProjects/RISC-V-Game-Ready-Emulator/Programs/start.S || cmake_object_order_depends_target_test
   DEP_FILE = CMakeFiles/test.dir/Users/mark.verbeek/CLionProjects/RISC-V-Game-Ready-Emulator/Programs/start.S.obj.d
-  FLAGS = -march=rv32i -mabi=ilp32 -nostdlib -T/Users/mark.verbeek/CLionProjects/RISC-V-Game-Ready-Emulator/Programs/test/../linker.ld -g
+  FLAGS = -march=rv32i -mabi=ilp32 -nostdlib -O2 -T/Users/mark.verbeek/CLionProjects/RISC-V-Game-Ready-Emulator/Programs/test/../linker.ld -g
   OBJECT_DIR = CMakeFiles/test.dir
   OBJECT_FILE_DIR = CMakeFiles/test.dir/Users/mark.verbeek/CLionProjects/RISC-V-Game-Ready-Emulator/Programs
 
 build CMakeFiles/test.dir/main.c.obj: C_COMPILER__test_unscanned_Debug /Users/mark.verbeek/CLionProjects/RISC-V-Game-Ready-Emulator/Programs/test/main.c || cmake_object_order_depends_target_test
   DEP_FILE = CMakeFiles/test.dir/main.c.obj.d
-  FLAGS = -march=rv32i -mabi=ilp32 -nostdlib -T/Users/mark.verbeek/CLionProjects/RISC-V-Game-Ready-Emulator/Programs/test/../linker.ld -g -std=gnu11 -fdiagnostics-color=always
+  FLAGS = -march=rv32i -mabi=ilp32 -nostdlib -O2 -T/Users/mark.verbeek/CLionProjects/RISC-V-Game-Ready-Emulator/Programs/test/../linker.ld -g -std=gnu11 -fdiagnostics-color=always
   OBJECT_DIR = CMakeFiles/test.dir
   OBJECT_FILE_DIR = CMakeFiles/test.dir
 
@@ -70,7 +70,7 @@ build CMakeFiles/test.dir/main.c.obj: C_COMPILER__test_unscanned_Debug /Users/ma
 # Link the executable test.elf
 
 build test.elf: C_EXECUTABLE_LINKER__test_Debug CMakeFiles/test.dir/Users/mark.verbeek/CLionProjects/RISC-V-Game-Ready-Emulator/Programs/start.S.obj CMakeFiles/test.dir/main.c.obj
-  FLAGS = -march=rv32i -mabi=ilp32 -nostdlib -T/Users/mark.verbeek/CLionProjects/RISC-V-Game-Ready-Emulator/Programs/test/../linker.ld -g
+  FLAGS = -march=rv32i -mabi=ilp32 -nostdlib -O2 -T/Users/mark.verbeek/CLionProjects/RISC-V-Game-Ready-Emulator/Programs/test/../linker.ld -g
   OBJECT_DIR = CMakeFiles/test.dir
   POST_BUILD = cd /Users/mark.verbeek/CLionProjects/RISC-V-Game-Ready-Emulator/Programs/test/cmake-build-rv32i && /usr/local/Cellar/riscv-gnu-toolchain/main/bin/riscv64-unknown-elf-objcopy -O binary test.elf test.bin && cd /Users/mark.verbeek/CLionProjects/RISC-V-Game-Ready-Emulator/Programs/test/cmake-build-rv32i && /usr/local/Cellar/riscv-gnu-toolchain/main/bin/riscv64-unknown-elf-objcopy -O binary test.elf test.bin && riscv64-unknown-elf-objdump -d test.elf > test.dis
   PRE_LINK = :

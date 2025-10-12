@@ -1,4 +1,4 @@
-from RV32I import CPU
+from cpu import CPU
 
 def main():
     rom_file = "/Users/mark.verbeek/CLionProjects/RISC-V-Game-Ready-Emulator/Programs/test/cmake-build-rv32i/test.bin"
@@ -7,6 +7,7 @@ def main():
 
     while rv32i.running:
         try:
+            print(f"{hex(rv32i.pc)}: {rv32i.reg._values}")
             rv32i.step()
         except Exception as e:
             print(hex(rv32i.reg["s0"] - 20))
