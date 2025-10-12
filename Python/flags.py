@@ -1,0 +1,4 @@
+DEBUG_MODE = False
+PRINT_INSTRUCTION = True
+PRINT_PC = True
+DUMP_REG = True

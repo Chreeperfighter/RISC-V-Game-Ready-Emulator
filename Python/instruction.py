@@ -1,5 +1,7 @@
-from opcode import Opcode, Funct7, Funct3, Syscall
+from isa import Opcode, Funct7, Funct3, Syscall
 from utils import to_signed, sign_extend
+from memory import get_reg_name
+from PIL import Image
 
 class Instruction:
     def __init__(self, data):
@@ -12,6 +14,9 @@ class Instruction:
 
     def execute(self, cpu):
         pass
+
+    def __str__(self):
+        return f"Instruction(opcode={hex(self.opcode)}, raw_data={hex(self.data)})"
 
 class RInstruction(Instruction):
     def __init__(self, data):
@@ -62,6 +67,11 @@ class RInstruction(Instruction):
                 elif self.funct7 == Funct7.SRA:
                     rs1_value_signed = to_signed(rs1_value)
                     cpu.reg[self.rd] = rs1_value_signed >> shift_amount
+
+    def __str__(self):
+        return (f"RInstruction(opcode={hex(self.opcode)}, rd={get_reg_name(self.rd)}[{hex(self.rd)}], "
+                f"funct3={hex(self.funct3)}, rs1={get_reg_name(self.rs1)}[{hex(self.rs1)}], "
+                f"rs2={get_reg_name(self.rs2)}[{hex(self.rs2)}], funct7={hex(self.funct7)}, raw_data={hex(self.data)})")
 
 class IInstruction(Instruction):
     def __init__(self, data):
@@ -146,7 +156,6 @@ class IInstruction(Instruction):
         elif self.opcode == Opcode.SYSTEM:
             priv = self.funct3
             func12 = self.immediate & 0xFFF
-            # TODO: Implement ts
             # ECALL
             if func12 == 0x0:
                 syscall_id = cpu.reg["a7"]
@@ -154,12 +163,31 @@ class IInstruction(Instruction):
                     exit_code = cpu.reg["a0"]
                     print(f"Process finished with exit code {to_signed(exit_code)}")
                     cpu.running = False
-                elif syscall_id == Syscall.PRINT:
+                elif syscall_id == Syscall.PRINT_INT:
                     data = cpu.reg["a0"]
-                    print(f"dec: {to_signed(data)}, hex: {hex(data)}")
+                    print(data, end="")
+                elif syscall_id == Syscall.PRINT_CHAR:
+                    data = cpu.reg["a0"] & 0xFF
+                    print(chr(data), end="")
+                elif syscall_id == Syscall.PRINT_FB:
+                    fb_address = cpu.reg["a0"]
+                    height = cpu.reg["a1"]
+                    width = cpu.reg["a2"]
+
+                    data = cpu.mcu.read(fb_address, height * width * 4, read_bytes=True)
+
+                    img = Image.frombytes("RGBA", (width, height), bytes(data))
+
+                    img.show()
+            # TODO: Implement ts
             # EBREAK
             elif func12 == 0x1:
                 ...
+
+    def __str__(self):
+        return (f"IInstruction(opcode={hex(self.opcode)}, rd={get_reg_name(self.rd)}[{hex(self.rd)}], "
+                f"funct3={hex(self.funct3)}, rs1={get_reg_name(self.rs1)}[{hex(self.rs1)}], "
+                f"immediate={hex(self.immediate)}[{to_signed(self.immediate)}], raw_data={hex(self.data)})")
 
 class SInstruction(Instruction):
     def __init__(self, data):
@@ -181,11 +209,17 @@ class SInstruction(Instruction):
         if self.opcode == Opcode.STORE:
             address = rs1_value + self.immediate
             if self.funct3 == Funct3.SW:
-                cpu.mcu.write(address, rs2_value, 4)
+                cpu.mcu.write(address, rs2_value & 0xFFFFFFFF, 4)
             elif self.funct3 == Funct3.SH:
-                cpu.mcu.write(address, rs2_value, 2)
+                cpu.mcu.write(address, rs2_value & 0xFFFF, 2)
             elif self.funct3 == Funct3.SB:
-                cpu.mcu.write(address, rs2_value, 1)
+                cpu.mcu.write(address, rs2_value & 0xFF, 1)
+
+    def __str__(self):
+        return (f"SInstruction(opcode={hex(self.opcode)}, "
+                f"funct3={hex(self.funct3)}, rs1={get_reg_name(self.rs1)}[{hex(self.rs1)}], "
+                f"rs2={get_reg_name(self.rs2)}[{hex(self.rs2)}], "
+                f"immediate={hex(self.immediate)}[{to_signed(self.immediate)}], raw_data={hex(self.data)})")
 
 class BInstruction(Instruction):
     def __init__(self, data):
@@ -236,6 +270,12 @@ class BInstruction(Instruction):
                     cpu.pc = cpu.pc + self.immediate
                     cpu.update_pc = False
 
+    def __str__(self):
+        return (f"SInstruction(opcode={hex(self.opcode)}, "
+                f"funct3={hex(self.funct3)}, rs1={get_reg_name(self.rs1)}[{hex(self.rs1)}], "
+                f"rs2={get_reg_name(self.rs2)}[{hex(self.rs2)}], "
+                f"immediate={hex(self.immediate)}[{to_signed(self.immediate)}], raw_data={hex(self.data)})")
+
 class UInstruction(Instruction):
     def __init__(self, data):
         super().__init__(data)
@@ -251,6 +291,10 @@ class UInstruction(Instruction):
             cpu.reg[self.rd] = self.immediate
         elif self.opcode == Opcode.AUIPC:
             cpu.reg[self.rd] = self.immediate + cpu.pc
+
+    def __str__(self):
+        return (f"SInstruction(opcode={hex(self.opcode)}, rd={get_reg_name(self.rd)}[{hex(self.rd)}], "
+                f"immediate={hex(self.immediate)}[{to_signed(self.immediate)}], raw_data={hex(self.data)})")
 
 class JInstruction(Instruction):
     def __init__(self, data):
@@ -271,3 +315,7 @@ class JInstruction(Instruction):
             cpu.reg[self.rd] = cpu.pc + 4
             cpu.pc = cpu.pc + self.immediate
             cpu.update_pc = False
+
+    def __str__(self):
+        return (f"SInstruction(opcode={hex(self.opcode)}, rd={get_reg_name(self.rd)}[{hex(self.rd)}], "
+                f"immediate={hex(self.immediate)}[{to_signed(self.immediate)}], raw_data={hex(self.data)})")

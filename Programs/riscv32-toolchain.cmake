@@ -11,7 +11,7 @@ set(CMAKE_ASM_COMPILER riscv64-unknown-elf-gcc)
 # === Flags identical to your manual command ===
 set(LINKER_SCRIPT "${CMAKE_SOURCE_DIR}/../linker.ld")
 
-set(RV32_FLAGS "-march=rv32i -mabi=ilp32 -nostdlib -O2 -T${LINKER_SCRIPT}")
+set(RV32_FLAGS "-march=rv32i -mabi=ilp32 -O0 -T${LINKER_SCRIPT} -nostartfiles")
 
 set(CMAKE_C_FLAGS "${RV32_FLAGS}")
 set(CMAKE_ASM_FLAGS "${RV32_FLAGS}")

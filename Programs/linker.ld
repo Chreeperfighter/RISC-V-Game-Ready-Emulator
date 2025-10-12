@@ -1,6 +1,6 @@
 MEMORY {
-	ROM (rx) : ORIGIN = 0x00000000, LENGTH = 64K
-	RAM (rwx) : ORIGIN = 0x80000000, LENGTH = 128K
+	ROM (rx) : ORIGIN = 0x00000000, LENGTH = 128K
+	RAM (rwx) : ORIGIN = 0x80000000, LENGTH = 512K
 }
 
 SECTIONS {
@@ -25,4 +25,7 @@ SECTIONS {
         	*(COMMON)
         	__bss_end = .;
 	} > RAM
+
+	__global_pointer$ = ORIGIN(RAM);         /* global pointer base */
+	_end = ORIGIN(RAM) + LENGTH(RAM);       /* end of RAM / heap start */
 }

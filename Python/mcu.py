@@ -1,24 +1,52 @@
-from memory import RAM, ROM
+from typing import Union
+
+from params import ROM_ORIGIN, ROM_LENGTH, ROM_END, RAM_ORIGIN, RAM_LENGTH, RAM_END, FB_ORIGIN, FB_LENGTH, FB_END
 
 class MCU:
     def __init__(self, rom: bytes):
-        self._rom = ROM(rom, size= 0x10000)
-        self._ram = RAM(size=0x20000)
+        self._rom = bytearray(ROM_LENGTH)
+        self._ram = bytearray(RAM_LENGTH)
+        self._framebuffer = bytearray(FB_LENGTH)
+        self.load_rom(rom)
 
-    def read(self, address: int, length: int):
+    def load_rom(self, rom: bytes):
+        self._rom = rom
+
+    def get_framebuffer(self):
+        return self._framebuffer
+
+    def read(self, address: int, length: int, read_bytes: bool = False) -> Union[bytes, int]:
         address = address & 0xFFFFFFFF
-        if 0x00000000 <= address < 0x00010000:
-            return self._rom.read(address, length)
-        elif 0x80000000 <= address < 0x80020000:
-            return self._ram.read(address - 0x80000000, length)
+        if ROM_ORIGIN <= address < ROM_END:
+            offset = address - ROM_ORIGIN
+            data = self._rom[offset:offset + length]
+            if read_bytes:
+                return data
+            return int.from_bytes(data, "little")
+        elif RAM_ORIGIN <= address < RAM_END:
+            offset = address - RAM_ORIGIN
+            data = self._ram[offset:offset + length]
+            if read_bytes:
+                return data
+            return int.from_bytes(data, "little")
+        elif FB_ORIGIN <= address < FB_END:
+            offset = address - FB_ORIGIN
+            data = self._framebuffer[offset:offset + length]
+            if read_bytes:
+                return data
+            return int.from_bytes(data, "little")
         else:
             raise IndexError(f"Invalid read address: {hex(address)}")
 
     def write(self, address: int, value: int, length: int):
         address = address & 0xFFFFFFFF
-        if 0x00000000 <= address < 0x00010000:
+        if ROM_ORIGIN <= address < ROM_END:
             raise RuntimeError("Writing to ROM not supported")
-        elif 0x80000000 <= address < 0x80020000:
-            self._ram.write(address - 0x80000000, value, length)
+        elif RAM_ORIGIN <= address < RAM_END:
+            offset = address - RAM_ORIGIN
+            self._ram[offset:offset + length] = value.to_bytes(length, "little")
+        elif FB_ORIGIN <= address < FB_END:
+            offset = address - FB_ORIGIN
+            self._framebuffer[offset:offset + length] = value.to_bytes(length, "little")
         else:
             raise IndexError(f"Invalid write address: {hex(address)}")

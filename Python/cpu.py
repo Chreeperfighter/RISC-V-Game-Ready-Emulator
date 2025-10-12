@@ -1,7 +1,8 @@
 from memory import REG, PC
 from mcu import MCU
 from instruction import Instruction, IInstruction, BInstruction, RInstruction, JInstruction, SInstruction, UInstruction
-from opcode import Opcode
+from isa import Opcode
+from flags import PRINT_INSTRUCTION, PRINT_PC, DEBUG_MODE, DUMP_REG
 
 class CPU:
     def __init__(self, rom_data: bytes):
@@ -23,6 +24,15 @@ class CPU:
         self.update_pc = True
         data = self.fetch()
         instruction: Instruction = self.decode(data)
+        if DEBUG_MODE:
+            print("\033[36mDEBUG: ", end="")
+            if PRINT_PC:
+                print(f"{hex(self.pc)}: ", end="")
+            if PRINT_INSTRUCTION:
+                print(instruction, end="")
+            if DUMP_REG:
+                print(f"\n{self.reg.dump()}", end="")
+            print("\033[0m")
         instruction.execute(self)
         if self.update_pc:
             self.pc = self.pc + 4

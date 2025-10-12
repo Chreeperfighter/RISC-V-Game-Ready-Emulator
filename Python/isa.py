@@ -91,8 +91,16 @@ class Funct7(IntEnum):
     SRA =   0b0100000
 
 class Syscall(IntEnum):
-    PRINT = 1
+    PRINT_INT = 1
     # a0 -> number to print
+
+    PRINT_CHAR = 2
+    # a0 -> char to print
+
+    PRINT_FB = 3
+    # a0 -> framebuffer address
+    # a1 -> Height
+    # a2 -> Width
 
     EXIT =  10
     # a0 -> exit code

@@ -1,56 +1,46 @@
-//
-// Created by Mark Verbeek on 10.10.25.
-//
+#include <stdint.h>
 
-void print(int x) {
-    register int a0 asm("a0") = x;   // put x in a0
-    register int a7 asm("a7") = 1;   // syscall number (e.g., 1 = print_int in simulator)
-    asm volatile("ecall" : "+r"(a0), "+r"(a7) :: "memory");
+#define WIDTH 80
+#define HEIGHT 60
+#define FRAMEBUFFER_SIZE (WIDTH * HEIGHT)
+#define FRAMEBUFFER_ADDR 0x81000000
+
+volatile uint32_t* framebuffer = (volatile uint32_t*)FRAMEBUFFER_ADDR;
+
+void display_framebuffer(const uint32_t* fb, uint32_t width, uint32_t height) {
+    register uint32_t a0 asm("a0") = (uint32_t)fb;
+    register uint32_t a1 asm("a1") = width;
+    register uint32_t a2 asm("a2") = height;
+    register uint32_t a7 asm("a7") = 3; // PRINT_FB
+    asm volatile("ecall"
+                 : /* no outputs */
+                 : "r"(a0), "r"(a1), "r"(a2), "r"(a7)
+                 : "memory");
 }
 
 int main(void) {
-    // --- Arithmetic ---
-    int a = 5;
-    int b = 3;
-    int sum = a + b;     // ADD
-    int diff = a - b;    // SUB
-    int prod = 0;
-    for (int i = 0; i < b; i++) {  // MUL via loop, since no M-extension
-        prod += a;
+    int ball_x = 10, ball_y = 5;
+    int vel_x = 1, vel_y = 1;
+    uint32_t ball_color = 0xFF00FFFF; // RGBA: magenta
+
+    while (1) {
+        for (int i = 0; i < FRAMEBUFFER_SIZE; i++) {
+            ((volatile uint32_t*)FRAMEBUFFER_ADDR)[i] = 0; // clear screen
+        }
+
+        // Draw ball (single pixel for simplicity)
+        ((volatile uint32_t*)FRAMEBUFFER_ADDR)[ball_x + ball_y * WIDTH] = ball_color;
+
+        // Update ball position
+        ball_x += vel_x;
+        ball_y += vel_y;
+
+        // Bounce off walls
+        if (ball_x <= 0 || ball_x >= WIDTH - 1) vel_x = -vel_x;
+        if (ball_y <= 0 || ball_y >= HEIGHT - 1) vel_y = -vel_y;
+
+        display_framebuffer((const uint32_t*)FRAMEBUFFER_ADDR, WIDTH, HEIGHT);
     }
-    print(sum);   // expect 8
-    print(diff);  // expect 2
-    print(prod);  // expect 15
-
-    // --- Logical ---
-    int x = 0b1100;
-    int y = 0b1010;
-    print(x & y);  // AND -> 0b1000 = 8
-    print(x | y);  // OR  -> 0b1110 = 14
-    print(x ^ y);  // XOR -> 0b0110 = 6
-    print(~x);     // NOT -> ~0b1100 = 0xFFFFFFF3 (-13 in 32-bit)
-
-    // --- Shifts ---
-    int z = 1;
-    print(z << 3);  // SLL -> 8
-    print(16 >> 2); // SRL -> 4 (logical shift)
-    print(-16 >> 2);// SRA -> -4 (arithmetic shift)
-
-    // --- Memory test ---
-    int arr[4] = {10, 20, 30, 40};
-    int val = arr[2]; // load
-    print(val);       // expect 30
-    arr[1] = 99;      // store
-    print(arr[1]);    // expect 99
-
-    // --- Branch test ---
-    int flag = 0;
-    if (sum > prod) {
-        flag = 1;
-    } else {
-        flag = 2;
-    }
-    print(flag); // expect 2, because 8 < 15
 
     return 0;
 }
