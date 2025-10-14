@@ -11,6 +11,7 @@ class CPU:
         self.mcu = MCU(rom_data)
         self.update_pc = None
         self.running = True
+        self.on_break = None
 
     @property
     def pc(self):

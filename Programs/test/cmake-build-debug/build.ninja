@@ -47,7 +47,7 @@ cmake_ninja_workdir = /Users/mark.verbeek/CLionProjects/RISC-V-Game-Ready-Emulat
 #############################################
 # Order-only phony target for test
 
-build cmake_object_order_depends_target_test: phony || .
+build cmake_object_order_depends_target_test: phony || asm_framebuffer_test asm_main asm_printf asm_util
 
 build CMakeFiles/test.dir/Users/mark.verbeek/CLionProjects/RISC-V-Game-Ready-Emulator/Programs/start.S.o: ASM_COMPILER__test_unscanned_Debug /Users/mark.verbeek/CLionProjects/RISC-V-Game-Ready-Emulator/Programs/start.S || cmake_object_order_depends_target_test
   DEP_FILE = CMakeFiles/test.dir/Users/mark.verbeek/CLionProjects/RISC-V-Game-Ready-Emulator/Programs/start.S.o.d
@@ -61,6 +61,24 @@ build CMakeFiles/test.dir/main.c.o: C_COMPILER__test_unscanned_Debug /Users/mark
   OBJECT_DIR = CMakeFiles/test.dir
   OBJECT_FILE_DIR = CMakeFiles/test.dir
 
+build CMakeFiles/test.dir/printf.c.o: C_COMPILER__test_unscanned_Debug /Users/mark.verbeek/CLionProjects/RISC-V-Game-Ready-Emulator/Programs/test/printf.c || cmake_object_order_depends_target_test
+  DEP_FILE = CMakeFiles/test.dir/printf.c.o.d
+  FLAGS = -g -std=gnu11 -arch arm64 -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.0.sdk -mmacosx-version-min=15.6 -fcolor-diagnostics
+  OBJECT_DIR = CMakeFiles/test.dir
+  OBJECT_FILE_DIR = CMakeFiles/test.dir
+
+build CMakeFiles/test.dir/util.c.o: C_COMPILER__test_unscanned_Debug /Users/mark.verbeek/CLionProjects/RISC-V-Game-Ready-Emulator/Programs/test/util.c || cmake_object_order_depends_target_test
+  DEP_FILE = CMakeFiles/test.dir/util.c.o.d
+  FLAGS = -g -std=gnu11 -arch arm64 -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.0.sdk -mmacosx-version-min=15.6 -fcolor-diagnostics
+  OBJECT_DIR = CMakeFiles/test.dir
+  OBJECT_FILE_DIR = CMakeFiles/test.dir
+
+build CMakeFiles/test.dir/framebuffer_test.c.o: C_COMPILER__test_unscanned_Debug /Users/mark.verbeek/CLionProjects/RISC-V-Game-Ready-Emulator/Programs/test/framebuffer_test.c || cmake_object_order_depends_target_test
+  DEP_FILE = CMakeFiles/test.dir/framebuffer_test.c.o.d
+  FLAGS = -g -std=gnu11 -arch arm64 -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.0.sdk -mmacosx-version-min=15.6 -fcolor-diagnostics
+  OBJECT_DIR = CMakeFiles/test.dir
+  OBJECT_FILE_DIR = CMakeFiles/test.dir
+
 
 # =============================================================================
 # Link build statements for EXECUTABLE target test
@@ -69,13 +87,37 @@ build CMakeFiles/test.dir/main.c.o: C_COMPILER__test_unscanned_Debug /Users/mark
 #############################################
 # Link the executable test.elf
 
-build test.elf: C_EXECUTABLE_LINKER__test_Debug CMakeFiles/test.dir/Users/mark.verbeek/CLionProjects/RISC-V-Game-Ready-Emulator/Programs/start.S.o CMakeFiles/test.dir/main.c.o
+build test.elf: C_EXECUTABLE_LINKER__test_Debug CMakeFiles/test.dir/Users/mark.verbeek/CLionProjects/RISC-V-Game-Ready-Emulator/Programs/start.S.o CMakeFiles/test.dir/main.c.o CMakeFiles/test.dir/printf.c.o CMakeFiles/test.dir/util.c.o CMakeFiles/test.dir/framebuffer_test.c.o || asm_framebuffer_test asm_main asm_printf asm_util
   FLAGS = -g -arch arm64 -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.0.sdk -mmacosx-version-min=15.6
   OBJECT_DIR = CMakeFiles/test.dir
-  POST_BUILD = cd /Users/mark.verbeek/CLionProjects/RISC-V-Game-Ready-Emulator/Programs/test/cmake-build-debug && CMAKE_OBJCOPY-NOTFOUND -O binary test.elf test.bin && cd /Users/mark.verbeek/CLionProjects/RISC-V-Game-Ready-Emulator/Programs/test/cmake-build-debug && CMAKE_OBJCOPY-NOTFOUND -O binary test.elf test.bin && riscv64-unknown-elf-objdump -d test.elf > test.dis
+  POST_BUILD = cd /Users/mark.verbeek/CLionProjects/RISC-V-Game-Ready-Emulator/Programs/test/cmake-build-debug && CMAKE_OBJCOPY-NOTFOUND -O binary /Users/mark.verbeek/CLionProjects/RISC-V-Game-Ready-Emulator/Programs/test/cmake-build-debug/test.elf test.bin && riscv64-unknown-elf-objdump -d /Users/mark.verbeek/CLionProjects/RISC-V-Game-Ready-Emulator/Programs/test/cmake-build-debug/test.elf > test.dis
   PRE_LINK = :
   TARGET_FILE = test.elf
   TARGET_PDB = test.elf.dbg
+
+
+#############################################
+# Utility command for asm_main
+
+build asm_main: phony CMakeFiles/asm_main main.s
+
+
+#############################################
+# Utility command for asm_printf
+
+build asm_printf: phony CMakeFiles/asm_printf printf.s
+
+
+#############################################
+# Utility command for asm_util
+
+build asm_util: phony CMakeFiles/asm_util util.s
+
+
+#############################################
+# Utility command for asm_framebuffer_test
+
+build asm_framebuffer_test: phony CMakeFiles/asm_framebuffer_test framebuffer_test.s
 
 
 #############################################
@@ -99,6 +141,66 @@ build CMakeFiles/rebuild_cache.util: CUSTOM_COMMAND
   restat = 1
 
 build rebuild_cache: phony CMakeFiles/rebuild_cache.util
+
+
+#############################################
+# Phony custom command for CMakeFiles/asm_main
+
+build CMakeFiles/asm_main | ${cmake_ninja_workdir}CMakeFiles/asm_main: phony main.s
+
+
+#############################################
+# Custom command for main.s
+
+build main.s | ${cmake_ninja_workdir}main.s: CUSTOM_COMMAND /Users/mark.verbeek/CLionProjects/RISC-V-Game-Ready-Emulator/Programs/test/main.c
+  COMMAND = cd /Users/mark.verbeek/CLionProjects/RISC-V-Game-Ready-Emulator/Programs/test/cmake-build-debug && /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/cc -O0 -S /Users/mark.verbeek/CLionProjects/RISC-V-Game-Ready-Emulator/Programs/test/main.c -o /Users/mark.verbeek/CLionProjects/RISC-V-Game-Ready-Emulator/Programs/test/cmake-build-debug/main.s
+  DESC = Generating assembly for main.c
+  restat = 1
+
+
+#############################################
+# Phony custom command for CMakeFiles/asm_printf
+
+build CMakeFiles/asm_printf | ${cmake_ninja_workdir}CMakeFiles/asm_printf: phony printf.s
+
+
+#############################################
+# Custom command for printf.s
+
+build printf.s | ${cmake_ninja_workdir}printf.s: CUSTOM_COMMAND /Users/mark.verbeek/CLionProjects/RISC-V-Game-Ready-Emulator/Programs/test/printf.c
+  COMMAND = cd /Users/mark.verbeek/CLionProjects/RISC-V-Game-Ready-Emulator/Programs/test/cmake-build-debug && /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/cc -O0 -S /Users/mark.verbeek/CLionProjects/RISC-V-Game-Ready-Emulator/Programs/test/printf.c -o /Users/mark.verbeek/CLionProjects/RISC-V-Game-Ready-Emulator/Programs/test/cmake-build-debug/printf.s
+  DESC = Generating assembly for printf.c
+  restat = 1
+
+
+#############################################
+# Phony custom command for CMakeFiles/asm_util
+
+build CMakeFiles/asm_util | ${cmake_ninja_workdir}CMakeFiles/asm_util: phony util.s
+
+
+#############################################
+# Custom command for util.s
+
+build util.s | ${cmake_ninja_workdir}util.s: CUSTOM_COMMAND /Users/mark.verbeek/CLionProjects/RISC-V-Game-Ready-Emulator/Programs/test/util.c
+  COMMAND = cd /Users/mark.verbeek/CLionProjects/RISC-V-Game-Ready-Emulator/Programs/test/cmake-build-debug && /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/cc -O0 -S /Users/mark.verbeek/CLionProjects/RISC-V-Game-Ready-Emulator/Programs/test/util.c -o /Users/mark.verbeek/CLionProjects/RISC-V-Game-Ready-Emulator/Programs/test/cmake-build-debug/util.s
+  DESC = Generating assembly for util.c
+  restat = 1
+
+
+#############################################
+# Phony custom command for CMakeFiles/asm_framebuffer_test
+
+build CMakeFiles/asm_framebuffer_test | ${cmake_ninja_workdir}CMakeFiles/asm_framebuffer_test: phony framebuffer_test.s
+
+
+#############################################
+# Custom command for framebuffer_test.s
+
+build framebuffer_test.s | ${cmake_ninja_workdir}framebuffer_test.s: CUSTOM_COMMAND /Users/mark.verbeek/CLionProjects/RISC-V-Game-Ready-Emulator/Programs/test/framebuffer_test.c
+  COMMAND = cd /Users/mark.verbeek/CLionProjects/RISC-V-Game-Ready-Emulator/Programs/test/cmake-build-debug && /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/cc -O0 -S /Users/mark.verbeek/CLionProjects/RISC-V-Game-Ready-Emulator/Programs/test/framebuffer_test.c -o /Users/mark.verbeek/CLionProjects/RISC-V-Game-Ready-Emulator/Programs/test/cmake-build-debug/framebuffer_test.s
+  DESC = Generating assembly for framebuffer_test.c
+  restat = 1
 
 # =============================================================================
 # Target aliases.

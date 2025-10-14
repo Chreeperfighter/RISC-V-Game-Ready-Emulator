@@ -1,7 +1,6 @@
 from isa import Opcode, Funct7, Funct3, Syscall
 from utils import to_signed, sign_extend
 from memory import get_reg_name
-from PIL import Image
 
 class Instruction:
     def __init__(self, data):
@@ -169,20 +168,9 @@ class IInstruction(Instruction):
                 elif syscall_id == Syscall.PRINT_CHAR:
                     data = cpu.reg["a0"] & 0xFF
                     print(chr(data), end="")
-                elif syscall_id == Syscall.PRINT_FB:
-                    fb_address = cpu.reg["a0"]
-                    height = cpu.reg["a1"]
-                    width = cpu.reg["a2"]
-
-                    data = cpu.mcu.read(fb_address, height * width * 4, read_bytes=True)
-
-                    img = Image.frombytes("RGBA", (width, height), bytes(data))
-
-                    img.show()
-            # TODO: Implement ts
-            # EBREAK
             elif func12 == 0x1:
-                ...
+                if cpu.on_break:
+                    cpu.on_break()
 
     def __str__(self):
         return (f"IInstruction(opcode={hex(self.opcode)}, rd={get_reg_name(self.rd)}[{hex(self.rd)}], "

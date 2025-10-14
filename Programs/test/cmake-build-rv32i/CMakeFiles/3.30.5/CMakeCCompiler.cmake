@@ -49,7 +49,7 @@ set(CMAKE_C_LINKER_PREFERENCE 10)
 set(CMAKE_C_LINKER_DEPFILE_SUPPORTED FALSE)
 
 # Save compiler ABI information.
-set(CMAKE_C_SIZEOF_DATA_PTR "8")
+set(CMAKE_C_SIZEOF_DATA_PTR "4")
 set(CMAKE_C_COMPILER_ABI "ELF")
 set(CMAKE_C_BYTE_ORDER "LITTLE_ENDIAN")
 set(CMAKE_C_LIBRARY_ARCHITECTURE "")
@@ -77,5 +77,5 @@ endif()
 
 set(CMAKE_C_IMPLICIT_INCLUDE_DIRECTORIES "/usr/local/Cellar/riscv-gnu-toolchain/main/lib/gcc/riscv64-unknown-elf/14.2.0/include;/usr/local/Cellar/riscv-gnu-toolchain/main/lib/gcc/riscv64-unknown-elf/14.2.0/include-fixed;/usr/local/Cellar/riscv-gnu-toolchain/main/riscv64-unknown-elf/include")
 set(CMAKE_C_IMPLICIT_LINK_LIBRARIES "gcc;c;gloss;gcc")
-set(CMAKE_C_IMPLICIT_LINK_DIRECTORIES "/usr/local/Cellar/riscv-gnu-toolchain/main/lib/gcc/riscv64-unknown-elf/14.2.0;/usr/local/Cellar/riscv-gnu-toolchain/main/riscv64-unknown-elf/lib")
+set(CMAKE_C_IMPLICIT_LINK_DIRECTORIES "/usr/local/Cellar/riscv-gnu-toolchain/main/lib/gcc/riscv64-unknown-elf/14.2.0/rv32i/ilp32;/usr/local/Cellar/riscv-gnu-toolchain/main/riscv64-unknown-elf/lib/rv32i/ilp32;/usr/local/Cellar/riscv-gnu-toolchain/main/lib/gcc/riscv64-unknown-elf/14.2.0;/usr/local/Cellar/riscv-gnu-toolchain/main/riscv64-unknown-elf/lib")
 set(CMAKE_C_IMPLICIT_LINK_FRAMEWORK_DIRECTORIES "")

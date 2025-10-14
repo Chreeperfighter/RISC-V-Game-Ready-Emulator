@@ -1,31 +1,41 @@
 MEMORY {
-	ROM (rx) : ORIGIN = 0x00000000, LENGTH = 128K
-	RAM (rwx) : ORIGIN = 0x80000000, LENGTH = 512K
+    RAM (rwx) : ORIGIN = 0x00000000, LENGTH = 512K
+    VRAM (rw) : ORIGIN = 0x10000000, LENGTH = 512K
 }
 
 SECTIONS {
-	. = 0x00000000;
-	.text : { 
-		*(.text) 
-	} > ROM
-	
-	.rodata : {
-		*(.rodata*)
-	} > ROM
+    . = 0x00000000;
+    
+    .text : {
+        PROVIDE(_text_start = .);
+        *(.text*)
+        *(.rodata*)
+        PROVIDE(_etext = .);
+    } > RAM
 
-	.data : {
-		__data_start = .;
-        	*(.data*)
-        	__data_end = .;
-	} > RAM AT > ROM
+    .data : {
+        PROVIDE(__data_start = .);
+        *(.data*)
+        *(.sdata*)
+        . = ALIGN(4);
+        PROVIDE(__data_end = .);
+        PROVIDE(__global_pointer$ = __data_start + 0x800);
+    } > RAM
 
-	.bss : {
-        	__bss_start = .;
-        	*(.bss*)
-        	*(COMMON)
-        	__bss_end = .;
-	} > RAM
-
-	__global_pointer$ = ORIGIN(RAM);         /* global pointer base */
-	_end = ORIGIN(RAM) + LENGTH(RAM);       /* end of RAM / heap start */
+    .bss (NOLOAD) : {
+        . = ALIGN(4);
+        PROVIDE(__bss_start = .);
+        *(.bss*)
+        *(.sbss*)
+        *(COMMON)
+        . = ALIGN(4);
+        PROVIDE(__bss_end = .);
+    } > RAM
+    
+    PROVIDE(_end = ORIGIN(RAM) + LENGTH(RAM));
+    
+    PROVIDE(__vram_start = ORIGIN(VRAM));
+    PROVIDE(__vram_end = ORIGIN(VRAM) + LENGTH(VRAM));
+    
+    /DISCARD/ : { *(.eh_frame) *(.eh_frame*) }
 }

@@ -1,0 +1,6 @@
+/Users/mark.verbeek/CLionProjects/RISC-V-Game-Ready-Emulator/Programs/test/build/CMakeFiles/test.dir
+/Users/mark.verbeek/CLionProjects/RISC-V-Game-Ready-Emulator/Programs/test/build/CMakeFiles/asm_main.dir
+/Users/mark.verbeek/CLionProjects/RISC-V-Game-Ready-Emulator/Programs/test/build/CMakeFiles/asm_printf.dir
+/Users/mark.verbeek/CLionProjects/RISC-V-Game-Ready-Emulator/Programs/test/build/CMakeFiles/asm_util.dir
+/Users/mark.verbeek/CLionProjects/RISC-V-Game-Ready-Emulator/Programs/test/build/CMakeFiles/edit_cache.dir
+/Users/mark.verbeek/CLionProjects/RISC-V-Game-Ready-Emulator/Programs/test/build/CMakeFiles/rebuild_cache.dir
