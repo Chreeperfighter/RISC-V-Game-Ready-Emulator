@@ -5,6 +5,7 @@
 #include "instruction_test.h"
 #include <stdint.h>
 #include <math.h>
+#include <stdio.h>
 
 int PRINT_OUTPUT;
 

@@ -1,0 +1,28 @@
+
+/Users/mark.verbeek/CLionProjects/RISC-V-Game-Ready-Emulator/Programs/test/cmake-build-rv32i-release/test.elf:     file format elf32-littleriscv
+
+
+Disassembly of section .text:
+
+00000000 <_start>:
+   0:	00080117          	auipc	sp,0x80
+   4:	00010113          	mv	sp,sp
+   8:	00001197          	auipc	gp,0x1
+   c:	83c18193          	addi	gp,gp,-1988 # 844 <__global_pointer$>
+  10:	04400293          	li	t0,68
+  14:	04400313          	li	t1,68
+  18:	00628863          	beq	t0,t1,28 <_start+0x28>
+  1c:	0002a023          	sw	zero,0(t0)
+  20:	00428293          	addi	t0,t0,4
+  24:	ff5ff06f          	j	18 <_start+0x18>
+  28:	014000ef          	jal	3c <main>
+  2c:	00a00893          	li	a7,10
+  30:	00000073          	ecall
+
+00000034 <add>:
+  34:	00b50533          	add	a0,a0,a1
+  38:	00008067          	ret
+
+0000003c <main>:
+  3c:	00000513          	li	a0,0
+  40:	00008067          	ret

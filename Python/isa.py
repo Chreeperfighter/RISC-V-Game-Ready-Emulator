@@ -91,16 +91,30 @@ class Funct7(IntEnum):
     SRA =   0b0100000
 
 class Syscall(IntEnum):
-    PRINT_INT = 1
-    # a0 -> number to print
-
-    PRINT_CHAR = 2
+    PUT_CHAR = 1
     # a0 -> char to print
-
-    PRINT_FB = 3
-    # a0 -> framebuffer address
-    # a1 -> Height
-    # a2 -> Width
-
+    GET_CHAR = 2
+    # a0 <- char
+    READ = 63
+    # a0 -> fd (0 = stdin)
+    # a1 -> buffer address
+    # a2 -> max length
+    # a0 <- bytes read
+    WRITE = 64
+    # a0 -> fd (0 = stdin)
+    # a1 -> buffer address
+    # a2 -> number of bytes
+    # a0 <- bytes written
+    GET_SCREEN_WIDTH = 200
+    # a0 <- screen width
+    GET_SCREEN_HEIGHT = 201
+    # a0 <- screen height
+    DISPLAY_ENABLE = 202
+    # a0 -> display enable
+    DISPLAY_STATUS = 203
+    # a0 <- display status
+    GET_CYCLES = 100
+    # a0 <- lower 32 bit
+    # a1 <- upper 32 bit
     EXIT =  10
     # a0 -> exit code

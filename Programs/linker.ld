@@ -8,9 +8,13 @@ SECTIONS {
     
     .text : {
         PROVIDE(_text_start = .);
-        *(.text*)
-        *(.rodata*)
+        KEEP(*(.text))   /* Keep _start even with --gc-sections */
+        *(.text*)               /* All other code */
         PROVIDE(_etext = .);
+    } > RAM
+    
+    .rodata : {
+        *(.rodata*)
     } > RAM
 
     .data : {

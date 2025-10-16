@@ -1,0 +1,56 @@
+
+/Users/mark.verbeek/CLionProjects/RISC-V-Game-Ready-Emulator/Programs/test/cmake-build-rv32i-debug/test.elf:     file format elf32-littleriscv
+
+
+Disassembly of section .text:
+
+00000000 <_start>:
+   0:	00080117          	auipc	sp,0x80
+   4:	00010113          	mv	sp,sp
+   8:	00001197          	auipc	gp,0x1
+   c:	8ac18193          	addi	gp,gp,-1876 # 8b4 <__global_pointer$>
+  10:	0b400293          	li	t0,180
+  14:	0b400313          	li	t1,180
+  18:	00628863          	beq	t0,t1,28 <_start+0x28>
+  1c:	0002a023          	sw	zero,0(t0)
+  20:	00428293          	addi	t0,t0,4
+  24:	ff5ff06f          	j	18 <_start+0x18>
+  28:	044000ef          	jal	6c <main>
+  2c:	00a00893          	li	a7,10
+  30:	00000073          	ecall
+
+00000034 <add>:
+  34:	fe010113          	addi	sp,sp,-32 # 7ffe0 <__global_pointer$+0x7f72c>
+  38:	00112e23          	sw	ra,28(sp)
+  3c:	00812c23          	sw	s0,24(sp)
+  40:	02010413          	addi	s0,sp,32
+  44:	fea42623          	sw	a0,-20(s0)
+  48:	feb42423          	sw	a1,-24(s0)
+  4c:	fec42703          	lw	a4,-20(s0)
+  50:	fe842783          	lw	a5,-24(s0)
+  54:	00f707b3          	add	a5,a4,a5
+  58:	00078513          	mv	a0,a5
+  5c:	01c12083          	lw	ra,28(sp)
+  60:	01812403          	lw	s0,24(sp)
+  64:	02010113          	addi	sp,sp,32
+  68:	00008067          	ret
+
+0000006c <main>:
+  6c:	fe010113          	addi	sp,sp,-32
+  70:	00112e23          	sw	ra,28(sp)
+  74:	00812c23          	sw	s0,24(sp)
+  78:	02010413          	addi	s0,sp,32
+  7c:	01400793          	li	a5,20
+  80:	fef42623          	sw	a5,-20(s0)
+  84:	03200793          	li	a5,50
+  88:	fef42423          	sw	a5,-24(s0)
+  8c:	fe842583          	lw	a1,-24(s0)
+  90:	fec42503          	lw	a0,-20(s0)
+  94:	fa1ff0ef          	jal	34 <add>
+  98:	fea42223          	sw	a0,-28(s0)
+  9c:	00000793          	li	a5,0
+  a0:	00078513          	mv	a0,a5
+  a4:	01c12083          	lw	ra,28(sp)
+  a8:	01812403          	lw	s0,24(sp)
+  ac:	02010113          	addi	sp,sp,32
+  b0:	00008067          	ret

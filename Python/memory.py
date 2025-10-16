@@ -59,7 +59,12 @@ class REG:
             return 0
         return self._values[index] & 0xFFFFFFFF
 
-    def __setitem__(self, index: int, value):
+    def __setitem__(self, index: Union[int, str], value):
+        if isinstance(index, str):
+            try:
+                index = reg_map[index]
+            except KeyError:
+                raise IndexError(f"{index} is not a valid register.")
         if not 0 <= index < 32:
             raise IndexError(f"Register index: {index} out of range")
         if index == 0:
@@ -67,11 +72,14 @@ class REG:
         self._values[index] = value & 0xFFFFFFFF
 
     def dump(self):
-        string = []
+        lines = []
+        max_name_len = max(len(get_reg_name(i)) for i in range(32))
+        lines.append("=== RV32I Register Dump ===")
         for i, value in enumerate(self._values):
             name = get_reg_name(i)
-            string.append(f"{name} [{hex(i)}]: {hex(value)}[{value}]")
-        return "\n".join(string)
+            lines.append(f"{name:<{max_name_len}} (x{i:02}) : 0x{value:08X}  ({value:>11})")
+        return "\n".join(lines)
+
 
 class PC:
     def __init__(self):

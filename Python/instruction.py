@@ -1,6 +1,7 @@
 from isa import Opcode, Funct7, Funct3, Syscall
 from utils import to_signed, sign_extend
 from memory import get_reg_name
+from params import Display
 
 class Instruction:
     def __init__(self, data):
@@ -158,19 +159,67 @@ class IInstruction(Instruction):
             # ECALL
             if func12 == 0x0:
                 syscall_id = cpu.reg["a7"]
-                if syscall_id == Syscall.EXIT:
+                if syscall_id == Syscall.PUT_CHAR:
+                    char = cpu.reg["a0"] & 0xFF
+                    print(chr(char), end="", flush=True)
+                elif syscall_id == Syscall.GET_CHAR:
+                    char = input("> ")[0]
+                    cpu.reg["a0"] = ord(char)
+                elif syscall_id == Syscall.READ:
+                    fd = cpu.reg["a0"]
+                    buffer_address = cpu.reg["a1"]
+                    max_length = cpu.reg["a2"]
+
+                    if fd == 0x0:  # stdin
+                        line = input()
+                        line_with_newline = line + '\n'  # Add newline that input() strips
+
+                        count = 0
+                        for c in line_with_newline:
+                            if count >= max_length:  # >= not >, and check BEFORE writing
+                                break
+                            cpu.mcu.write(buffer_address + count, ord(c), 1)
+                            count += 1
+
+                        cpu.reg["a0"] = count  # Return bytes read
+                    else:
+                        cpu.reg["a0"] = -1  # Error for unsupported fd
+                elif syscall_id == Syscall.WRITE:
+                    fd = cpu.reg["a0"]
+                    buffer_address = cpu.reg["a1"]
+                    num_bytes = cpu.reg["a2"]
+
+                    if fd == 0x1 or fd == 0x2:  # stdout or stderr
+                        data = cpu.mcu.read(buffer_address, num_bytes, True)
+                        print(data.decode('ascii'), end="", flush=True)  # No newline!
+                        cpu.reg["a0"] = num_bytes  # Return bytes written
+                    else:
+                        cpu.reg["a0"] = -1  # Error for unsupported fd
+                elif syscall_id == Syscall.GET_SCREEN_WIDTH:
+                    cpu.reg["a0"] = Display.WIDTH & 0xFFFFFFFF
+                elif syscall_id == Syscall.GET_SCREEN_HEIGHT:
+                    cpu.reg["a0"] = Display.HEIGHT & 0xFFFFFFFF
+                elif syscall_id == Syscall.DISPLAY_ENABLE:
+                    Display.ENABLED = cpu.reg["a0"]
+                    # Status: bit 0 = enabled, bit 1 = ready (always ready)
+                    if Display.ENABLED:
+                        Display.STATUS = 0x3  # Both enabled and ready
+                        print(f"Display ENABLED: 0x{Display.ENABLED:x}")
+                    else:
+                        Display.STATUS = 0x2  # Ready but not enabled
+                        print("Display DISABLED")
+                elif syscall_id == Syscall.DISPLAY_STATUS:
+                    cpu.reg["a0"] = Display.STATUS & 0xFFFFFFFF
+                elif syscall_id == Syscall.GET_CYCLES:
+                    cpu.reg["a0"] = cpu.cycles & 0xFFFFFFFF
+                    cpu.reg["a1"] = (cpu.cycles >> 32) & 0xFFFFFFFF
+                elif syscall_id == Syscall.EXIT:
                     exit_code = cpu.reg["a0"]
                     print(f"Process finished with exit code {to_signed(exit_code)}")
                     cpu.running = False
-                elif syscall_id == Syscall.PRINT_INT:
-                    data = cpu.reg["a0"]
-                    print(data, end="")
-                elif syscall_id == Syscall.PRINT_CHAR:
-                    data = cpu.reg["a0"] & 0xFF
-                    print(chr(data), end="")
             elif func12 == 0x1:
                 if cpu.on_break:
-                    cpu.on_break()
+                    cpu.on_break(cpu)
 
     def __str__(self):
         return (f"IInstruction(opcode={hex(self.opcode)}, rd={get_reg_name(self.rd)}[{hex(self.rd)}], "

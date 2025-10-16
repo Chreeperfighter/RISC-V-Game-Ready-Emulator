@@ -5,26 +5,23 @@
 #include "framebuffer_test.h"
 #include <stdint.h>
 #include "util.h"
+#include <stdio.h>
 
 #define VRAM_BASE 0x10000000
-#define DISPLAY_CTRL_BASE 0x20000000
-
-// Display control registers (memory-mapped)
-#define DISPLAY_WIDTH   ((volatile uint32_t*)(DISPLAY_CTRL_BASE + 0x00))
-#define DISPLAY_HEIGHT  ((volatile uint32_t*)(DISPLAY_CTRL_BASE + 0x04))
-#define DISPLAY_ENABLE  ((volatile uint32_t*)(DISPLAY_CTRL_BASE + 0x08))
-#define DISPLAY_STATUS  ((volatile uint32_t*)(DISPLAY_CTRL_BASE + 0x0C))
 
 volatile uint32_t *framebuffer = (volatile uint32_t *)VRAM_BASE;
 
+int display_width;
+int display_height;
+
 void set_pixel(const int x, const int y, const uint32_t color) {
-    uint32_t width = *DISPLAY_WIDTH;
+    uint32_t width = display_width;
     framebuffer[y * width + x] = color;
 }
 
 void clear_screen(const uint32_t color) {
-    uint32_t width = *DISPLAY_WIDTH;
-    uint32_t height = *DISPLAY_HEIGHT;
+    uint32_t width = display_width;
+    uint32_t height = display_height;
     uint32_t total = width * height;
 
     for (uint32_t i = 0; i < total; i++) {
@@ -118,20 +115,27 @@ uint32_t hsv_to_rgb(float h, float s, float v) {
 void init_display(void) {
     printf("Initializing display...\n");
 
+    uint32_t status = get_display_status();
+    if (!(status & 0x2)) {
+        printf("Warning: Display not ready.\n");
+        return;
+    }
+
+    display_width = (int)get_display_width();
+    display_height = (int)get_display_height();
+
     // Query display capabilities
-    uint32_t width = *DISPLAY_WIDTH;
-    uint32_t height = *DISPLAY_HEIGHT;
+    uint32_t width = display_width;
+    uint32_t height = display_height;
 
-    printf("Display resolution: %dx%d\n", width, height);
+    printf("Display resolution: %lux%lu\n", width, height);
 
-    // Enable display
-    *DISPLAY_ENABLE = 1;
-
-    // Check status
-    uint32_t status = *DISPLAY_STATUS;
+    set_display_enable(0x1);
+    status = get_display_status();
     if (status & 0x1) {
         printf("Display enabled successfully\n");
-    } else {
+    }
+    else {
         printf("Warning: Display not ready\n");
     }
 }
@@ -142,8 +146,8 @@ void run_frame_buffer_test(void) {
 
     printf("Running framebuffer test...\n");
 
-    uint32_t width = *DISPLAY_WIDTH;
-    uint32_t height = *DISPLAY_HEIGHT;
+    uint32_t width = display_width;
+    uint32_t height = display_height;
 
     uint32_t section_height = height / 4;
 
@@ -194,8 +198,8 @@ void draw_cool_pattern(void) {
 
     printf("Rendering cool pattern...\n");
 
-    uint32_t width = *DISPLAY_WIDTH;
-    uint32_t height = *DISPLAY_HEIGHT;
+    uint32_t width = display_width;
+    uint32_t height = display_height;
 
     int cx = width / 2;
     int cy = height / 2;

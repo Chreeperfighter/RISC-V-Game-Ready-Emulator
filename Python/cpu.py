@@ -1,17 +1,26 @@
+from elf_loader import load_elf
 from memory import REG, PC
 from mcu import MCU
 from instruction import Instruction, IInstruction, BInstruction, RInstruction, JInstruction, SInstruction, UInstruction
 from isa import Opcode
-from flags import PRINT_INSTRUCTION, PRINT_PC, DEBUG_MODE, DUMP_REG
 
 class CPU:
-    def __init__(self, rom_data: bytes):
+    def __init__(self):
         self.reg = REG()
         self._pc = PC()
-        self.mcu = MCU(rom_data)
+        self.mcu = MCU()
         self.update_pc = None
         self.running = True
         self.on_break = None
+        self.step_once = False
+        self.cycles = 0
+        self.breakpoints = []
+
+    def add_breakpoint(self, addr):
+        self.breakpoints.append(addr)
+
+    def load_elf(self, filename):
+        return load_elf(filename, self)
 
     @property
     def pc(self):
@@ -25,18 +34,17 @@ class CPU:
         self.update_pc = True
         data = self.fetch()
         instruction: Instruction = self.decode(data)
-        if DEBUG_MODE:
-            print("\033[36mDEBUG: ", end="")
-            if PRINT_PC:
-                print(f"{hex(self.pc)}: ", end="")
-            if PRINT_INSTRUCTION:
-                print(instruction, end="")
-            if DUMP_REG:
-                print(f"\n{self.reg.dump()}", end="")
-            print("\033[0m")
+        if self.step_once:
+            self.step_once = False
+            if self.on_break:
+                self.on_break(self)
+        elif self.pc in self.breakpoints:
+            if self.on_break:
+                self.on_break(self)
         instruction.execute(self)
         if self.update_pc:
             self.pc = self.pc + 4
+        self.cycles += 1
 
     def fetch(self):
         return self.mcu.read(self.pc, 4)
