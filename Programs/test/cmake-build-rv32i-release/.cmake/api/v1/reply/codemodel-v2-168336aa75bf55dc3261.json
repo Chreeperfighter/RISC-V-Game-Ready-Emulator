@@ -6,7 +6,7 @@
 			[
 				{
 					"build" : ".",
-					"jsonFile" : "directory-.-Debug-f5ebdc15457944623624.json",
+					"jsonFile" : "directory-.-Release-f5ebdc15457944623624.json",
 					"minimumCMakeVersion" : 
 					{
 						"string" : "3.30"
@@ -16,13 +16,11 @@
 					"targetIndexes" : 
 					[
 						0,
-						1,
-						2,
-						3
+						1
 					]
 				}
 			],
-			"name" : "Debug",
+			"name" : "Release",
 			"projects" : 
 			[
 				{
@@ -34,9 +32,7 @@
 					"targetIndexes" : 
 					[
 						0,
-						1,
-						2,
-						3
+						1
 					]
 				}
 			],
@@ -44,29 +40,15 @@
 			[
 				{
 					"directoryIndex" : 0,
-					"id" : "asm_framebuffer_test::@6890427a1f51a3e7e1df",
-					"jsonFile" : "target-asm_framebuffer_test-Debug-fb6ab69e1118d25ac0f9.json",
-					"name" : "asm_framebuffer_test",
-					"projectIndex" : 0
-				},
-				{
-					"directoryIndex" : 0,
 					"id" : "asm_main::@6890427a1f51a3e7e1df",
-					"jsonFile" : "target-asm_main-Debug-c662a4df4c54bcafd94f.json",
+					"jsonFile" : "target-asm_main-Release-2bfe532f7297ce1c088d.json",
 					"name" : "asm_main",
 					"projectIndex" : 0
 				},
 				{
 					"directoryIndex" : 0,
-					"id" : "asm_util::@6890427a1f51a3e7e1df",
-					"jsonFile" : "target-asm_util-Debug-bf9c9fde5a0311214d25.json",
-					"name" : "asm_util",
-					"projectIndex" : 0
-				},
-				{
-					"directoryIndex" : 0,
 					"id" : "test::@6890427a1f51a3e7e1df",
-					"jsonFile" : "target-test-Debug-8eb804acc8ca836d7604.json",
+					"jsonFile" : "target-test-Release-a476ce20b92334d835df.json",
 					"name" : "test",
 					"projectIndex" : 0
 				}
@@ -76,7 +58,7 @@
 	"kind" : "codemodel",
 	"paths" : 
 	{
-		"build" : "/Users/mark.verbeek/CLionProjects/RISC-V-Game-Ready-Emulator/Programs/test/cmake-build-debug",
+		"build" : "/Users/mark.verbeek/CLionProjects/RISC-V-Game-Ready-Emulator/Programs/test/cmake-build-rv32i-release",
 		"source" : "/Users/mark.verbeek/CLionProjects/RISC-V-Game-Ready-Emulator/Programs/test"
 	},
 	"version" : 

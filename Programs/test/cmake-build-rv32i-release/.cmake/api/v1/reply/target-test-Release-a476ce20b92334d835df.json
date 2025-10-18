@@ -42,7 +42,7 @@
 			"compileCommandFragments" : 
 			[
 				{
-					"fragment" : "-g -arch arm64 -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.0.sdk -mmacosx-version-min=15.6"
+					"fragment" : "-march=rv32i -mabi=ilp32 -O3"
 				}
 			],
 			"language" : "ASM",
@@ -55,7 +55,7 @@
 			"compileCommandFragments" : 
 			[
 				{
-					"fragment" : "-g -std=gnu11 -arch arm64 -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.0.sdk -mmacosx-version-min=15.6 -fcolor-diagnostics"
+					"fragment" : "-march=rv32i -mabi=ilp32 -O3 -std=gnu11 -fdiagnostics-color=always"
 				}
 			],
 			"language" : "C",
@@ -69,9 +69,7 @@
 			},
 			"sourceIndexes" : 
 			[
-				1,
-				2,
-				3
+				1
 			]
 		}
 	],
@@ -80,14 +78,6 @@
 		{
 			"backtrace" : 2,
 			"id" : "asm_main::@6890427a1f51a3e7e1df"
-		},
-		{
-			"backtrace" : 2,
-			"id" : "asm_util::@6890427a1f51a3e7e1df"
-		},
-		{
-			"backtrace" : 2,
-			"id" : "asm_framebuffer_test::@6890427a1f51a3e7e1df"
 		}
 	],
 	"id" : "test::@6890427a1f51a3e7e1df",
@@ -96,11 +86,11 @@
 		"commandFragments" : 
 		[
 			{
-				"fragment" : "-g",
+				"fragment" : "-march=rv32i -mabi=ilp32 -O3",
 				"role" : "flags"
 			},
 			{
-				"fragment" : "",
+				"fragment" : "-T/Users/mark.verbeek/CLionProjects/RISC-V-Game-Ready-Emulator/Programs/test/../linker.ld -nostartfiles -march=rv32i -mabi=ilp32",
 				"role" : "flags"
 			}
 		],
@@ -126,9 +116,7 @@
 			"name" : "Source Files",
 			"sourceIndexes" : 
 			[
-				1,
-				2,
-				3
+				1
 			]
 		}
 	],
@@ -144,18 +132,6 @@
 			"backtrace" : 1,
 			"compileGroupIndex" : 1,
 			"path" : "main.c",
-			"sourceGroupIndex" : 1
-		},
-		{
-			"backtrace" : 1,
-			"compileGroupIndex" : 1,
-			"path" : "util.c",
-			"sourceGroupIndex" : 1
-		},
-		{
-			"backtrace" : 1,
-			"compileGroupIndex" : 1,
-			"path" : "framebuffer_test.c",
 			"sourceGroupIndex" : 1
 		}
 	],

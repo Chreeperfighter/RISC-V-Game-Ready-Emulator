@@ -15,7 +15,8 @@
 					"source" : ".",
 					"targetIndexes" : 
 					[
-						0
+						0,
+						1
 					]
 				}
 			],
@@ -27,10 +28,11 @@
 					[
 						0
 					],
-					"name" : "Cpp",
+					"name" : "test",
 					"targetIndexes" : 
 					[
-						0
+						0,
+						1
 					]
 				}
 			],
@@ -38,9 +40,16 @@
 			[
 				{
 					"directoryIndex" : 0,
-					"id" : "Cpp::@6890427a1f51a3e7e1df",
-					"jsonFile" : "target-Cpp-Debug-15e523e3bb4b13c72d11.json",
-					"name" : "Cpp",
+					"id" : "asm_main::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-asm_main-Debug-c662a4df4c54bcafd94f.json",
+					"name" : "asm_main",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "test::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-test-Debug-22b4f47917c670dec927.json",
+					"name" : "test",
 					"projectIndex" : 0
 				}
 			]
@@ -49,8 +58,8 @@
 	"kind" : "codemodel",
 	"paths" : 
 	{
-		"build" : "/Users/mark.verbeek/CLionProjects/RISC-V-Game-Ready-Emulator/Cpp/cmake-build-debug",
-		"source" : "/Users/mark.verbeek/CLionProjects/RISC-V-Game-Ready-Emulator/Cpp"
+		"build" : "/Users/mark.verbeek/CLionProjects/RISC-V-Game-Ready-Emulator/Programs/test/cmake-build-debug",
+		"source" : "/Users/mark.verbeek/CLionProjects/RISC-V-Game-Ready-Emulator/Programs/test"
 	},
 	"version" : 
 	{

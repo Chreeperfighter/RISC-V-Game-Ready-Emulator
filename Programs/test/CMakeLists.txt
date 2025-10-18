@@ -27,7 +27,7 @@ foreach(src ${SOURCES})
 
         add_custom_command(
                 OUTPUT ${asm_file}
-                COMMAND ${CMAKE_C_COMPILER} -O0 -S ${CMAKE_SOURCE_DIR}/${src} -o ${asm_file}
+                COMMAND ${CMAKE_C_COMPILER} -O2 -g -fverbose-asm -S ${CMAKE_SOURCE_DIR}/${src} -o ${asm_file}
                 DEPENDS ${CMAKE_SOURCE_DIR}/${src}
                 COMMENT "Generating assembly for ${src}"
         )

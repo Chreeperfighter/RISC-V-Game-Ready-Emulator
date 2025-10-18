@@ -118,7 +118,7 @@ build CMakeFiles/asm_main | ${cmake_ninja_workdir}CMakeFiles/asm_main: phony mai
 # Custom command for main.s
 
 build main.s | ${cmake_ninja_workdir}main.s: CUSTOM_COMMAND /Users/mark.verbeek/CLionProjects/RISC-V-Game-Ready-Emulator/Programs/test/main.c
-  COMMAND = cd /Users/mark.verbeek/CLionProjects/RISC-V-Game-Ready-Emulator/Programs/test/cmake-build-rv32i-debug && /usr/local/Cellar/riscv-gnu-toolchain/main/bin/riscv64-unknown-elf-gcc -O0 -S /Users/mark.verbeek/CLionProjects/RISC-V-Game-Ready-Emulator/Programs/test/main.c -o /Users/mark.verbeek/CLionProjects/RISC-V-Game-Ready-Emulator/Programs/test/cmake-build-rv32i-debug/main.s
+  COMMAND = cd /Users/mark.verbeek/CLionProjects/RISC-V-Game-Ready-Emulator/Programs/test/cmake-build-rv32i-debug && /usr/local/Cellar/riscv-gnu-toolchain/main/bin/riscv64-unknown-elf-gcc -O2 -g -fverbose-asm -S /Users/mark.verbeek/CLionProjects/RISC-V-Game-Ready-Emulator/Programs/test/main.c -o /Users/mark.verbeek/CLionProjects/RISC-V-Game-Ready-Emulator/Programs/test/cmake-build-rv32i-debug/main.s
   DESC = Generating assembly for main.c
   restat = 1
 

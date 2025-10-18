@@ -13,6 +13,7 @@ class CPU:
         self.running = True
         self.on_break = None
         self.step_once = False
+        self.debug = False
         self.cycles = 0
         self.breakpoints = []
 
@@ -34,13 +35,14 @@ class CPU:
         self.update_pc = True
         data = self.fetch()
         instruction: Instruction = self.decode(data)
-        if self.step_once:
-            self.step_once = False
-            if self.on_break:
-                self.on_break(self)
-        elif self.pc in self.breakpoints:
-            if self.on_break:
-                self.on_break(self)
+        if self.debug:
+            if self.step_once:
+                self.step_once = False
+                if self.on_break:
+                    self.on_break(self)
+            elif self.pc in self.breakpoints:
+                if self.on_break:
+                    self.on_break(self)
         instruction.execute(self)
         if self.update_pc:
             self.pc = self.pc + 4

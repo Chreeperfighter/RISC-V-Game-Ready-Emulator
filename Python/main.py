@@ -22,7 +22,7 @@ def print_framebuffer(data: bytes, width: int, height: int):
 def main():
     # Configuration
     elf_path = Path(
-        "/Users/mark.verbeek/CLionProjects/RISC-V-Game-Ready-Emulator/Programs/test/cmake-build-rv32i-release/test.elf")
+        "/Users/mark.verbeek/CLionProjects/RISC-V-Game-Ready-Emulator/Programs/test/cmake-build-rv32i-debug/test.elf")
 
     if not elf_path.exists():
         print(f"Error: ELF file not found: {elf_path}")
@@ -31,7 +31,7 @@ def main():
     # Initialize CPU and load program
     print(f"Loading {elf_path.name}...")
     cpu = CPU()
-    debug_info = cpu.load_elf(str(elf_path))
+    debug_info, debug = cpu.load_elf(str(elf_path))
 
     # Show debug info summary
     print(f"Loaded {len(debug_info['functions'])} functions")
@@ -43,7 +43,16 @@ def main():
     cpu.on_break = debugger.on_breakpoint
 
     # Optional: Set initial breakpoints
-    debugger.set_breakpoint_at_line(cpu, "main.c", 14)
+    cpu.debug = debug
+    if debug:
+        with open("debug_config.txt", "r") as f:
+            commands = f.readlines()
+        if commands:
+            for command in commands:
+                print(f"debugConfig> {command}")
+                debugger.parse(command, cpu)
+        else:
+            cpu.breakpoints.append(cpu.pc)
 
     # Run program
     print("Starting execution...")
