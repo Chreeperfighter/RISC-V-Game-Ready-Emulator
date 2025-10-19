@@ -35,6 +35,7 @@ class CPU:
         self.update_pc = True
         data = self.fetch()
         instruction: Instruction = self.decode(data)
+        print(hex(self.pc), self.reg._values)
         if self.debug:
             if self.step_once:
                 self.step_once = False

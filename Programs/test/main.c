@@ -3,7 +3,7 @@
 volatile uint64_t result = 0; // prevent optimization
 
 int main(void) {
-    const uint64_t iterations = 1000000000ULL; // 1 billion
+    const uint64_t iterations = 10000000ULL; // 1 billion
     uint64_t a = 0x123456789ABCDEF0ULL;
     uint64_t b = 0x0FEDCBA987654321ULL;
     uint64_t c = 0xCAFEBABEDEADBEEFULL;

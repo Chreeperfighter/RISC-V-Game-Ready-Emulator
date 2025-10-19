@@ -9,6 +9,7 @@
 #include <random>
 
 #include "ISA.hpp"
+#include "Registers.hpp"
 
 struct DecodedInstruction {
   	Opcode opcode;
@@ -64,7 +65,7 @@ private:
 
     std::mt19937 rng;
     uint32_t pc;
-    uint32_t regs[32];
+    Registers regs;
 	bool update_pc;
 	std::vector<uint8_t> ram;
 };

@@ -34,8 +34,8 @@ Disassembly of section .text:
   60:	05a12a23          	sw	s10,84(sp)
   64:	05b12823          	sw	s11,80(sp)
   68:	08010413          	addi	s0,sp,128
-  6c:	3b9ad737          	lui	a4,0x3b9ad
-  70:	a0070713          	addi	a4,a4,-1536 # 3b9aca00 <_end+0x3b92ca00>
+  6c:	05f5e737          	lui	a4,0x5f5e
+  70:	10070713          	addi	a4,a4,256 # 5f5e100 <_end+0x5ede100>
   74:	00000793          	li	a5,0
   78:	fae42423          	sw	a4,-88(s0)
   7c:	faf42623          	sw	a5,-84(s0)

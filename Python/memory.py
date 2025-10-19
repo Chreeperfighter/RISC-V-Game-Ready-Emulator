@@ -45,7 +45,8 @@ class REG:
     def __init__(self):
         self._values: list[int] = [0]
         for _ in range(31):
-            self._values.append(random.getrandbits(32))
+            self._values.append(0)
+            # self._values.append(random.getrandbits(32))
 
     def __getitem__(self, index: Union[int, str]) -> int:
         if isinstance(index, str):

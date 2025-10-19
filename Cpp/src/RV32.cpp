@@ -9,11 +9,13 @@
 #include <random>
 #include <iostream>
 
+#include "Syscall.hpp"
+
 RV32::RV32(const bool randomizeRegs, const bool randomizeMemory) : rng(std::random_device{}()),
                                                                    pc(0),
                                                                    regs{},
                                                                    running(true),
-                                                                    update_pc(true),
+                                                                   update_pc(true),
                                                                    ram(Config::RAM_SIZE, 0) {
     init_regs(randomizeRegs);
     if (randomizeMemory) {
@@ -29,7 +31,7 @@ void RV32::print_inst(DecodedInstruction inst) {
             << " funct7=" << static_cast<int>(inst.funct7) << std::endl;
 }
 
-void RV32::load_bin(const uint8_t* bin, size_t size, uint32_t start_address) {
+void RV32::load_bin(const uint8_t* bin, const size_t size, const uint32_t start_address) {
     memcpy(&ram[start_address], bin, size);
 }
 
@@ -87,66 +89,69 @@ void RV32::execute(const DecodedInstruction inst) {
 
         // R-Type
         case Opcode::OP: {
-            const auto rs1_value = static_cast<int32_t>(regs[inst.rs1]);
-            const auto rs2_value = static_cast<int32_t>(regs[inst.rs2]);
+            const auto rs1_value = static_cast<int32_t>(regs.read(inst.rs1));
+            const auto rs2_value = static_cast<int32_t>(regs.read(inst.rs2));
 
             switch (inst.funct3) {
                 case Funct3::ADD_SUB: {
                     switch (inst.funct7) {
                         case Funct7::ADD:
-                            regs[inst.rd] = static_cast<uint32_t>(rs1_value + rs2_value);
+                            regs.write(inst.rd, static_cast<uint32_t>(rs1_value + rs2_value));
                             break;
                         case Funct7::SUB:
-                            regs[inst.rd] = static_cast<uint32_t>(rs1_value - rs2_value);
+                            regs.write(inst.rd, static_cast<uint32_t>(rs1_value - rs2_value));
                             break;
                         default:
                             print_inst(inst);
+                            running = false;
                             break;
                     }
                     break;
                 }
                 case Funct3::SLT: {
-                    regs[inst.rd] = (rs1_value < rs2_value) ? 1 : 0;
+                    regs.write(inst.rd, (rs1_value < rs2_value) ? 1 : 0);
                     break;
                 }
                 case Funct3::SLTU: {
-                    regs[inst.rd] = (static_cast<uint32_t>(rs1_value) < static_cast<uint32_t>(rs2_value)) ? 1 : 0;
+                    regs.write(inst.rd, (static_cast<uint32_t>(rs1_value) < static_cast<uint32_t>(rs2_value)) ? 1 : 0);
                     break;
                 }
                 case Funct3::AND: {
-                    regs[inst.rd] = static_cast<uint32_t>(rs1_value & rs2_value);
+                    regs.write(inst.rd, static_cast<uint32_t>(rs1_value & rs2_value));
                     break;
                 }
                 case Funct3::OR: {
-                    regs[inst.rd] = static_cast<uint32_t>(rs1_value | rs2_value);
+                    regs.write(inst.rd, static_cast<uint32_t>(rs1_value | rs2_value));
                     break;
                 }
                 case Funct3::XOR: {
-                    regs[inst.rd] = static_cast<uint32_t>(rs1_value ^ rs2_value);
+                    regs.write(inst.rd, static_cast<uint32_t>(rs1_value ^ rs2_value));
                     break;
                 }
                 case Funct3::SLL: {
-                    const auto amount = static_cast<uint8_t>(rs1_value & 0x1F);
-                    regs[inst.rd] = static_cast<uint32_t>(rs1_value << amount);
+                    const auto amount = static_cast<uint8_t>(rs2_value & 0x1F);
+                    regs.write(inst.rd, static_cast<uint32_t>(rs1_value << amount));
                     break;
                 }
                 case Funct3::SRL_SRA: {
-                    const auto amount = static_cast<uint8_t>(rs1_value & 0x1F);
+                    const auto amount = static_cast<uint8_t>(rs2_value & 0x1F);
                     switch (inst.funct7) {
                         case Funct7::SRL:
-                            regs[inst.rd] = static_cast<uint32_t>(rs1_value) >> amount;
+                            regs.write(inst.rd, static_cast<uint32_t>(rs1_value) >> amount);
                             break;
                         case Funct7::SRA:
-                            regs[inst.rd] = static_cast<uint32_t>(rs1_value >> amount);
+                            regs.write(inst.rd, static_cast<uint32_t>(rs1_value >> amount));
                             break;
                         default:
                             print_inst(inst);
+                            running = false;
                             break;
                     }
                     break;
                 }
                 default:
                     print_inst(inst);
+                    running = false;
                     break;
             }
             break;
@@ -154,101 +159,105 @@ void RV32::execute(const DecodedInstruction inst) {
 
         // I-Type
         case Opcode::OP_IMM: {
-            const auto rs1_value = static_cast<int32_t>(regs[inst.rs1]);
+            const auto rs1_value = static_cast<int32_t>(regs.read(inst.rs1));
 
             switch (inst.funct3) {
                 case Funct3::ADDI: {
-                    regs[inst.rd] = static_cast<uint32_t>(rs1_value + inst.imm);
+                    regs.write(inst.rd, static_cast<uint32_t>(rs1_value + inst.imm));
                     break;
                 }
                 case Funct3::SLTI: {
-                    regs[inst.rd] = (rs1_value < inst.imm) ? 1 : 0;
+                    regs.write(inst.rd, (rs1_value < inst.imm) ? 1 : 0);
                     break;
                 }
                 case Funct3::SLTIU: {
-                    regs[inst.rd] = (static_cast<uint32_t>(rs1_value) < static_cast<uint32_t>(inst.imm)) ? 1 : 0;
+                    regs.write(inst.rd, (static_cast<uint32_t>(rs1_value) < static_cast<uint32_t>(inst.imm)) ? 1 : 0);
                     break;
                 }
                 case Funct3::ANDI: {
-                    regs[inst.rd] = static_cast<uint32_t>(rs1_value & inst.imm);
+                    regs.write(inst.rd, static_cast<uint32_t>(rs1_value & inst.imm));
                     break;
                 }
                 case Funct3::ORI: {
-                    regs[inst.rd] = static_cast<uint32_t>(rs1_value | inst.imm);
+                    regs.write(inst.rd, static_cast<uint32_t>(rs1_value | inst.imm));
                     break;
                 }
                 case Funct3::XORI: {
-                    regs[inst.rd] = static_cast<uint32_t>(rs1_value ^ inst.imm);
+                    regs.write(inst.rd, static_cast<uint32_t>(rs1_value ^ inst.imm));
                     break;
                 }
                 case Funct3::SLLI: {
-                    const auto amount = static_cast<uint8_t>(rs1_value & 0x1F);
+                    const auto amount = static_cast<uint8_t>(inst.imm & 0x1F);
                     if (inst.funct7 == Funct7::SLLI) {
-                        regs[inst.rd] = static_cast<uint32_t>(rs1_value << amount);
+                        regs.write(inst.rd, static_cast<uint32_t>(rs1_value << amount));
                     } else {
                         print_inst(inst);
+                        running = false;
                     }
                     break;
                 }
                 case Funct3::SRLI_SRAI: {
-                    const auto amount = static_cast<uint8_t>(rs1_value & 0x1F);
+                    const auto amount = static_cast<uint8_t>(inst.imm & 0x1F);
                     switch (inst.funct7) {
                         case Funct7::SRLI:
-                            regs[inst.rd] = static_cast<uint32_t>(rs1_value) >> amount;
+                            regs.write(inst.rd, static_cast<uint32_t>(rs1_value) >> amount);
                             break;
                         case Funct7::SRAI:
-                            regs[inst.rd] = static_cast<uint32_t>(rs1_value >> amount);
+                            regs.write(inst.rd, static_cast<uint32_t>(rs1_value >> amount));
                             break;
                         default:
                             print_inst(inst);
+                            running = false;
                             break;
                     }
                     break;
                 }
                 default:
                     print_inst(inst);
+                    running = false;
                     break;
             }
             break;
         }
 
         case Opcode::JALR: {
-            const auto rs1_value = static_cast<int32_t>(regs[inst.rs1]);
+            const auto rs1_value = static_cast<int32_t>(regs.read(inst.rs1));
             const uint32_t address = static_cast<uint32_t>(rs1_value + inst.imm) & 0xFFFFFFFE;
-            regs[inst.rd] = pc + 4;
+            regs.write(inst.rd, pc + 4);
             pc = address;
             update_pc = false;
             break;
         }
 
         case Opcode::LOAD: {
-            const auto rs1_value = static_cast<int32_t>(regs[inst.rs1]);
+            const auto rs1_value = static_cast<int32_t>(regs.read(inst.rs1));
             const auto address = static_cast<uint32_t>(rs1_value + inst.imm);
             switch (inst.funct3) {
                 case Funct3::LW: {
-                    regs[inst.rd] = read_u32(address);
+                    regs.write(inst.rd, read_u32(address));
                     break;
                 }
                 case Funct3::LH: {
                     const uint16_t value = read_u16(address);
-                    regs[inst.rd] = static_cast<uint32_t>(sign_extend(value, 16));
+                    regs.write(inst.rd, static_cast<uint32_t>(sign_extend(value, 16)));
                     break;
                 }
                 case Funct3::LHU: {
-                    regs[inst.rd] = static_cast<uint32_t>(read_u16(address));
+                    regs.write(inst.rd, static_cast<uint32_t>(read_u16(address)));
                     break;
                 }
                 case Funct3::LB: {
                     const uint8_t value = read_u8(address);
-                    regs[inst.rd] = static_cast<uint32_t>(sign_extend(value, 8));
+                    regs.write(inst.rd, static_cast<uint32_t>(sign_extend(value, 8)));
                     break;
                 }
                 case Funct3::LBU: {
-                    regs[inst.rd] = static_cast<uint32_t>(read_u8(address));
+                    regs.write(inst.rd, static_cast<uint32_t>(read_u8(address)));
                     break;
                 }
                 default:
                     print_inst(inst);
+                    running = false;
                     break;
             }
             break;
@@ -261,15 +270,32 @@ void RV32::execute(const DecodedInstruction inst) {
         }
 
         case Opcode::SYSTEM: {
-            // TODO: Implement SYSTEM
-            std::cerr << "SYSTEM not implemented" << std::endl;
+            const uint16_t func12 = inst.imm & 0xFFF;
+            // ECALL
+            if (func12 == 0x0) {
+                const auto syscall_id = static_cast<Syscall>(regs.read(Register::a7));
+                switch (syscall_id) {
+                    case Syscall::EXIT: {
+                        const auto exit_code = static_cast<int32_t>(regs.read(Register::a0));
+                        std::cout << "Process finished with exit code " << exit_code << std::endl;
+                        running = false;
+                        break;
+                    }
+                    default:
+                        std::cerr << std::hex << std::showbase
+                                  << "Unknown syscall ID: " << static_cast<uint32_t>(syscall_id)
+                                  << std::dec << std::endl;
+                        running = false;
+                        break;
+                }
+            }
             break;
         }
 
         // S-Type
         case Opcode::STORE: {
-            const auto rs1_value = static_cast<int32_t>(regs[inst.rs1]);
-            const auto rs2_value = static_cast<int32_t>(regs[inst.rs2]);
+            const auto rs1_value = static_cast<int32_t>(regs.read(inst.rs1));
+            const auto rs2_value = static_cast<int32_t>(regs.read(inst.rs2));
             const auto address = static_cast<uint32_t>(rs1_value + inst.imm);
             switch (inst.funct3) {
                 case Funct3::SW: {
@@ -286,6 +312,7 @@ void RV32::execute(const DecodedInstruction inst) {
                 }
                 default:
                     print_inst(inst);
+                    running = false;
                     break;
             }
             break;
@@ -293,8 +320,8 @@ void RV32::execute(const DecodedInstruction inst) {
 
         // B-Type
         case Opcode::BRANCH: {
-            const auto rs1_value = static_cast<int32_t>(regs[inst.rs1]);
-            const auto rs2_value = static_cast<int32_t>(regs[inst.rs2]);
+            const auto rs1_value = static_cast<int32_t>(regs.read(inst.rs1));
+            const auto rs2_value = static_cast<int32_t>(regs.read(inst.rs2));
             switch (inst.funct3) {
                 case Funct3::BEQ: {
                     if (rs1_value == rs2_value) {
@@ -340,6 +367,7 @@ void RV32::execute(const DecodedInstruction inst) {
                 }
                 default:
                     print_inst(inst);
+                    running = false;
                     break;
             }
             break;
@@ -347,17 +375,17 @@ void RV32::execute(const DecodedInstruction inst) {
 
         // U-Type
         case Opcode::LUI: {
-            regs[inst.rd] = static_cast<uint32_t>(inst.imm);
+            regs.write(inst.rd, static_cast<uint32_t>(inst.imm));
             break;
         }
         case Opcode::AUIPC: {
-            regs[inst.rd] = inst.imm + pc;
+            regs.write(inst.rd, inst.imm + pc);
             break;
         }
 
         // J-Type
         case Opcode::JAL: {
-            regs[inst.rd] = pc + 4;
+            regs.write(inst.rd, pc + 4);
             pc += inst.imm;
             update_pc = false;
             break;
@@ -365,6 +393,7 @@ void RV32::execute(const DecodedInstruction inst) {
 
         default:
             print_inst(inst);
+            running = false;
             break;
     }
 }
@@ -374,8 +403,8 @@ inline int32_t RV32::sign_extend(const uint32_t value, const unsigned int fromBi
     return static_cast<int32_t>(value << (32 - fromBits)) >> (32 - fromBits);
 }
 
-inline uint32_t RV32::get_bits(const uint32_t data, const unsigned int start, const unsigned int end) {
-    return (data >> start) & ((1u << (end - start)) - 1);
+inline uint32_t RV32::get_bits(uint32_t data, unsigned start, unsigned end) {
+    return (data >> start) & ((1u << (end - start + 1)) - 1);
 }
 
 void RV32::decode_r_type(DecodedInstruction &inst, const uint32_t data) {
@@ -433,7 +462,7 @@ void RV32::decode_j_type(DecodedInstruction &inst, const uint32_t data) {
     inst.rd = get_bits(data, 7, 11);
     const uint32_t imm_19_12 = get_bits(data, 12, 19);
     const uint32_t imm_11 = get_bits(data, 20, 20);
-    const uint32_t imm_10_1 = get_bits(data, 20, 20);
+    const uint32_t imm_10_1 = get_bits(data, 21, 30);
     const uint32_t imm_20 = get_bits(data, 31, 31);
     const uint32_t imm = (imm_20 << 20) | (imm_19_12 << 12) | (imm_11 << 11) | (imm_10_1 << 1);
     inst.imm = sign_extend(imm, 21);
@@ -488,20 +517,20 @@ void RV32::write_value(uint32_t address, T value) {
     }
     else {
         std::cerr << std::hex << std::showbase
-                  << "RV32::read_value(): address " << address << " out of range"
+                  << "RV32::write_value(): address " << address << " out of range"
                   << std::dec << std::endl;
     }
 }
 
 void inline RV32::init_regs(const bool initRandom) {
-    regs[0] = 0;
+    regs.write(0, 0);  // Ensure x0 is zero
     if (initRandom) {
         for (int i = 1; i < 32; i++) {
-            regs[i] = rng();
+            regs.write(i, rng());
         }
     } else {
         for (int i = 1; i < 32; i++) {
-            regs[i] = 0;
+            regs.write(i, 0);
         }
     }
 }

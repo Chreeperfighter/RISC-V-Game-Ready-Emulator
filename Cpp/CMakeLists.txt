@@ -12,6 +12,8 @@ add_executable(Cpp
         inc/RV32.hpp
         inc/config.hpp
         inc/ISA.hpp
+        inc/Syscall.hpp
+        inc/Registers.hpp
 )
 
 target_include_directories(Cpp PRIVATE ${CMAKE_SOURCE_DIR}/inc)

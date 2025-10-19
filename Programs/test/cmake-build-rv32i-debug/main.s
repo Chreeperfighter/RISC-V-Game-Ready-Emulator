@@ -68,7 +68,7 @@ main:
 .LBB3:
 # /Users/mark.verbeek/CLionProjects/RISC-V-Game-Ready-Emulator/Programs/test/main.c:11:     for (uint64_t i = 0; i < iterations; i++) {
 	.loc 1 11 28 discriminator 1
-	li	a7,1000001536		# tmp184,
+	li	a7,99999744		# tmp184,
 .LBE3:
 # /Users/mark.verbeek/CLionProjects/RISC-V-Game-Ready-Emulator/Programs/test/main.c:9:     uint64_t c = 0xCAFEBABEDEADBEEFULL;
 	.loc 1 9 14
@@ -82,7 +82,7 @@ main:
 .LBB4:
 # /Users/mark.verbeek/CLionProjects/RISC-V-Game-Ready-Emulator/Programs/test/main.c:11:     for (uint64_t i = 0; i < iterations; i++) {
 	.loc 1 11 28 discriminator 1
-	addi	a7,a7,-1536	#, tmp165, tmp184
+	addi	a7,a7,256	#, tmp165, tmp184
 # /Users/mark.verbeek/CLionProjects/RISC-V-Game-Ready-Emulator/Programs/test/main.c:11:     for (uint64_t i = 0; i < iterations; i++) {
 	.loc 1 11 19
 	li	a0,0		# i,
@@ -278,7 +278,7 @@ result:
 	.byte	0x6
 	.byte	0x14
 	.4byte	0x7f
-	.4byte	0x3b9aca00
+	.4byte	0x5f5e100
 	.uleb128 0x2
 	.string	"a"
 	.byte	0x7
