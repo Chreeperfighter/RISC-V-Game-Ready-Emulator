@@ -222,6 +222,9 @@ Cpp_IS_TOP_LEVEL:STATIC=ON
 //Value Computed by CMake
 Cpp_SOURCE_DIR:STATIC=/Users/mark.verbeek/CLionProjects/RISC-V-Game-Ready-Emulator/Cpp
 
+//The directory containing a CMake configuration file for SDL2.
+SDL2_DIR:PATH=/opt/homebrew/lib/cmake/SDL2
+
 
 ########################
 # INTERNAL cache entries

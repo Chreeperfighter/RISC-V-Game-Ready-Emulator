@@ -69,7 +69,9 @@
 			},
 			"sourceIndexes" : 
 			[
-				1
+				1,
+				2,
+				3
 			]
 		}
 	],
@@ -78,6 +80,14 @@
 		{
 			"backtrace" : 2,
 			"id" : "asm_main::@6890427a1f51a3e7e1df"
+		},
+		{
+			"backtrace" : 2,
+			"id" : "asm_util::@6890427a1f51a3e7e1df"
+		},
+		{
+			"backtrace" : 2,
+			"id" : "asm_framebuffer_test::@6890427a1f51a3e7e1df"
 		}
 	],
 	"id" : "test::@6890427a1f51a3e7e1df",
@@ -116,7 +126,9 @@
 			"name" : "Source Files",
 			"sourceIndexes" : 
 			[
-				1
+				1,
+				2,
+				3
 			]
 		}
 	],
@@ -132,6 +144,18 @@
 			"backtrace" : 1,
 			"compileGroupIndex" : 1,
 			"path" : "main.c",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 1,
+			"compileGroupIndex" : 1,
+			"path" : "util.c",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 1,
+			"compileGroupIndex" : 1,
+			"path" : "framebuffer_test.c",
 			"sourceGroupIndex" : 1
 		}
 	],

@@ -11,18 +11,22 @@
 
 #include "Syscall.hpp"
 
-RV32::RV32(const bool randomizeRegs, const bool randomizeMemory) : rng(std::random_device{}()),
+RV32::RV32(const bool randomizeRegs, const bool randomizeMemory) : running(true),
+                                                                   rng(std::random_device{}()),
                                                                    pc(0),
-                                                                   regs{},
-                                                                   running(true),
                                                                    update_pc(true),
-                                                                   ram(Config::RAM_SIZE, 0) {
+                                                                   ram(Config::RAM_SIZE, 0),
+                                                                   vram(Config::VRAM_SIZE, 0) {
     init_regs(randomizeRegs);
     if (randomizeMemory) {
         for (auto &byte: ram) {
             byte = static_cast<uint8_t>(rng());
         }
     }
+}
+
+const uint8_t* RV32::get_vram() const {
+    return vram.data();
 }
 
 void RV32::print_inst(DecodedInstruction inst) {
@@ -281,11 +285,43 @@ void RV32::execute(const DecodedInstruction inst) {
                         running = false;
                         break;
                     }
+                    case Syscall::GET_SCREEN_WIDTH:
+                        regs.write(Register::a0, Config::FB_WIDTH);
+                        break;
+                    case Syscall::GET_SCREEN_HEIGHT: {
+                        regs.write(Register::a0, Config::FB_HEIGHT);
+                        break;
+                    }
+                    case Syscall::DISPLAY_ENABLE: {
+                        const uint32_t display_enable = regs.read(Register::a0);
+                        // TODO: Implement Display Enable
+                        break;
+                    }
+                    case Syscall::DISPLAY_STATUS: {
+                        regs.write(Register::a0, 0x2);
+                        break;
+                    }
+                    case Syscall::WRITE: {
+                        const uint32_t fd = regs.read(Register::a0);
+                        const uint32_t buffer_address = regs.read(Register::a1);
+                        const uint32_t buffer_size = regs.read(Register::a2);
+
+                        if (fd == 0x1 | fd == 0x2) {
+                            const unsigned char* buffer = read_bytes(buffer_address, buffer_size);
+                            for (size_t i= 0; i < buffer_size; i++) {
+                                std::cout << buffer[i];
+                            }
+                            regs.write(Register::a0, buffer_size);
+                        }
+                        else {
+                            regs.write(Register::a0, -1);
+                        }
+                        break;
+                    }
                     default:
-                        std::cerr << std::hex << std::showbase
-                                  << "Unknown syscall ID: " << static_cast<uint32_t>(syscall_id)
-                                  << std::dec << std::endl;
-                        running = false;
+                        std::cerr << "Unknown syscall ID: " << static_cast<uint32_t>(syscall_id)
+                                  << std::endl;
+                        // running = false;
                         break;
                 }
             }
@@ -480,6 +516,18 @@ uint8_t RV32::read_u8(const uint32_t address) const {
     return read_value<uint8_t>(address);
 }
 
+const uint8_t* RV32::read_bytes(uint32_t address, size_t size) const {
+    const uint32_t upper_address = address + size;
+    if (Config::RAM_ORIGIN <= address && upper_address <= Config::RAM_END) {
+        address -= Config::RAM_ORIGIN;
+        return &ram[address - Config::RAM_ORIGIN];
+    }
+    std::cerr << std::hex << std::showbase
+              << "RV32::read_bytes(): address " << address << " out of range"
+              << std::dec << std::endl;
+    return nullptr;
+}
+
 template<typename T>
 T RV32::read_value(uint32_t address) const {
     const uint32_t upper_address = address + sizeof(T);
@@ -514,6 +562,10 @@ void RV32::write_value(uint32_t address, T value) {
     if (Config::RAM_ORIGIN <= address && upper_address <= Config::RAM_END) {
         address -= Config::RAM_ORIGIN;
         std::memcpy(&ram[address], &value, sizeof(value));
+    }
+    else if (Config::VRAM_ORIGIN <= address && upper_address <= Config::VRAM_END) {
+        address -= Config::VRAM_ORIGIN;
+        std::memcpy(&vram[address], &value, sizeof(value));
     }
     else {
         std::cerr << std::hex << std::showbase

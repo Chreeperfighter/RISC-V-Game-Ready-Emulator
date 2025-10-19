@@ -6,6 +6,7 @@
 #include <stdint.h>
 #include "util.h"
 #include <stdio.h>
+#include <stdbool.h>
 
 #define VRAM_BASE 0x10000000
 
@@ -245,3 +246,66 @@ void draw_cool_pattern(void) {
 
     printf("Rendering complete!\n");
 }
+
+// Adjustable-size bouncing ball demo
+void run_bouncing_ball_demo_size(int ball_radius) {
+    int ball_x = display_width / 4;
+    int ball_y = display_height / 4;
+    int vx = 2;
+    int vy = 1;
+
+    const uint32_t ball_color = 0xFFFFFFFF; // white
+    const uint32_t bg_color = 0xFF000000;   // black
+
+    // Clear screen once
+    clear_screen(bg_color);
+
+    while (true) {
+        // Erase old ball
+        for (int dy = -ball_radius; dy <= ball_radius; dy++) {
+            int y = ball_y + dy;
+            if (y < 0 || y >= display_height) continue;
+            for (int dx = -ball_radius; dx <= ball_radius; dx++) {
+                int x = ball_x + dx;
+                if (x < 0 || x >= display_width) continue;
+                set_pixel(x, y, bg_color);
+            }
+        }
+
+        // Update position
+        ball_x += vx;
+        ball_y += vy;
+
+        // Bounce off edges
+        if (ball_x - ball_radius < 0) {
+            ball_x = ball_radius;
+            vx = -vx;
+        } else if (ball_x + ball_radius >= display_width) {
+            ball_x = display_width - 1 - ball_radius;
+            vx = -vx;
+        }
+
+        if (ball_y - ball_radius < 0) {
+            ball_y = ball_radius;
+            vy = -vy;
+        } else if (ball_y + ball_radius >= display_height) {
+            ball_y = display_height - 1 - ball_radius;
+            vy = -vy;
+        }
+
+        // Draw new ball
+        for (int dy = -ball_radius; dy <= ball_radius; dy++) {
+            int y = ball_y + dy;
+            if (y < 0 || y >= display_height) continue;
+            for (int dx = -ball_radius; dx <= ball_radius; dx++) {
+                int x = ball_x + dx;
+                if (x < 0 || x >= display_width) continue;
+                set_pixel(x, y, ball_color);
+            }
+        }
+
+        // Optional delay to slow down animation
+        for (volatile int i = 0; i < 10000; i++);
+    }
+}
+

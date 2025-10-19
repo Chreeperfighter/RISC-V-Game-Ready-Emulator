@@ -35,6 +35,7 @@ public:
     RV32(bool randomizeRegs, bool randomizeMemory);
     void step();
 	void load_bin(const uint8_t* bin, size_t size, uint32_t start_address);
+	const uint8_t* get_vram() const;
 
 	bool running;
 
@@ -46,6 +47,7 @@ private:
 	uint32_t read_u32(uint32_t address) const;
 	uint16_t read_u16(uint32_t address) const;
 	uint8_t read_u8(uint32_t address) const;
+	const uint8_t* read_bytes(uint32_t address, size_t size) const;
 	void write_u32(uint32_t address, uint32_t value);
 	void write_u16(uint32_t address, uint16_t value);
 	void write_u8(uint32_t address, uint8_t value);
@@ -68,6 +70,7 @@ private:
     Registers regs;
 	bool update_pc;
 	std::vector<uint8_t> ram;
+	std::vector<uint8_t> vram;
 };
 
 

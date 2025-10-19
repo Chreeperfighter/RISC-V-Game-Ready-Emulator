@@ -217,6 +217,8 @@ class IInstruction(Instruction):
                     exit_code = cpu.reg["a0"]
                     print(f"Process finished with exit code {to_signed(exit_code)}")
                     cpu.running = False
+                else:
+                    print(f"Unknown syscall: {syscall_id}")
             elif func12 == 0x1:
                 if cpu.on_break:
                     cpu.on_break(cpu)

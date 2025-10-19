@@ -43,7 +43,7 @@
 				}
 			],
 			"type" : "STRING",
-			"value" : "Release"
+			"value" : "Debug"
 		},
 		{
 			"name" : "CMAKE_CACHEFILE_DIR",
@@ -55,7 +55,7 @@
 				}
 			],
 			"type" : "INTERNAL",
-			"value" : "/Users/mark.verbeek/CLionProjects/RISC-V-Game-Ready-Emulator/Cpp/cmake-build-release"
+			"value" : "/Users/mark.verbeek/CLionProjects/RISC-V-Game-Ready-Emulator/Cpp/cmake-build-debug"
 		},
 		{
 			"name" : "CMAKE_CACHE_MAJOR_VERSION",
@@ -479,7 +479,7 @@
 				}
 			],
 			"type" : "STATIC",
-			"value" : "/Users/mark.verbeek/CLionProjects/RISC-V-Game-Ready-Emulator/Cpp/cmake-build-release/CMakeFiles/pkgRedirects"
+			"value" : "/Users/mark.verbeek/CLionProjects/RISC-V-Game-Ready-Emulator/Cpp/cmake-build-debug/CMakeFiles/pkgRedirects"
 		},
 		{
 			"name" : "CMAKE_GENERATOR",
@@ -1127,7 +1127,7 @@
 				}
 			],
 			"type" : "STATIC",
-			"value" : "/Users/mark.verbeek/CLionProjects/RISC-V-Game-Ready-Emulator/Cpp/cmake-build-release"
+			"value" : "/Users/mark.verbeek/CLionProjects/RISC-V-Game-Ready-Emulator/Cpp/cmake-build-debug"
 		},
 		{
 			"name" : "Cpp_IS_TOP_LEVEL",
@@ -1152,6 +1152,18 @@
 			],
 			"type" : "STATIC",
 			"value" : "/Users/mark.verbeek/CLionProjects/RISC-V-Game-Ready-Emulator/Cpp"
+		},
+		{
+			"name" : "SDL2_DIR",
+			"properties" : 
+			[
+				{
+					"name" : "HELPSTRING",
+					"value" : "The directory containing a CMake configuration file for SDL2."
+				}
+			],
+			"type" : "PATH",
+			"value" : "/opt/homebrew/lib/cmake/SDL2"
 		}
 	],
 	"kind" : "cache",
