@@ -29,6 +29,7 @@ enum class Syscall : uint32_t {
     // a0 -> display enable
     DISPLAY_STATUS = 203,
     // a0 <- display status
+    DISPLAY_UPDATE = 204,
     GET_CYCLES = 100,
     // a0 <- lower 32 bit
     // a1 <- upper 32 bit

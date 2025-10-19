@@ -28,8 +28,8 @@ DisplayContext init_display() {
         "RISC-V Emulator",
         SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
         Config::FB_WIDTH, Config::FB_HEIGHT,
-        SDL_WINDOW_SHOWN
-        );
+        SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI
+    );
 
     ctx.renderer = SDL_CreateRenderer(
         ctx.window, -1,
@@ -50,6 +50,7 @@ void update_display(const DisplayContext &ctx, const uint8_t *framebuffer) {
     SDL_UpdateTexture(ctx.texture, nullptr, framebuffer, Config::FB_WIDTH * 4);
     SDL_RenderClear(ctx.renderer);
     SDL_RenderCopy(ctx.renderer, ctx.texture, nullptr, nullptr);
+    // unlock
     SDL_RenderPresent(ctx.renderer);
 }
 
@@ -96,10 +97,12 @@ void load_bin_into_cpu(RV32& cpu, const std::string& path, const uint32_t start_
 int main() {
     std::atomic<bool> running(true);
     std::atomic<long long> cycles(0);
+    std::vector<uint8_t> framebuffer(Config::FB_SIZE);
 
     RV32 rv32i(true, true);
     load_bin_into_cpu(rv32i, "/Users/mark.verbeek/CLionProjects/RISC-V-Game-Ready-Emulator/Programs/test/cmake-build-rv32i-release/test.bin", 0);
     const DisplayContext display = init_display();
+    rv32i.display_status = 0x2;
 
     // CPU worker thread
     std::thread cpu_thread([&]() {
@@ -122,17 +125,26 @@ int main() {
         }
 
         auto now = std::chrono::steady_clock::now();
-        const auto elapsed_display = std::chrono::duration_cast<std::chrono::milliseconds>(now - last_display).count();
+       /* const auto elapsed_display = std::chrono::duration_cast<std::chrono::milliseconds>(now - last_display).count();
         if (elapsed_display >= 1000/60) {
-            update_display(display, rv32i.get_vram());
+            std::vector<uint8_t> framebuffer(Config::FB_SIZE);
+            rv32i.get_frame(framebuffer);
+            update_display(display, framebuffer.data());
             last_display = now;
-        }
+        }*/
 
         const auto elapsed_sec = std::chrono::duration_cast<std::chrono::milliseconds>(now - start).count();
         if (elapsed_sec >= 1000) {
             std::cout << "Cycles/s: " << cycles << std::endl;
             start = now;
             cycles = 0;
+        }
+
+        if (rv32i.update_display) {
+            rv32i.display_status = 0x0;
+            rv32i.get_frame(framebuffer);
+            update_display(display, framebuffer.data());
+            rv32i.display_status = 0x2;
         }
     }
     cpu_thread.join();

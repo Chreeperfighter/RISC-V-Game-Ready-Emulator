@@ -5,11 +5,11 @@
 #include "RV32.hpp"
 #include "Config.hpp"
 #include "ISA.hpp"
+#include "Syscall.hpp"
 #include <cstdint>
 #include <random>
 #include <iostream>
-
-#include "Syscall.hpp"
+#include <mutex>
 
 RV32::RV32(const bool randomizeRegs, const bool randomizeMemory) : running(true),
                                                                    rng(std::random_device{}()),
@@ -25,6 +25,12 @@ RV32::RV32(const bool randomizeRegs, const bool randomizeMemory) : running(true)
     }
 }
 
+void RV32::get_frame(std::vector<uint8_t> &framebuffer) {
+    std::lock_guard<std::mutex> lock(mtx);
+    std::memcpy(framebuffer.data(), vram.data(), Config::FB_SIZE);
+    update_display = false;
+}
+
 const uint8_t* RV32::get_vram() const {
     return vram.data();
 }
@@ -36,7 +42,7 @@ void RV32::print_inst(DecodedInstruction inst) {
 }
 
 void RV32::load_bin(const uint8_t* bin, const size_t size, const uint32_t start_address) {
-    memcpy(&ram[start_address], bin, size);
+    std::memcpy(&ram[start_address], bin, size);
 }
 
 void RV32::step() {
@@ -298,7 +304,11 @@ void RV32::execute(const DecodedInstruction inst) {
                         break;
                     }
                     case Syscall::DISPLAY_STATUS: {
-                        regs.write(Register::a0, 0x2);
+                        regs.write(Register::a0, display_status);
+                        break;
+                    }
+                    case Syscall::DISPLAY_UPDATE: {
+                        update_display = true;
                         break;
                     }
                     case Syscall::WRITE: {
@@ -565,6 +575,8 @@ void RV32::write_value(uint32_t address, T value) {
     }
     else if (Config::VRAM_ORIGIN <= address && upper_address <= Config::VRAM_END) {
         address -= Config::VRAM_ORIGIN;
+        while (update_display) {}
+        std::lock_guard<std::mutex> lock(mtx);
         std::memcpy(&vram[address], &value, sizeof(value));
     }
     else {

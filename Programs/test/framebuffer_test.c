@@ -273,8 +273,8 @@ void run_bouncing_ball_demo_size(int ball_radius) {
         }
 
         // Update position
-        ball_x += vx;
-        ball_y += vy;
+        ball_x += vx * 2;
+        ball_y += vy * 2;
 
         // Bounce off edges
         if (ball_x - ball_radius < 0) {
@@ -303,9 +303,10 @@ void run_bouncing_ball_demo_size(int ball_radius) {
                 set_pixel(x, y, ball_color);
             }
         }
-
-        // Optional delay to slow down animation
-        for (volatile int i = 0; i < 10000; i++);
+        uint32_t status = get_display_status();
+        //if (status == 0x2) {
+            update_display();
+        //}
     }
 }
 

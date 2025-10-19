@@ -7,6 +7,7 @@
 
 #include <cstdint>
 #include <random>
+#include <mutex>
 
 #include "ISA.hpp"
 #include "Registers.hpp"
@@ -36,8 +37,11 @@ public:
     void step();
 	void load_bin(const uint8_t* bin, size_t size, uint32_t start_address);
 	const uint8_t* get_vram() const;
+	void get_frame(std::vector<uint8_t>& framebuffer);
 
 	bool running;
+	std::atomic<uint32_t> display_status {0};
+	std::atomic<bool> update_display {false};
 
 private:
 	uint32_t fetch() const;
@@ -71,6 +75,7 @@ private:
 	bool update_pc;
 	std::vector<uint8_t> ram;
 	std::vector<uint8_t> vram;
+	std::mutex mtx;
 };
 
 

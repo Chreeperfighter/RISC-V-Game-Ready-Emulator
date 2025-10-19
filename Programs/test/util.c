@@ -34,6 +34,11 @@ unsigned int get_display_status(void) {
     return a0;
 }
 
+void update_display() {
+    register int a7 asm("a7") = 204; // DISPLAY_UPDATE
+    asm volatile ("ecall" :: "r"(a7) : "memory");
+}
+
 unsigned long long get_cycles(void) {
     register int a0 asm("a0");
     register int a1 asm("a1");

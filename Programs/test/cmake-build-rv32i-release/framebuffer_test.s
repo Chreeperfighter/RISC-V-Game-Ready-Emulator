@@ -86,11 +86,11 @@ clear_screen:
 # /Users/mark.verbeek/CLionProjects/RISC-V-Game-Ready-Emulator/Programs/test/framebuffer_test.c:29:         framebuffer[i] = color;
 	.loc 1 29 20 is_stmt 0
 	lui	a5,%hi(framebuffer)	# tmp154,
-	ld	a5,%lo(framebuffer)(a5)		# ivtmp.72, framebuffer
+	ld	a5,%lo(framebuffer)(a5)		# ivtmp.70, framebuffer
 	slli	a3,a4,32	#, tmp158, tmp153
 	srli	a4,a3,30	#, _22, tmp158
 .LVL4:
-	add	a4,a4,a5	# ivtmp.72, _24, _22
+	add	a4,a4,a5	# ivtmp.70, _24, _22
 .LVL5:
 .L5:
 	.loc 1 29 9 is_stmt 1
@@ -100,9 +100,9 @@ clear_screen:
 	.loc 1 28 38 is_stmt 1 discriminator 3
 .LVL6:
 	.loc 1 28 28 discriminator 1
-	addi	a5,a5,4	#, ivtmp.72, ivtmp.72
+	addi	a5,a5,4	#, ivtmp.70, ivtmp.70
 .LVL7:
-	bne	a5,a4,.L5	#, ivtmp.72, _24,
+	bne	a5,a4,.L5	#, ivtmp.70, _24,
 .LVL8:
 .L3:
 .LBE51:
@@ -1198,11 +1198,11 @@ run_frame_buffer_test:
 # /Users/mark.verbeek/CLionProjects/RISC-V-Game-Ready-Emulator/Programs/test/framebuffer_test.c:29:         framebuffer[i] = color;
 	.loc 1 29 20
 	lui	a5,%hi(framebuffer)	# tmp228,
-	ld	a5,%lo(framebuffer)(a5)		# ivtmp.152, framebuffer
+	ld	a5,%lo(framebuffer)(a5)		# ivtmp.150, framebuffer
 	slli	a3,a4,32	#, tmp346, tmp215
 	srli	a4,a3,30	#, _130, tmp346
 .LVL99:
-	add	a4,a4,a5	# ivtmp.152, _128, _130
+	add	a4,a4,a5	# ivtmp.150, _128, _130
 .LVL100:
 .L89:
 	.loc 1 29 9 is_stmt 1
@@ -1212,9 +1212,9 @@ run_frame_buffer_test:
 	.loc 1 28 38 is_stmt 1 discriminator 3
 .LVL101:
 	.loc 1 28 28 discriminator 1
-	addi	a5,a5,4	#, ivtmp.152, ivtmp.152
+	addi	a5,a5,4	#, ivtmp.150, ivtmp.150
 .LVL102:
-	bne	a5,a4,.L89	#, ivtmp.152, _128,
+	bne	a5,a4,.L89	#, ivtmp.150, _128,
 .LVL103:
 .L90:
 .LBE107:
@@ -1291,7 +1291,7 @@ run_frame_buffer_test:
 .LBE139:
 # /Users/mark.verbeek/CLionProjects/RISC-V-Game-Ready-Emulator/Programs/test/framebuffer_test.c:158:         for (uint32_t x = 0; x < width; x++) {
 	.loc 1 158 32 discriminator 1
-	li	a2,0		# ivtmp.145,
+	li	a2,0		# ivtmp.143,
 # /Users/mark.verbeek/CLionProjects/RISC-V-Game-Ready-Emulator/Programs/test/framebuffer_test.c:158:         for (uint32_t x = 0; x < width; x++) {
 	.loc 1 158 23
 	li	a3,0		# x,
@@ -1302,7 +1302,7 @@ run_frame_buffer_test:
 	.loc 1 160 13
 # /Users/mark.verbeek/CLionProjects/RISC-V-Game-Ready-Emulator/Programs/test/framebuffer_test.c:159:             uint8_t intensity = (x * 255) / width;
 	.loc 1 159 43 is_stmt 0
-	divuw	a4,a2,s0	# width, tmp234, ivtmp.145
+	divuw	a4,a2,s0	# width, tmp234, ivtmp.143
 .LBB135:
 .LBB131:
 # /Users/mark.verbeek/CLionProjects/RISC-V-Game-Ready-Emulator/Programs/test/framebuffer_test.c:20:     framebuffer[y * width + x] = color;
@@ -1312,7 +1312,7 @@ run_frame_buffer_test:
 .LBE135:
 # /Users/mark.verbeek/CLionProjects/RISC-V-Game-Ready-Emulator/Programs/test/framebuffer_test.c:160:             set_pixel(x, y, intensity << 16);
 	.loc 1 160 13
-	addiw	a2,a2,255	#, ivtmp.145, ivtmp.145
+	addiw	a2,a2,255	#, ivtmp.143, ivtmp.143
 .LVL110:
 .LBB136:
 .LBB132:
@@ -1396,13 +1396,13 @@ run_frame_buffer_test:
 	.loc 1 167 32 is_stmt 1 discriminator 1
 	beq	s0,zero,.L95	#, width,,
 	mv	a2,s7	# y, tmp220
-	li	a6,0		# ivtmp.141,
+	li	a6,0		# ivtmp.139,
 .LVL118:
 .L97:
 .LBB149:
 # /Users/mark.verbeek/CLionProjects/RISC-V-Game-Ready-Emulator/Programs/test/framebuffer_test.c:168:             uint8_t intensity = ((y - section_height) * 255) / section_height;
 	.loc 1 168 62 is_stmt 0
-	divuw	a3,a6,s7	# tmp220, tmp262, ivtmp.141
+	divuw	a3,a6,s7	# tmp220, tmp262, ivtmp.139
 .LBE149:
 # /Users/mark.verbeek/CLionProjects/RISC-V-Game-Ready-Emulator/Programs/test/framebuffer_test.c:167:         for (uint32_t x = 0; x < width; x++) {
 	.loc 1 167 23
@@ -1451,7 +1451,7 @@ run_frame_buffer_test:
 	addiw	a2,a2,1	#, y, y
 .LVL122:
 	.loc 1 166 41 discriminator 1
-	addiw	a6,a6,255	#, ivtmp.141, ivtmp.141
+	addiw	a6,a6,255	#, ivtmp.139, ivtmp.139
 .LVL123:
 	bne	s8,a2,.L97	#, tmp338, y,
 .LVL124:
@@ -1484,7 +1484,7 @@ run_frame_buffer_test:
 .LVL127:
 .L100:
 	slliw	a2,s6,8	#, tmp288, y
-	subw	a2,a2,s6	# ivtmp.128, tmp288, y
+	subw	a2,a2,s6	# ivtmp.126, tmp288, y
 # /Users/mark.verbeek/CLionProjects/RISC-V-Game-Ready-Emulator/Programs/test/framebuffer_test.c:176:         for (uint32_t x = 0; x < width; x++) {
 	.loc 1 176 23 is_stmt 0
 	li	a3,0		# x,
@@ -1495,13 +1495,13 @@ run_frame_buffer_test:
 	.loc 1 178 13
 # /Users/mark.verbeek/CLionProjects/RISC-V-Game-Ready-Emulator/Programs/test/framebuffer_test.c:177:             uint8_t intensity = ((x + y) * 255) / (width + section_height * 3);
 	.loc 1 177 49 is_stmt 0
-	divuw	a4,a2,a0	# tmp339, tmp293, ivtmp.128
+	divuw	a4,a2,a0	# tmp339, tmp293, ivtmp.126
 .LBB121:
 .LBB119:
 # /Users/mark.verbeek/CLionProjects/RISC-V-Game-Ready-Emulator/Programs/test/framebuffer_test.c:20:     framebuffer[y * width + x] = color;
 	.loc 1 20 19
 	lw	a5,%lo(display_width)(s2)		# display_width, display_width
-	addiw	a2,a2,255	#, ivtmp.128, ivtmp.128
+	addiw	a2,a2,255	#, ivtmp.126, ivtmp.126
 .LVL129:
 	mulw	a5,a5,s6	# tmp299, display_width, y
 	andi	a4,a4,0xff	# _87, tmp293
@@ -1810,11 +1810,11 @@ draw_cool_pattern:
 # /Users/mark.verbeek/CLionProjects/RISC-V-Game-Ready-Emulator/Programs/test/framebuffer_test.c:29:         framebuffer[i] = color;
 	.loc 1 29 20
 	lui	s10,%hi(framebuffer)	# tmp326,
-	ld	a5,%lo(framebuffer)(s10)		# ivtmp.176, framebuffer
+	ld	a5,%lo(framebuffer)(s10)		# ivtmp.174, framebuffer
 	slli	a3,a4,32	#, tmp330, tmp207
 	srli	a4,a3,30	#, _130, tmp330
 .LVL154:
-	add	a4,a4,a5	# ivtmp.176, _128, _130
+	add	a4,a4,a5	# ivtmp.174, _128, _130
 .LVL155:
 .L136:
 	.loc 1 29 9 is_stmt 1
@@ -1824,9 +1824,9 @@ draw_cool_pattern:
 	.loc 1 28 38 is_stmt 1 discriminator 3
 .LVL156:
 	.loc 1 28 28 discriminator 1
-	addi	a5,a5,4	#, ivtmp.176, ivtmp.176
+	addi	a5,a5,4	#, ivtmp.174, ivtmp.174
 .LVL157:
-	bne	a4,a5,.L136	#, _128, ivtmp.176,
+	bne	a4,a5,.L136	#, _128, ivtmp.174,
 .LVL158:
 .L137:
 .LBE178:
@@ -1870,7 +1870,7 @@ draw_cool_pattern:
 .LVL162:
 .LBB186:
 	.loc 1 213 32 discriminator 1
-	negw	a1,t0	# ivtmp.172, tmp214
+	negw	a1,t0	# ivtmp.170, tmp214
 	beq	s8,zero,.L134	#, width,,
 	negw	a5,s4	# tmp325, tmp212
 	sd	s11,56(sp)	#,
@@ -1910,7 +1910,7 @@ draw_cool_pattern:
 	.loc 1 241 17
 	lui	s4,%hi(.LC32)	# tmp327,
 .LVL163:
-	mv	a2,a1	# ivtmp.172, ivtmp.172
+	mv	a2,a1	# ivtmp.170, ivtmp.170
 	mv	s5,s8	# width, width
 	mv	a3,a0	# pixels_done, pixels_done
 	sd	t0,40(sp)	# tmp214, %sfp
@@ -1922,26 +1922,26 @@ draw_cool_pattern:
 	addiw	a4,a3,1	#, tmp232, pixels_done
 # /Users/mark.verbeek/CLionProjects/RISC-V-Game-Ready-Emulator/Programs/test/framebuffer_test.c:218:             int dist = (dx < 0 ? -dx : dx) + (dy < 0 ? -dy : dy);
 	.loc 1 218 60
-	sraiw	a5,a2,31	#, tmp225, ivtmp.172
-	ld	s7,24(sp)		# ivtmp.164, %sfp
+	sraiw	a5,a2,31	#, tmp225, ivtmp.170
+	ld	s7,24(sp)		# ivtmp.162, %sfp
 	slliw	s8,a4,2	#, tmp235, tmp232
-	xor	t1,a2,a5	# tmp225, tmp226, ivtmp.172
+	xor	t1,a2,a5	# tmp225, tmp226, ivtmp.170
 	addw	s8,s8,a4	# tmp232, tmp237, tmp235
-	slliw	s8,s8,1	#, ivtmp.167, tmp237
+	slliw	s8,s8,1	#, ivtmp.165, tmp237
 	subw	t1,t1,a5	# tmp228, tmp226, tmp225
-	li	s10,0		# ivtmp.166,
+	li	s10,0		# ivtmp.164,
 .LBE198:
 # /Users/mark.verbeek/CLionProjects/RISC-V-Game-Ready-Emulator/Programs/test/framebuffer_test.c:213:         for (uint32_t x = 0; x < width; x++) {
 	.loc 1 213 23
 	li	s6,0		# x,
 	mv	a5,s0	# tmp216, tmp216
 	mv	a7,s2	# tmp326, tmp326
-	mv	s0,s8	# ivtmp.167, ivtmp.167
+	mv	s0,s8	# ivtmp.165, ivtmp.165
 .LVL165:
-	mv	s2,s10	# ivtmp.166, ivtmp.166
+	mv	s2,s10	# ivtmp.164, ivtmp.164
 	mv	s8,s1	# y, y
-	mv	s10,s7	# ivtmp.164, ivtmp.164
-	sd	a2,8(sp)	# ivtmp.172, %sfp
+	mv	s10,s7	# ivtmp.162, ivtmp.162
+	sd	a2,8(sp)	# ivtmp.170, %sfp
 	mv	s7,s6	# x, x
 	sd	a3,16(sp)	# pixels_done, %sfp
 	mv	s6,t1	# tmp228, tmp228
@@ -1956,12 +1956,12 @@ draw_cool_pattern:
 	mv	a2,s3	# last_percent, percent
 # /Users/mark.verbeek/CLionProjects/RISC-V-Game-Ready-Emulator/Programs/test/framebuffer_test.c:239:             int percent = (pixels_done * 10) / total_pixels;
 	.loc 1 239 46 is_stmt 0
-	divuw	s3,s0,s1	# tmp216, percent, ivtmp.167
+	divuw	s3,s0,s1	# tmp216, percent, ivtmp.165
 .LVL167:
 # /Users/mark.verbeek/CLionProjects/RISC-V-Game-Ready-Emulator/Programs/test/framebuffer_test.c:218:             int dist = (dx < 0 ? -dx : dx) + (dy < 0 ? -dy : dy);
 	.loc 1 218 38
-	sraiw	a5,s10,31	#, tmp241, ivtmp.164
-	xor	t3,s10,a5	# tmp241, tmp242, ivtmp.164
+	sraiw	a5,s10,31	#, tmp241, ivtmp.162
+	xor	t3,s10,a5	# tmp241, tmp242, ivtmp.162
 	subw	t3,t3,a5	# tmp244, tmp242, tmp241
 # /Users/mark.verbeek/CLionProjects/RISC-V-Game-Ready-Emulator/Programs/test/framebuffer_test.c:221:             int pattern1 = (x + y) & 0xFF;
 	.loc 1 221 31
@@ -1979,7 +1979,7 @@ draw_cool_pattern:
 	andi	a4,a4,255	#, tmp249, tmp248
 # /Users/mark.verbeek/CLionProjects/RISC-V-Game-Ready-Emulator/Programs/test/framebuffer_test.c:222:             int pattern2 = (x * y) >> 4;
 	.loc 1 222 36
-	srliw	a5,s2,4	# tmp251, ivtmp.166,
+	srliw	a5,s2,4	# tmp251, ivtmp.164,
 # /Users/mark.verbeek/CLionProjects/RISC-V-Game-Ready-Emulator/Programs/test/framebuffer_test.c:223:             int pattern3 = dist & 0xFF;
 	.loc 1 223 17
 	andi	a3,t3,255	#, tmp254, tmp246
@@ -2111,29 +2111,29 @@ draw_cool_pattern:
 	addiw	s7,s7,1	#, x, x
 .LVL176:
 	.loc 1 213 32 discriminator 1
-	addiw	s10,s10,1	#, ivtmp.164, ivtmp.164
+	addiw	s10,s10,1	#, ivtmp.162, ivtmp.162
 .LVL177:
-	addw	s2,s8,s2	# ivtmp.166, ivtmp.166, y
+	addw	s2,s8,s2	# ivtmp.164, ivtmp.164, y
 .LVL178:
-	addiw	s0,s0,10	#, ivtmp.167, ivtmp.167
+	addiw	s0,s0,10	#, ivtmp.165, ivtmp.165
 	bne	s5,s7,.L139	#, width, x,
 .LBE186:
 # /Users/mark.verbeek/CLionProjects/RISC-V-Game-Ready-Emulator/Programs/test/framebuffer_test.c:212:     for (uint32_t y = 0; y < height; y++) {
 	.loc 1 212 28 is_stmt 0 discriminator 1
-	ld	a2,8(sp)		# ivtmp.172, %sfp
+	ld	a2,8(sp)		# ivtmp.170, %sfp
 	ld	a3,16(sp)		# pixels_done, %sfp
 	ld	a5,32(sp)		# tmp220, %sfp
-	addiw	a2,a2,1	#, ivtmp.172, ivtmp.172
+	addiw	a2,a2,1	#, ivtmp.170, ivtmp.170
 	mv	s0,s1	# tmp216, tmp216
 	mv	s2,a7	# tmp326, tmp326
 	addw	a3,s5,a3	# pixels_done, pixels_done, width
 	.loc 1 212 39 is_stmt 1 discriminator 2
 .LVL179:
 	.loc 1 212 28 discriminator 1
-	beq	a2,a5,.L147	#, ivtmp.172, tmp220,
+	beq	a2,a5,.L147	#, ivtmp.170, tmp220,
 .LVL180:
 	ld	a5,40(sp)		# tmp214, %sfp
-	addw	s1,a5,a2	# ivtmp.172, y, tmp214
+	addw	s1,a5,a2	# ivtmp.170, y, tmp214
 .LVL181:
 .LBB200:
 	.loc 1 213 32 discriminator 1
@@ -2206,460 +2206,489 @@ run_bouncing_ball_demo_size:
 	.loc 1 252 5
 # /Users/mark.verbeek/CLionProjects/RISC-V-Game-Ready-Emulator/Programs/test/framebuffer_test.c:251: void run_bouncing_ball_demo_size(int ball_radius) {
 	.loc 1 251 51 is_stmt 0
-	addi	sp,sp,-64	#,,
-	.cfi_def_cfa_offset 64
-	sd	s0,48(sp)	#,
-	sd	s2,32(sp)	#,
-	.cfi_offset 8, -16
-	.cfi_offset 18, -32
+	addi	sp,sp,-128	#,,
+	.cfi_def_cfa_offset 128
+	sd	s3,88(sp)	#,
+	sd	s7,56(sp)	#,
+	.cfi_offset 19, -40
+	.cfi_offset 23, -72
 # /Users/mark.verbeek/CLionProjects/RISC-V-Game-Ready-Emulator/Programs/test/framebuffer_test.c:252:     int ball_x = display_width / 4;
 	.loc 1 252 32
-	lui	s0,%hi(display_width)	# tmp328,
+	lui	s3,%hi(display_width)	# tmp315,
 # /Users/mark.verbeek/CLionProjects/RISC-V-Game-Ready-Emulator/Programs/test/framebuffer_test.c:253:     int ball_y = display_height / 4;
 	.loc 1 253 33
-	lui	s2,%hi(display_height)	# tmp329,
+	lui	s7,%hi(display_height)	# tmp314,
 # /Users/mark.verbeek/CLionProjects/RISC-V-Game-Ready-Emulator/Programs/test/framebuffer_test.c:253:     int ball_y = display_height / 4;
 	.loc 1 253 9
-	lw	a5,%lo(display_height)(s2)		# display_height, display_height
+	lw	a5,%lo(display_height)(s7)		# display_height, display_height
 # /Users/mark.verbeek/CLionProjects/RISC-V-Game-Ready-Emulator/Programs/test/framebuffer_test.c:252:     int ball_x = display_width / 4;
 	.loc 1 252 9
-	lw	a4,%lo(display_width)(s0)		# display_width, display_width
+	lw	a4,%lo(display_width)(s3)		# display_width, display_width
 # /Users/mark.verbeek/CLionProjects/RISC-V-Game-Ready-Emulator/Programs/test/framebuffer_test.c:251: void run_bouncing_ball_demo_size(int ball_radius) {
 	.loc 1 251 51
-	sd	s3,24(sp)	#,
-	sd	s4,16(sp)	#,
-	.cfi_offset 19, -40
+	sd	s6,64(sp)	#,
+	sd	s8,48(sp)	#,
+	.cfi_offset 22, -64
+	.cfi_offset 24, -80
+# /Users/mark.verbeek/CLionProjects/RISC-V-Game-Ready-Emulator/Programs/test/framebuffer_test.c:252:     int ball_x = display_width / 4;
+	.loc 1 252 9
+	sraiw	s6,a4,31	#, tmp202, display_width
+# /Users/mark.verbeek/CLionProjects/RISC-V-Game-Ready-Emulator/Programs/test/framebuffer_test.c:253:     int ball_y = display_height / 4;
+	.loc 1 253 9
+	sraiw	s8,a5,31	#, tmp217, display_height
+# /Users/mark.verbeek/CLionProjects/RISC-V-Game-Ready-Emulator/Programs/test/framebuffer_test.c:251: void run_bouncing_ball_demo_size(int ball_radius) {
+	.loc 1 251 51
+	sd	s4,80(sp)	#,
+# /Users/mark.verbeek/CLionProjects/RISC-V-Game-Ready-Emulator/Programs/test/framebuffer_test.c:252:     int ball_x = display_width / 4;
+	.loc 1 252 9
+	srliw	s6,s6,30	# tmp204, tmp202,
 	.cfi_offset 20, -48
-# /Users/mark.verbeek/CLionProjects/RISC-V-Game-Ready-Emulator/Programs/test/framebuffer_test.c:252:     int ball_x = display_width / 4;
-	.loc 1 252 9
-	sraiw	s3,a4,31	#, tmp203, display_width
-# /Users/mark.verbeek/CLionProjects/RISC-V-Game-Ready-Emulator/Programs/test/framebuffer_test.c:253:     int ball_y = display_height / 4;
-	.loc 1 253 9
-	sraiw	s4,a5,31	#, tmp218, display_height
 # /Users/mark.verbeek/CLionProjects/RISC-V-Game-Ready-Emulator/Programs/test/framebuffer_test.c:251: void run_bouncing_ball_demo_size(int ball_radius) {
 	.loc 1 251 51
-	sd	s1,40(sp)	#,
-# /Users/mark.verbeek/CLionProjects/RISC-V-Game-Ready-Emulator/Programs/test/framebuffer_test.c:252:     int ball_x = display_width / 4;
-	.loc 1 252 9
-	srliw	s3,s3,30	# tmp205, tmp203,
-	.cfi_offset 9, -24
-# /Users/mark.verbeek/CLionProjects/RISC-V-Game-Ready-Emulator/Programs/test/framebuffer_test.c:251: void run_bouncing_ball_demo_size(int ball_radius) {
-	.loc 1 251 51
-	mv	s1,a0	# tmp345, ball_radius
+	mv	s4,a0	# tmp328, ball_radius
 # /Users/mark.verbeek/CLionProjects/RISC-V-Game-Ready-Emulator/Programs/test/framebuffer_test.c:253:     int ball_y = display_height / 4;
 	.loc 1 253 9
-	srliw	s4,s4,30	# tmp220, tmp218,
+	srliw	s8,s8,30	# tmp219, tmp217,
 # /Users/mark.verbeek/CLionProjects/RISC-V-Game-Ready-Emulator/Programs/test/framebuffer_test.c:261:     clear_screen(bg_color);
 	.loc 1 261 5
 	li	a0,-16777216		#,
 .LVL189:
 # /Users/mark.verbeek/CLionProjects/RISC-V-Game-Ready-Emulator/Programs/test/framebuffer_test.c:253:     int ball_y = display_height / 4;
 	.loc 1 253 9
-	addw	s4,s4,a5	# display_height, tmp222, tmp220
-# /Users/mark.verbeek/CLionProjects/RISC-V-Game-Ready-Emulator/Programs/test/framebuffer_test.c:252:     int ball_x = display_width / 4;
-	.loc 1 252 9
-	addw	s3,s3,a4	# display_width, tmp207, tmp205
+	addw	s8,s8,a5	# display_height, tmp221, tmp219
 # /Users/mark.verbeek/CLionProjects/RISC-V-Game-Ready-Emulator/Programs/test/framebuffer_test.c:251: void run_bouncing_ball_demo_size(int ball_radius) {
 	.loc 1 251 51
-	sd	ra,56(sp)	#,
+	sd	s0,112(sp)	#,
+	sd	s1,104(sp)	#,
+	sd	s2,96(sp)	#,
+	sd	s5,72(sp)	#,
+	sd	s9,40(sp)	#,
+	sd	s10,32(sp)	#,
+	sd	s11,24(sp)	#,
+# /Users/mark.verbeek/CLionProjects/RISC-V-Game-Ready-Emulator/Programs/test/framebuffer_test.c:252:     int ball_x = display_width / 4;
+	.loc 1 252 9
+	addw	s6,s6,a4	# display_width, tmp206, tmp204
+# /Users/mark.verbeek/CLionProjects/RISC-V-Game-Ready-Emulator/Programs/test/framebuffer_test.c:251: void run_bouncing_ball_demo_size(int ball_radius) {
+	.loc 1 251 51
+	sd	ra,120(sp)	#,
+	.cfi_offset 8, -16
+	.cfi_offset 9, -24
+	.cfi_offset 18, -32
+	.cfi_offset 21, -56
+	.cfi_offset 25, -88
+	.cfi_offset 26, -96
+	.cfi_offset 27, -104
 	.cfi_offset 1, -8
 # /Users/mark.verbeek/CLionProjects/RISC-V-Game-Ready-Emulator/Programs/test/framebuffer_test.c:261:     clear_screen(bg_color);
 	.loc 1 261 5
 	call	clear_screen		#
 .LVL190:
-.LBB201:
-.LBB202:
-.LBB203:
-.LBB204:
-.LBB205:
-.LBB206:
-# /Users/mark.verbeek/CLionProjects/RISC-V-Game-Ready-Emulator/Programs/test/framebuffer_test.c:20:     framebuffer[y * width + x] = color;
-	.loc 1 20 16
-	lui	a5,%hi(framebuffer)	# tmp225,
-	ld	a2,%lo(framebuffer)(a5)		# framebuffer.1_65, framebuffer
-.LBE206:
-.LBE205:
-.LBE204:
-.LBE203:
-.LBE202:
-.LBE201:
-.LBB223:
-# /Users/mark.verbeek/CLionProjects/RISC-V-Game-Ready-Emulator/Programs/test/framebuffer_test.c:308:         for (volatile int i = 0; i < 10000; i++);
-	.loc 1 308 36 discriminator 1
-	li	t3,8192		# tmp346,
-.LBE223:
+# /Users/mark.verbeek/CLionProjects/RISC-V-Game-Ready-Emulator/Programs/test/framebuffer_test.c:254:     int vx = 2;
+	.loc 1 254 9
+	li	s11,2		# vx,
+	li	a5,4		# tmp312,
 # /Users/mark.verbeek/CLionProjects/RISC-V-Game-Ready-Emulator/Programs/test/framebuffer_test.c:252:     int ball_x = display_width / 4;
 	.loc 1 252 9
-	sraiw	s3,s3,2	#, ball_x, tmp207
+	sraiw	s6,s6,2	#, ball_x, tmp206
 .LVL191:
 	.loc 1 253 5 is_stmt 1
 # /Users/mark.verbeek/CLionProjects/RISC-V-Game-Ready-Emulator/Programs/test/framebuffer_test.c:253:     int ball_y = display_height / 4;
 	.loc 1 253 9 is_stmt 0
-	sraiw	s4,s4,2	#, ball_y, tmp222
+	sraiw	s8,s8,2	#, ball_y, tmp221
 .LVL192:
 	.loc 1 254 5 is_stmt 1
 	.loc 1 255 5
 	.loc 1 257 5
 	.loc 1 258 5
 	.loc 1 261 5
-.LBB224:
+.LBB201:
+.LBB202:
 # /Users/mark.verbeek/CLionProjects/RISC-V-Game-Ready-Emulator/Programs/test/framebuffer_test.c:265:         for (int dy = -ball_radius; dy <= ball_radius; dy++) {
 	.loc 1 265 18 is_stmt 0
-	negw	t4,s1	# tmp227, ball_radius
-	addiw	a6,s1,1	#, tmp327, ball_radius
-.LBE224:
-.LBB225:
-# /Users/mark.verbeek/CLionProjects/RISC-V-Game-Ready-Emulator/Programs/test/framebuffer_test.c:308:         for (volatile int i = 0; i < 10000; i++);
-	.loc 1 308 36 discriminator 1
-	addi	t3,t3,1807	#, tmp344, tmp346
-.LBE225:
+	negw	s0,s4	# tmp225, ball_radius
+	addiw	s9,s4,1	#, tmp316, ball_radius
+	mv	s1,s11	# tmp313, vx
+.LBE202:
+.LBE201:
 # /Users/mark.verbeek/CLionProjects/RISC-V-Game-Ready-Emulator/Programs/test/framebuffer_test.c:255:     int vy = 1;
 	.loc 1 255 9
-	li	t1,1		# vy,
-# /Users/mark.verbeek/CLionProjects/RISC-V-Game-Ready-Emulator/Programs/test/framebuffer_test.c:254:     int vx = 2;
-	.loc 1 254 9
-	li	a7,2		# vx,
-.LBB226:
-.LBB220:
-.LBB218:
-.LBB215:
-.LBB211:
+	li	s2,1		# vy,
+	sd	a5,8(sp)	# tmp312, %sfp
+.LBB249:
+.LBB223:
+.LBB203:
+.LBB204:
+.LBB205:
+.LBB206:
 .LBB207:
 # /Users/mark.verbeek/CLionProjects/RISC-V-Game-Ready-Emulator/Programs/test/framebuffer_test.c:20:     framebuffer[y * width + x] = color;
 	.loc 1 20 32
-	li	a0,-16777216		# tmp338,
+	li	s5,-16777216		# tmp323,
 .LBE207:
-.LBE211:
-.LBE215:
-.LBE218:
-.LBE220:
-.LBE226:
+.LBE206:
+.LBE205:
+.LBE204:
+.LBE203:
+.LBE223:
+.LBB224:
+.LBB225:
+.LBB226:
 .LBB227:
 .LBB228:
 .LBB229:
-.LBB230:
-.LBB231:
-.LBB232:
-	li	a1,-1		# tmp341,
+	li	s10,-1		# tmp326,
 .LVL193:
-.L170:
-.LBE232:
-.LBE231:
-.LBE230:
+.L162:
 .LBE229:
 .LBE228:
 .LBE227:
+.LBE226:
+.LBE225:
+.LBE224:
+.LBE249:
 	.loc 1 263 5 is_stmt 1
+.LBB250:
 	.loc 1 265 9
-.LBB244:
+.LBB245:
 	.loc 1 265 14
 	.loc 1 265 40 discriminator 1
-	bgt	t4,s1,.L154	#, tmp227, ball_radius,
-	subw	a3,s4,s1	# ivtmp.204, ball_y, ball_radius
-	addw	t0,s4,a6	# tmp327, tmp237, ball_y
-	addw	t5,s3,a6	# tmp327, tmp335, ball_x
+	blt	s4,s0,.L154	#, ball_radius, tmp225,
+.LBB221:
+.LBB219:
+.LBB216:
+.LBB212:
+.LBB208:
+# /Users/mark.verbeek/CLionProjects/RISC-V-Game-Ready-Emulator/Programs/test/framebuffer_test.c:20:     framebuffer[y * width + x] = color;
+	.loc 1 20 16 is_stmt 0
+	lui	a5,%hi(framebuffer)	# tmp334,
+	ld	a6,%lo(framebuffer)(a5)		# framebuffer.1_63, framebuffer
+	subw	a3,s8,s4	# ivtmp.201, ball_y, ball_radius
+	addw	t1,s8,s9	# tmp316, tmp240, ball_y
+	addw	a0,s6,s9	# tmp316, tmp320, ball_x
 .LVL194:
 .L153:
-.LBB221:
-	.loc 1 266 13
+.LBE208:
+.LBE212:
+.LBE216:
+.LBE219:
+	.loc 1 266 13 is_stmt 1
 	.loc 1 267 13
 # /Users/mark.verbeek/CLionProjects/RISC-V-Game-Ready-Emulator/Programs/test/framebuffer_test.c:267:             if (y < 0 || y >= display_height) continue;
 	.loc 1 267 16 is_stmt 0
-	blt	a3,zero,.L155	#, ivtmp.204,,
+	blt	a3,zero,.L155	#, ivtmp.201,,
 # /Users/mark.verbeek/CLionProjects/RISC-V-Game-Ready-Emulator/Programs/test/framebuffer_test.c:267:             if (y < 0 || y >= display_height) continue;
 	.loc 1 267 23 discriminator 2
-	lw	a5,%lo(display_height)(s2)		# display_height, display_height
-	bgt	a5,a3,.L179	#, display_height, ivtmp.204,
+	lw	a5,%lo(display_height)(s7)		# display_height, display_height
+	bgt	a5,a3,.L175	#, display_height, ivtmp.201,
 .L155:
 .LBE221:
 	.loc 1 265 58 is_stmt 1 discriminator 2
 .LVL195:
 	.loc 1 265 40 discriminator 1
-	addiw	a3,a3,1	#, ivtmp.204, ivtmp.204
+	addiw	a3,a3,1	#, ivtmp.201, ivtmp.201
 .LVL196:
-	bne	a3,t0,.L153	#, ivtmp.204, tmp237,
+	bne	a3,t1,.L153	#, ivtmp.201, tmp240,
 .LVL197:
 .L154:
-.LBE244:
+.LBE245:
 	.loc 1 276 9
-# /Users/mark.verbeek/CLionProjects/RISC-V-Game-Ready-Emulator/Programs/test/framebuffer_test.c:276:         ball_x += vx;
+# /Users/mark.verbeek/CLionProjects/RISC-V-Game-Ready-Emulator/Programs/test/framebuffer_test.c:276:         ball_x += vx * 2;
 	.loc 1 276 16 is_stmt 0
-	addw	s3,s3,a7	# vx, ball_x, ball_x
+	ld	a5,8(sp)		# tmp312, %sfp
+# /Users/mark.verbeek/CLionProjects/RISC-V-Game-Ready-Emulator/Programs/test/framebuffer_test.c:277:         ball_y += vy * 2;
+	.loc 1 277 16
+	addw	s8,s1,s8	# ball_y, ball_y, tmp313
 .LVL198:
-	.loc 1 277 9 is_stmt 1
-# /Users/mark.verbeek/CLionProjects/RISC-V-Game-Ready-Emulator/Programs/test/framebuffer_test.c:277:         ball_y += vy;
-	.loc 1 277 16 is_stmt 0
-	addw	s4,s4,t1	# vy, ball_y, ball_y
+# /Users/mark.verbeek/CLionProjects/RISC-V-Game-Ready-Emulator/Programs/test/framebuffer_test.c:276:         ball_x += vx * 2;
+	.loc 1 276 16
+	addw	s6,a5,s6	# ball_x, ball_x, tmp312
 .LVL199:
-	.loc 1 280 9 is_stmt 1
+	.loc 1 277 9 is_stmt 1
+	.loc 1 280 9
 # /Users/mark.verbeek/CLionProjects/RISC-V-Game-Ready-Emulator/Programs/test/framebuffer_test.c:280:         if (ball_x - ball_radius < 0) {
 	.loc 1 280 12 is_stmt 0
-	blt	s3,s1,.L180	#, ball_x, ball_radius,
+	blt	s6,s4,.L176	#, ball_x, ball_radius,
 	.loc 1 283 16 is_stmt 1
 # /Users/mark.verbeek/CLionProjects/RISC-V-Game-Ready-Emulator/Programs/test/framebuffer_test.c:283:         } else if (ball_x + ball_radius >= display_width) {
 	.loc 1 283 41 is_stmt 0
-	lw	a5,%lo(display_width)(s0)		# display_width.41_7, display_width
+	lw	a5,%lo(display_width)(s3)		# display_width.41_9, display_width
 # /Users/mark.verbeek/CLionProjects/RISC-V-Game-Ready-Emulator/Programs/test/framebuffer_test.c:283:         } else if (ball_x + ball_radius >= display_width) {
 	.loc 1 283 27
-	addw	a4,s1,s3	# ball_x, tmp262, ball_radius
+	addw	a4,s4,s6	# ball_x, tmp265, ball_radius
 # /Users/mark.verbeek/CLionProjects/RISC-V-Game-Ready-Emulator/Programs/test/framebuffer_test.c:283:         } else if (ball_x + ball_radius >= display_width) {
 	.loc 1 283 19
-	blt	a4,a5,.L158	#, tmp262, display_width.41_7,
+	blt	a4,a5,.L158	#, tmp265, display_width.41_9,
 	.loc 1 284 13 is_stmt 1
 # /Users/mark.verbeek/CLionProjects/RISC-V-Game-Ready-Emulator/Programs/test/framebuffer_test.c:284:             ball_x = display_width - 1 - ball_radius;
 	.loc 1 284 36 is_stmt 0
-	addiw	a5,a5,-1	#, tmp265, display_width.41_7
+	addiw	a5,a5,-1	#, tmp268, display_width.41_9
+# /Users/mark.verbeek/CLionProjects/RISC-V-Game-Ready-Emulator/Programs/test/framebuffer_test.c:285:             vx = -vx;
+	.loc 1 285 16
+	negw	s11,s11	# vx, vx
+.LVL200:
 # /Users/mark.verbeek/CLionProjects/RISC-V-Game-Ready-Emulator/Programs/test/framebuffer_test.c:284:             ball_x = display_width - 1 - ball_radius;
 	.loc 1 284 20
-	subw	s3,a5,s1	# ball_x, tmp265, ball_radius
-.LVL200:
-	.loc 1 285 13 is_stmt 1
-# /Users/mark.verbeek/CLionProjects/RISC-V-Game-Ready-Emulator/Programs/test/framebuffer_test.c:285:             vx = -vx;
-	.loc 1 285 16 is_stmt 0
-	negw	a7,a7	# vx, vx
+	subw	s6,a5,s4	# ball_x, tmp268, ball_radius
 .LVL201:
+	.loc 1 285 13 is_stmt 1
+	slliw	a5,s11,1	#, tmp312, vx
+	sd	a5,8(sp)	# tmp312, %sfp
+.LVL202:
 .L158:
-	.loc 1 288 9 is_stmt 1
+	.loc 1 288 9
 # /Users/mark.verbeek/CLionProjects/RISC-V-Game-Ready-Emulator/Programs/test/framebuffer_test.c:288:         if (ball_y - ball_radius < 0) {
 	.loc 1 288 12 is_stmt 0
-	blt	s4,s1,.L181	#, ball_y, ball_radius,
+	blt	s8,s4,.L177	#, ball_y, ball_radius,
 .L159:
 	.loc 1 291 16 is_stmt 1
 # /Users/mark.verbeek/CLionProjects/RISC-V-Game-Ready-Emulator/Programs/test/framebuffer_test.c:291:         } else if (ball_y + ball_radius >= display_height) {
 	.loc 1 291 41 is_stmt 0
-	lw	a5,%lo(display_height)(s2)		# display_height.43_11, display_height
+	lw	a5,%lo(display_height)(s7)		# display_height.43_13, display_height
 # /Users/mark.verbeek/CLionProjects/RISC-V-Game-Ready-Emulator/Programs/test/framebuffer_test.c:291:         } else if (ball_y + ball_radius >= display_height) {
 	.loc 1 291 27
-	addw	a4,s1,s4	# ball_y, tmp274, ball_radius
+	addw	a4,s4,s8	# ball_y, tmp277, ball_radius
 # /Users/mark.verbeek/CLionProjects/RISC-V-Game-Ready-Emulator/Programs/test/framebuffer_test.c:291:         } else if (ball_y + ball_radius >= display_height) {
 	.loc 1 291 19
-	blt	a4,a5,.L160	#, tmp274, display_height.43_11,
+	blt	a4,a5,.L160	#, tmp277, display_height.43_13,
 	.loc 1 292 13 is_stmt 1
 # /Users/mark.verbeek/CLionProjects/RISC-V-Game-Ready-Emulator/Programs/test/framebuffer_test.c:292:             ball_y = display_height - 1 - ball_radius;
 	.loc 1 292 37 is_stmt 0
-	addiw	a5,a5,-1	#, tmp277, display_height.43_11
+	addiw	a5,a5,-1	#, tmp280, display_height.43_13
+# /Users/mark.verbeek/CLionProjects/RISC-V-Game-Ready-Emulator/Programs/test/framebuffer_test.c:293:             vy = -vy;
+	.loc 1 293 16
+	negw	s2,s2	# vy, vy
+.LVL203:
 # /Users/mark.verbeek/CLionProjects/RISC-V-Game-Ready-Emulator/Programs/test/framebuffer_test.c:292:             ball_y = display_height - 1 - ball_radius;
 	.loc 1 292 20
-	subw	s4,a5,s1	# ball_y, tmp277, ball_radius
-.LVL202:
+	subw	s8,a5,s4	# ball_y, tmp280, ball_radius
+.LVL204:
 	.loc 1 293 13 is_stmt 1
-# /Users/mark.verbeek/CLionProjects/RISC-V-Game-Ready-Emulator/Programs/test/framebuffer_test.c:293:             vy = -vy;
-	.loc 1 293 16 is_stmt 0
-	negw	t1,t1	# vy, vy
-.LVL203:
+	slliw	s1,s2,1	#, tmp313, vy
+.LVL205:
 .L160:
-	.loc 1 297 9 is_stmt 1
-.LBB245:
+	.loc 1 297 9
+.LBB246:
 	.loc 1 297 14
 	.loc 1 297 40 discriminator 1
-	bgt	t4,s1,.L166	#, tmp227, ball_radius,
-	subw	a3,s4,s1	# ivtmp.194, ball_y, ball_radius
-	addw	t0,s4,a6	# tmp327, tmp294, ball_y
-	addw	t5,s3,a6	# tmp327, tmp331, ball_x
-.LVL204:
-.L165:
-.LBB242:
-	.loc 1 298 13
+	blt	s4,s0,.L165	#, ball_radius, tmp225,
+.LBB243:
+.LBB241:
+.LBB238:
+.LBB234:
+.LBB230:
+# /Users/mark.verbeek/CLionProjects/RISC-V-Game-Ready-Emulator/Programs/test/framebuffer_test.c:20:     framebuffer[y * width + x] = color;
+	.loc 1 20 16 is_stmt 0
+	lui	a5,%hi(framebuffer)	# tmp337,
+	ld	a6,%lo(framebuffer)(a5)		# framebuffer.1_72, framebuffer
+	subw	a3,s8,s4	# ivtmp.191, ball_y, ball_radius
+	addw	a7,s8,s9	# tmp316, tmp291, ball_y
+.LVL206:
+.L164:
+.LBE230:
+.LBE234:
+.LBE238:
+.LBE241:
+	.loc 1 298 13 is_stmt 1
 	.loc 1 299 13
 # /Users/mark.verbeek/CLionProjects/RISC-V-Game-Ready-Emulator/Programs/test/framebuffer_test.c:299:             if (y < 0 || y >= display_height) continue;
 	.loc 1 299 16 is_stmt 0
-	blt	a3,zero,.L167	#, ivtmp.194,,
+	blt	a3,zero,.L166	#, ivtmp.191,,
 # /Users/mark.verbeek/CLionProjects/RISC-V-Game-Ready-Emulator/Programs/test/framebuffer_test.c:299:             if (y < 0 || y >= display_height) continue;
 	.loc 1 299 23 discriminator 2
-	lw	a5,%lo(display_height)(s2)		# display_height, display_height
-	bgt	a5,a3,.L182	#, display_height, ivtmp.194,
-.L167:
-.LBE242:
-	.loc 1 297 58 is_stmt 1 discriminator 2
-.LVL205:
-	.loc 1 297 40 discriminator 1
-	addiw	a3,a3,1	#, ivtmp.194, ivtmp.194
-.LVL206:
-	bne	a3,t0,.L165	#, ivtmp.194, tmp294,
-.LVL207:
+	lw	a5,%lo(display_height)(s7)		# display_height, display_height
+	bgt	a5,a3,.L178	#, display_height, ivtmp.191,
 .L166:
-.LBE245:
-	.loc 1 308 9
-.LBB246:
-	.loc 1 308 14
-# /Users/mark.verbeek/CLionProjects/RISC-V-Game-Ready-Emulator/Programs/test/framebuffer_test.c:308:         for (volatile int i = 0; i < 10000; i++);
-	.loc 1 308 27 is_stmt 0
-	sw	zero,12(sp)	#, i
-	.loc 1 308 36 is_stmt 1 discriminator 1
-	lw	a5,12(sp)		# i, i
-	bgt	a5,t3,.L170	#, i, tmp344,
-.L162:
-	.loc 1 308 46 discriminator 3
-	lw	a5,12(sp)		# i, i
-	addiw	a5,a5,1	#, tmp319, i
-	sw	a5,12(sp)	# tmp319, i
-	.loc 1 308 36 discriminator 1
-	lw	a5,12(sp)		# i, i
-	ble	a5,t3,.L162	#, i, tmp344,
-	j	.L170		#
+.LBE243:
+	.loc 1 297 58 is_stmt 1 discriminator 2
+.LVL207:
+	.loc 1 297 40 discriminator 1
+	addiw	a3,a3,1	#, ivtmp.191, ivtmp.191
 .LVL208:
-.L179:
-	subw	a4,s3,s1	# ivtmp.199, ball_x, ball_radius
-.L157:
+	bne	a3,a7,.L164	#, ivtmp.191, tmp291,
 .LVL209:
+.L165:
 .LBE246:
+	.loc 1 306 9
+# /Users/mark.verbeek/CLionProjects/RISC-V-Game-Ready-Emulator/Programs/test/framebuffer_test.c:306:         uint32_t status = get_display_status();
+	.loc 1 306 27 is_stmt 0
+	call	get_display_status		#
+.LVL210:
+	.loc 1 308 13 is_stmt 1
+	call	update_display		#
+.LVL211:
+.LBE250:
+	.loc 1 263 11
+# /Users/mark.verbeek/CLionProjects/RISC-V-Game-Ready-Emulator/Programs/test/framebuffer_test.c:263:     while (true) {
+	.loc 1 263 18 is_stmt 0
+	j	.L162		#
+.LVL212:
+.L175:
+	subw	a4,s6,s4	# ivtmp.196, ball_x, ball_radius
+.L157:
+.LVL213:
+.LBB251:
 .LBB247:
 .LBB222:
-.LBB219:
-.LBB216:
-	.loc 1 269 17
+.LBB220:
+.LBB217:
+	.loc 1 269 17 is_stmt 1
 	.loc 1 270 17
 	.loc 1 271 17
-.LBB212:
-.LBB208:
-	.loc 1 19 5
-.LBE208:
-.LBE212:
-.LBE216:
-	.loc 1 268 62 discriminator 2
-	.loc 1 268 44 discriminator 1
-.LBB217:
-# /Users/mark.verbeek/CLionProjects/RISC-V-Game-Ready-Emulator/Programs/test/framebuffer_test.c:270:                 if (x < 0 || x >= display_width) continue;
-	.loc 1 270 20 is_stmt 0
-	blt	a4,zero,.L156	#, ivtmp.199,,
-# /Users/mark.verbeek/CLionProjects/RISC-V-Game-Ready-Emulator/Programs/test/framebuffer_test.c:270:                 if (x < 0 || x >= display_width) continue;
-	.loc 1 270 32 discriminator 2
-	lw	a5,%lo(display_width)(s0)		# display_width.40_4, display_width
-.LVL210:
 .LBB213:
 .LBB209:
-	.loc 1 20 5 is_stmt 1
+	.loc 1 19 5
 .LBE209:
 .LBE213:
+.LBE217:
+	.loc 1 268 62 discriminator 2
+	.loc 1 268 44 discriminator 1
+.LBB218:
 # /Users/mark.verbeek/CLionProjects/RISC-V-Game-Ready-Emulator/Programs/test/framebuffer_test.c:270:                 if (x < 0 || x >= display_width) continue;
-	.loc 1 270 27 is_stmt 0 discriminator 2
-	ble	a5,a4,.L156	#, display_width.40_4, ivtmp.199,
+	.loc 1 270 20 is_stmt 0
+	blt	a4,zero,.L156	#, ivtmp.196,,
+# /Users/mark.verbeek/CLionProjects/RISC-V-Game-Ready-Emulator/Programs/test/framebuffer_test.c:270:                 if (x < 0 || x >= display_width) continue;
+	.loc 1 270 32 discriminator 2
+	lw	a5,%lo(display_width)(s3)		# display_width.40_4, display_width
+.LVL214:
 .LBB214:
 .LBB210:
-# /Users/mark.verbeek/CLionProjects/RISC-V-Game-Ready-Emulator/Programs/test/framebuffer_test.c:20:     framebuffer[y * width + x] = color;
-	.loc 1 20 19
-	mulw	a5,a5,a3	# tmp250, display_width.40_4, ivtmp.204
-.LVL211:
-# /Users/mark.verbeek/CLionProjects/RISC-V-Game-Ready-Emulator/Programs/test/framebuffer_test.c:20:     framebuffer[y * width + x] = color;
-	.loc 1 20 27
-	addw	a5,a5,a4	# ivtmp.199, tmp252, tmp250
-# /Users/mark.verbeek/CLionProjects/RISC-V-Game-Ready-Emulator/Programs/test/framebuffer_test.c:20:     framebuffer[y * width + x] = color;
-	.loc 1 20 16
-	slli	t6,a5,32	#, tmp347, tmp252
-	srli	a5,t6,30	#, _71, tmp347
-	add	a5,a2,a5	# _71, _72, framebuffer.1_65
-# /Users/mark.verbeek/CLionProjects/RISC-V-Game-Ready-Emulator/Programs/test/framebuffer_test.c:20:     framebuffer[y * width + x] = color;
-	.loc 1 20 32
-	sw	a0,0(a5)	# tmp338, *_72
-.LVL212:
-.L156:
+	.loc 1 20 5 is_stmt 1
 .LBE210:
 .LBE214:
-.LBE217:
+# /Users/mark.verbeek/CLionProjects/RISC-V-Game-Ready-Emulator/Programs/test/framebuffer_test.c:270:                 if (x < 0 || x >= display_width) continue;
+	.loc 1 270 27 is_stmt 0 discriminator 2
+	ble	a5,a4,.L156	#, display_width.40_4, ivtmp.196,
+.LBB215:
+.LBB211:
+# /Users/mark.verbeek/CLionProjects/RISC-V-Game-Ready-Emulator/Programs/test/framebuffer_test.c:20:     framebuffer[y * width + x] = color;
+	.loc 1 20 19
+	mulw	a5,a5,a3	# tmp253, display_width.40_4, ivtmp.201
+.LVL215:
+# /Users/mark.verbeek/CLionProjects/RISC-V-Game-Ready-Emulator/Programs/test/framebuffer_test.c:20:     framebuffer[y * width + x] = color;
+	.loc 1 20 27
+	addw	a5,a5,a4	# ivtmp.196, tmp255, tmp253
+# /Users/mark.verbeek/CLionProjects/RISC-V-Game-Ready-Emulator/Programs/test/framebuffer_test.c:20:     framebuffer[y * width + x] = color;
+	.loc 1 20 16
+	slli	a7,a5,32	#, tmp329, tmp255
+	srli	a5,a7,30	#, _69, tmp329
+	add	a5,a6,a5	# _69, _70, framebuffer.1_63
+# /Users/mark.verbeek/CLionProjects/RISC-V-Game-Ready-Emulator/Programs/test/framebuffer_test.c:20:     framebuffer[y * width + x] = color;
+	.loc 1 20 32
+	sw	s5,0(a5)	# tmp323, *_70
+.LVL216:
+.L156:
+.LBE211:
+.LBE215:
+.LBE218:
 # /Users/mark.verbeek/CLionProjects/RISC-V-Game-Ready-Emulator/Programs/test/framebuffer_test.c:268:             for (int dx = -ball_radius; dx <= ball_radius; dx++) {
 	.loc 1 268 44 discriminator 1
-	addiw	a4,a4,1	#, ivtmp.199, ivtmp.199
-.LVL213:
-	bne	a4,t5,.L157	#, ivtmp.199, tmp335,
+	addiw	a4,a4,1	#, ivtmp.196, ivtmp.196
+.LVL217:
+	bne	a4,a0,.L157	#, ivtmp.196, tmp320,
 	j	.L155		#
-.LVL214:
-.L182:
-	subw	a4,s3,s1	# ivtmp.189, ball_x, ball_radius
-.L169:
-.LVL215:
-.LBE219:
+.LVL218:
+.L178:
+	subw	a4,s6,s4	# ivtmp.186, ball_x, ball_radius
+	addw	a0,s6,s9	# tmp316, tmp301, ball_x
+.L168:
+.LVL219:
+.LBE220:
 .LBE222:
 .LBE247:
 .LBB248:
-.LBB243:
-.LBB241:
+.LBB244:
+.LBB242:
 .LBB239:
 	.loc 1 301 17 is_stmt 1
 	.loc 1 302 17
 	.loc 1 303 17
-.LBB236:
-.LBB233:
+.LBB235:
+.LBB231:
 	.loc 1 19 5
-.LBE233:
-.LBE236:
+.LBE231:
+.LBE235:
 .LBE239:
 	.loc 1 300 62 discriminator 2
 	.loc 1 300 44 discriminator 1
 .LBB240:
 # /Users/mark.verbeek/CLionProjects/RISC-V-Game-Ready-Emulator/Programs/test/framebuffer_test.c:302:                 if (x < 0 || x >= display_width) continue;
 	.loc 1 302 20 is_stmt 0
-	blt	a4,zero,.L168	#, ivtmp.189,,
+	blt	a4,zero,.L167	#, ivtmp.186,,
 # /Users/mark.verbeek/CLionProjects/RISC-V-Game-Ready-Emulator/Programs/test/framebuffer_test.c:302:                 if (x < 0 || x >= display_width) continue;
 	.loc 1 302 32 discriminator 2
-	lw	a5,%lo(display_width)(s0)		# display_width.46_14, display_width
-.LVL216:
-.LBB237:
-.LBB234:
+	lw	a5,%lo(display_width)(s3)		# display_width.46_16, display_width
+.LVL220:
+.LBB236:
+.LBB232:
 	.loc 1 20 5 is_stmt 1
-.LBE234:
-.LBE237:
+.LBE232:
+.LBE236:
 # /Users/mark.verbeek/CLionProjects/RISC-V-Game-Ready-Emulator/Programs/test/framebuffer_test.c:302:                 if (x < 0 || x >= display_width) continue;
 	.loc 1 302 27 is_stmt 0 discriminator 2
-	ble	a5,a4,.L168	#, display_width.46_14, ivtmp.189,
-.LBB238:
-.LBB235:
+	ble	a5,a4,.L167	#, display_width.46_16, ivtmp.186,
+.LBB237:
+.LBB233:
 # /Users/mark.verbeek/CLionProjects/RISC-V-Game-Ready-Emulator/Programs/test/framebuffer_test.c:20:     framebuffer[y * width + x] = color;
 	.loc 1 20 19
-	mulw	a5,a5,a3	# tmp307, display_width.46_14, ivtmp.194
-.LVL217:
+	mulw	a5,a5,a3	# tmp304, display_width.46_16, ivtmp.191
+.LVL221:
 # /Users/mark.verbeek/CLionProjects/RISC-V-Game-Ready-Emulator/Programs/test/framebuffer_test.c:20:     framebuffer[y * width + x] = color;
 	.loc 1 20 27
-	addw	a5,a5,a4	# ivtmp.189, tmp309, tmp307
+	addw	a5,a5,a4	# ivtmp.186, tmp306, tmp304
 # /Users/mark.verbeek/CLionProjects/RISC-V-Game-Ready-Emulator/Programs/test/framebuffer_test.c:20:     framebuffer[y * width + x] = color;
 	.loc 1 20 16
-	slli	t6,a5,32	#, tmp348, tmp309
-	srli	a5,t6,30	#, _80, tmp348
-	add	a5,a2,a5	# _80, _81, framebuffer.1_65
+	slli	t1,a5,32	#, tmp330, tmp306
+	srli	a5,t1,30	#, _78, tmp330
+	add	a5,a6,a5	# _78, _79, framebuffer.1_72
 # /Users/mark.verbeek/CLionProjects/RISC-V-Game-Ready-Emulator/Programs/test/framebuffer_test.c:20:     framebuffer[y * width + x] = color;
 	.loc 1 20 32
-	sw	a1,0(a5)	# tmp341, *_81
-.LVL218:
-.L168:
-.LBE235:
-.LBE238:
+	sw	s10,0(a5)	# tmp326, *_79
+.LVL222:
+.L167:
+.LBE233:
+.LBE237:
 .LBE240:
 # /Users/mark.verbeek/CLionProjects/RISC-V-Game-Ready-Emulator/Programs/test/framebuffer_test.c:300:             for (int dx = -ball_radius; dx <= ball_radius; dx++) {
 	.loc 1 300 44 discriminator 1
-	addiw	a4,a4,1	#, ivtmp.189, ivtmp.189
-.LVL219:
-	bne	a4,t5,.L169	#, ivtmp.189, tmp331,
-	j	.L167		#
-.LVL220:
-.L180:
-.LBE241:
-.LBE243:
+	addiw	a4,a4,1	#, ivtmp.186, ivtmp.186
+.LVL223:
+	bne	a0,a4,.L168	#, tmp301, ivtmp.186,
+	j	.L166		#
+.LVL224:
+.L176:
+.LBE242:
+.LBE244:
 .LBE248:
 	.loc 1 281 13 is_stmt 1
 	.loc 1 282 13
 # /Users/mark.verbeek/CLionProjects/RISC-V-Game-Ready-Emulator/Programs/test/framebuffer_test.c:282:             vx = -vx;
 	.loc 1 282 16 is_stmt 0
-	negw	a7,a7	# vx, vx
-.LVL221:
+	negw	s11,s11	# vx, vx
+.LVL225:
+	slliw	a5,s11,1	#, tmp312, vx
+	sd	a5,8(sp)	# tmp312, %sfp
 # /Users/mark.verbeek/CLionProjects/RISC-V-Game-Ready-Emulator/Programs/test/framebuffer_test.c:281:             ball_x = ball_radius;
 	.loc 1 281 20
-	mv	s3,s1	# ball_x, ball_radius
-.LVL222:
+	mv	s6,s4	# ball_x, ball_radius
+.LVL226:
 	.loc 1 288 9 is_stmt 1
 # /Users/mark.verbeek/CLionProjects/RISC-V-Game-Ready-Emulator/Programs/test/framebuffer_test.c:288:         if (ball_y - ball_radius < 0) {
 	.loc 1 288 12 is_stmt 0
-	bge	s4,s1,.L159	#, ball_y, ball_radius,
-.L181:
+	bge	s8,s4,.L159	#, ball_y, ball_radius,
+.L177:
 	.loc 1 289 13 is_stmt 1
-.LVL223:
+.LVL227:
 	.loc 1 290 13
 # /Users/mark.verbeek/CLionProjects/RISC-V-Game-Ready-Emulator/Programs/test/framebuffer_test.c:290:             vy = -vy;
 	.loc 1 290 16 is_stmt 0
-	negw	t1,t1	# vy, vy
-.LVL224:
+	negw	s2,s2	# vy, vy
+.LVL228:
+	slliw	s1,s2,1	#, tmp313, vy
 # /Users/mark.verbeek/CLionProjects/RISC-V-Game-Ready-Emulator/Programs/test/framebuffer_test.c:289:             ball_y = ball_radius;
 	.loc 1 289 20
-	mv	s4,s1	# ball_y, ball_radius
+	mv	s8,s4	# ball_y, ball_radius
 	j	.L160		#
+.LBE251:
 	.cfi_endproc
 .LFE16:
 	.size	run_bouncing_ball_demo_size, .-run_bouncing_ball_demo_size
@@ -2749,12 +2778,12 @@ framebuffer:
 	.file 6 "<built-in>"
 	.section	.debug_info,"",@progbits
 .Ldebug_info0:
-	.4byte	0xfa3
+	.4byte	0xfc5
 	.2byte	0x5
 	.byte	0x1
 	.byte	0x8
 	.4byte	.Ldebug_abbrev0
-	.uleb128 0x29
+	.uleb128 0x28
 	.4byte	.LASF67
 	.byte	0x1d
 	.4byte	.LASF0
@@ -2774,7 +2803,7 @@ framebuffer:
 	.byte	0x1
 	.byte	0x6
 	.4byte	.LASF4
-	.uleb128 0x11
+	.uleb128 0x12
 	.4byte	.LASF7
 	.byte	0x2
 	.byte	0x2b
@@ -2788,20 +2817,18 @@ framebuffer:
 	.byte	0x2
 	.byte	0x7
 	.4byte	.LASF6
-	.uleb128 0x2a
+	.uleb128 0x29
 	.byte	0x4
 	.byte	0x5
 	.string	"int"
-	.uleb128 0x1f
+	.uleb128 0x1a
 	.4byte	0x5d
-	.uleb128 0x19
-	.4byte	0x5d
-	.uleb128 0x11
+	.uleb128 0x12
 	.4byte	.LASF8
 	.byte	0x2
 	.byte	0x4f
 	.byte	0x19
-	.4byte	0x7a
+	.4byte	0x75
 	.uleb128 0x7
 	.byte	0x4
 	.byte	0x7
@@ -2814,22 +2841,22 @@ framebuffer:
 	.byte	0x8
 	.byte	0x7
 	.4byte	.LASF11
-	.uleb128 0x11
+	.uleb128 0x12
 	.4byte	.LASF12
 	.byte	0x3
 	.byte	0x18
 	.byte	0x13
 	.4byte	0x43
-	.uleb128 0x11
+	.uleb128 0x12
 	.4byte	.LASF13
 	.byte	0x3
 	.byte	0x30
 	.byte	0x14
-	.4byte	0x6e
-	.uleb128 0x1f
-	.4byte	0x9b
-	.uleb128 0x19
-	.4byte	0x9b
+	.4byte	0x69
+	.uleb128 0x2a
+	.4byte	0x96
+	.uleb128 0x1a
+	.4byte	0x96
 	.uleb128 0x7
 	.byte	0x8
 	.byte	0x5
@@ -2842,25 +2869,25 @@ framebuffer:
 	.byte	0x1
 	.byte	0x8
 	.4byte	.LASF16
-	.uleb128 0x19
-	.4byte	0xbf
-	.uleb128 0x20
-	.4byte	0xc6
+	.uleb128 0x1a
+	.4byte	0xba
+	.uleb128 0x1f
+	.4byte	0xc1
 	.uleb128 0x7
 	.byte	0x8
 	.byte	0x7
 	.4byte	.LASF17
-	.uleb128 0x1a
+	.uleb128 0x1b
 	.4byte	.LASF18
 	.byte	0xd
 	.byte	0x14
-	.4byte	0xec
+	.4byte	0xe7
 	.uleb128 0x9
 	.byte	0x3
 	.8byte	framebuffer
-	.uleb128 0x20
-	.4byte	0xa7
-	.uleb128 0x1a
+	.uleb128 0x1f
+	.4byte	0xa2
+	.uleb128 0x1b
 	.4byte	.LASF19
 	.byte	0xf
 	.byte	0x5
@@ -2868,7 +2895,7 @@ framebuffer:
 	.uleb128 0x9
 	.byte	0x3
 	.8byte	display_width
-	.uleb128 0x1a
+	.uleb128 0x1b
 	.4byte	.LASF20
 	.byte	0x10
 	.byte	0x5
@@ -2877,54 +2904,62 @@ framebuffer:
 	.byte	0x3
 	.8byte	display_height
 	.uleb128 0x2b
+	.4byte	.LASF68
+	.byte	0x4
+	.byte	0xe
+	.byte	0x6
+	.4byte	0x124
+	.uleb128 0x13
+	.byte	0
+	.uleb128 0x2c
 	.4byte	.LASF21
 	.byte	0x4
 	.byte	0xc
 	.byte	0x6
-	.4byte	0x12d
-	.uleb128 0x21
+	.4byte	0x136
+	.uleb128 0x20
 	.4byte	0x5d
 	.byte	0
-	.uleb128 0x2c
-	.4byte	.LASF55
+	.uleb128 0x2d
+	.4byte	.LASF56
 	.byte	0x5
 	.byte	0xce
 	.byte	0x5
 	.4byte	0x5d
-	.4byte	0x144
-	.uleb128 0x21
-	.4byte	0xcb
-	.uleb128 0x1b
+	.4byte	0x14d
+	.uleb128 0x20
+	.4byte	0xc6
+	.uleb128 0x13
 	.byte	0
-	.uleb128 0x22
+	.uleb128 0x21
 	.4byte	.LASF22
 	.byte	0xb
-	.4byte	0x7a
-	.4byte	0x154
-	.uleb128 0x1b
+	.4byte	0x75
+	.4byte	0x15d
+	.uleb128 0x13
 	.byte	0
-	.uleb128 0x22
+	.uleb128 0x21
 	.4byte	.LASF23
 	.byte	0xa
-	.4byte	0x7a
-	.4byte	0x164
-	.uleb128 0x1b
+	.4byte	0x75
+	.4byte	0x16d
+	.uleb128 0x13
 	.byte	0
-	.uleb128 0x2d
-	.4byte	.LASF68
+	.uleb128 0x2e
+	.4byte	.LASF69
 	.byte	0x4
 	.byte	0xd
 	.byte	0xe
-	.4byte	0x7a
-	.uleb128 0x12
+	.4byte	0x75
+	.uleb128 0x14
 	.4byte	.LASF28
 	.byte	0xfb
 	.8byte	.LFB16
 	.8byte	.LFE16-.LFB16
 	.uleb128 0x1
 	.byte	0x9c
-	.4byte	0x348
-	.uleb128 0x2e
+	.4byte	0x36a
+	.uleb128 0x2f
 	.4byte	.LASF49
 	.byte	0x1
 	.byte	0xfb
@@ -2955,68 +2990,77 @@ framebuffer:
 	.byte	0x9
 	.4byte	0x5d
 	.4byte	.LLST138
-	.uleb128 0x23
+	.uleb128 0x22
 	.4byte	.LASF26
 	.2byte	0x101
-	.4byte	0xac
+	.4byte	0xa7
 	.sleb128 -1
-	.uleb128 0x23
+	.uleb128 0x22
 	.4byte	.LASF27
 	.2byte	0x102
-	.4byte	0xac
+	.4byte	0xa7
 	.sleb128 -16777216
 	.uleb128 0xc
 	.4byte	.LLRL139
-	.4byte	0x285
+	.4byte	0x353
+	.uleb128 0x30
+	.4byte	.LASF48
+	.byte	0x1
+	.2byte	0x132
+	.byte	0x12
+	.4byte	0x96
+	.uleb128 0xc
+	.4byte	.LLRL140
+	.4byte	0x2a4
 	.uleb128 0x9
 	.string	"dy"
 	.2byte	0x109
 	.byte	0x12
 	.4byte	0x5d
-	.4byte	.LLST140
+	.4byte	.LLST141
 	.uleb128 0x5
-	.4byte	.LLRL141
+	.4byte	.LLRL142
 	.uleb128 0x9
 	.string	"y"
 	.2byte	0x10a
 	.byte	0x11
 	.4byte	0x5d
-	.4byte	.LLST142
+	.4byte	.LLST143
 	.uleb128 0x5
-	.4byte	.LLRL143
+	.4byte	.LLRL144
 	.uleb128 0x9
 	.string	"dx"
 	.2byte	0x10c
 	.byte	0x16
 	.4byte	0x5d
-	.4byte	.LLST144
+	.4byte	.LLST145
 	.uleb128 0x5
-	.4byte	.LLRL145
+	.4byte	.LLRL146
 	.uleb128 0x9
 	.string	"x"
 	.2byte	0x10d
 	.byte	0x15
 	.4byte	0x5d
-	.4byte	.LLST146
-	.uleb128 0x24
-	.4byte	0xe1a
-	.8byte	.LBB205
-	.4byte	.LLRL147
+	.4byte	.LLST147
+	.uleb128 0x23
+	.4byte	0xe3c
+	.8byte	.LBB206
+	.4byte	.LLRL148
 	.2byte	0x10f
 	.uleb128 0x1
-	.4byte	0xe24
-	.4byte	.LLST148
-	.uleb128 0x1
-	.4byte	0xe2d
+	.4byte	0xe46
 	.4byte	.LLST149
 	.uleb128 0x1
-	.4byte	0xe36
+	.4byte	0xe4f
 	.4byte	.LLST150
-	.uleb128 0x5
-	.4byte	.LLRL147
-	.uleb128 0x4
-	.4byte	0xe41
+	.uleb128 0x1
+	.4byte	0xe58
 	.4byte	.LLST151
+	.uleb128 0x5
+	.4byte	.LLRL148
+	.uleb128 0x4
+	.4byte	0xe63
+	.4byte	.LLST152
 	.byte	0
 	.byte	0
 	.byte	0
@@ -3025,7 +3069,7 @@ framebuffer:
 	.byte	0
 	.uleb128 0xc
 	.4byte	.LLRL153
-	.4byte	0x319
+	.4byte	0x338
 	.uleb128 0x9
 	.string	"dy"
 	.2byte	0x129
@@ -3056,24 +3100,24 @@ framebuffer:
 	.byte	0x15
 	.4byte	0x5d
 	.4byte	.LLST160
-	.uleb128 0x24
-	.4byte	0xe1a
-	.8byte	.LBB231
+	.uleb128 0x23
+	.4byte	0xe3c
+	.8byte	.LBB228
 	.4byte	.LLRL161
 	.2byte	0x12f
 	.uleb128 0x1
-	.4byte	0xe24
+	.4byte	0xe46
 	.4byte	.LLST162
 	.uleb128 0x1
-	.4byte	0xe2d
+	.4byte	0xe4f
 	.4byte	.LLST163
 	.uleb128 0x1
-	.4byte	0xe36
+	.4byte	0xe58
 	.4byte	.LLST164
 	.uleb128 0x5
 	.4byte	.LLRL161
 	.uleb128 0x4
-	.4byte	0xe41
+	.4byte	0xe63
 	.4byte	.LLST165
 	.byte	0
 	.byte	0
@@ -3081,22 +3125,16 @@ framebuffer:
 	.byte	0
 	.byte	0
 	.byte	0
-	.uleb128 0xc
-	.4byte	.LLRL152
-	.4byte	0x331
-	.uleb128 0x2f
-	.string	"i"
-	.byte	0x1
-	.2byte	0x134
-	.byte	0x1b
-	.4byte	0x64
-	.uleb128 0x2
-	.byte	0x91
-	.sleb128 -52
+	.uleb128 0xd
+	.8byte	.LVL210
+	.4byte	0x16d
+	.uleb128 0xd
+	.8byte	.LVL211
+	.4byte	0x116
 	.byte	0
 	.uleb128 0x1c
 	.8byte	.LVL190
-	.4byte	0xdd8
+	.4byte	0xdfa
 	.uleb128 0x6
 	.uleb128 0x1
 	.byte	0x5a
@@ -3107,25 +3145,25 @@ framebuffer:
 	.byte	0x1f
 	.byte	0
 	.byte	0
-	.uleb128 0x12
+	.uleb128 0x14
 	.4byte	.LASF29
 	.byte	0xc5
 	.8byte	.LFB15
 	.8byte	.LFE15-.LFB15
 	.uleb128 0x1
 	.byte	0x9c
-	.4byte	0x5a6
+	.4byte	0x5c8
 	.uleb128 0x2
 	.4byte	.LASF30
 	.byte	0xca
 	.byte	0xe
-	.4byte	0x9b
+	.4byte	0x96
 	.4byte	.LLST99
 	.uleb128 0x2
 	.4byte	.LASF31
 	.byte	0xcb
 	.byte	0xe
-	.4byte	0x9b
+	.4byte	0x96
 	.4byte	.LLST100
 	.uleb128 0x3
 	.string	"cx"
@@ -3143,13 +3181,13 @@ framebuffer:
 	.4byte	.LASF32
 	.byte	0xd0
 	.byte	0xe
-	.4byte	0x9b
+	.4byte	0x96
 	.4byte	.LLST103
 	.uleb128 0x2
 	.4byte	.LASF33
 	.byte	0xd1
 	.byte	0xe
-	.4byte	0x9b
+	.4byte	0x96
 	.4byte	.LLST104
 	.uleb128 0x2
 	.4byte	.LASF34
@@ -3157,15 +3195,15 @@ framebuffer:
 	.byte	0x9
 	.4byte	0x5d
 	.4byte	.LLST105
-	.uleb128 0x13
+	.uleb128 0x15
 	.8byte	.LBB185
 	.8byte	.LBE185-.LBB185
-	.4byte	0x516
+	.4byte	0x538
 	.uleb128 0x3
 	.string	"y"
 	.byte	0xd4
 	.byte	0x13
-	.4byte	0x9b
+	.4byte	0x96
 	.4byte	.LLST113
 	.uleb128 0x5
 	.4byte	.LLRL114
@@ -3173,7 +3211,7 @@ framebuffer:
 	.string	"x"
 	.byte	0xd5
 	.byte	0x17
-	.4byte	0x9b
+	.4byte	0x96
 	.4byte	.LLST115
 	.uleb128 0x5
 	.4byte	.LLRL116
@@ -3241,7 +3279,7 @@ framebuffer:
 	.4byte	.LASF40
 	.byte	0xe9
 	.byte	0x16
-	.4byte	0x9b
+	.4byte	0x96
 	.4byte	.LLST127
 	.uleb128 0x2
 	.4byte	.LASF41
@@ -3249,32 +3287,32 @@ framebuffer:
 	.byte	0x11
 	.4byte	0x5d
 	.4byte	.LLST128
-	.uleb128 0x14
-	.4byte	0xe1a
+	.uleb128 0x16
+	.4byte	0xe3c
 	.8byte	.LBB188
 	.4byte	.LLRL129
 	.byte	0xea
 	.byte	0xd
-	.4byte	0x4f2
+	.4byte	0x514
 	.uleb128 0x1
-	.4byte	0xe24
+	.4byte	0xe46
 	.4byte	.LLST130
 	.uleb128 0x1
-	.4byte	0xe2d
+	.4byte	0xe4f
 	.4byte	.LLST131
 	.uleb128 0x1
-	.4byte	0xe36
+	.4byte	0xe58
 	.4byte	.LLST132
 	.uleb128 0x5
 	.4byte	.LLRL129
 	.uleb128 0x4
-	.4byte	0xe41
+	.4byte	0xe63
 	.4byte	.LLST133
 	.byte	0
 	.byte	0
 	.uleb128 0x1c
 	.8byte	.LVL174
-	.4byte	0x12d
+	.4byte	0x136
 	.uleb128 0x6
 	.uleb128 0x1
 	.byte	0x5a
@@ -3291,40 +3329,40 @@ framebuffer:
 	.byte	0
 	.byte	0
 	.byte	0
-	.uleb128 0x14
-	.4byte	0xdd8
+	.uleb128 0x16
+	.4byte	0xdfa
 	.8byte	.LBB175
 	.4byte	.LLRL106
 	.byte	0xc6
 	.byte	0x5
-	.4byte	0x56b
+	.4byte	0x58d
 	.uleb128 0x1
-	.4byte	0xde2
+	.4byte	0xe04
 	.4byte	.LLST107
 	.uleb128 0x5
 	.4byte	.LLRL106
 	.uleb128 0x4
-	.4byte	0xded
+	.4byte	0xe0f
 	.4byte	.LLST108
 	.uleb128 0x4
-	.4byte	0xdf8
+	.4byte	0xe1a
 	.4byte	.LLST109
 	.uleb128 0x4
-	.4byte	0xe03
+	.4byte	0xe25
 	.4byte	.LLST110
-	.uleb128 0x25
-	.4byte	0xe0e
+	.uleb128 0x24
+	.4byte	0xe30
 	.4byte	.LLRL111
 	.uleb128 0x4
-	.4byte	0xe0f
+	.4byte	0xe31
 	.4byte	.LLST112
 	.byte	0
 	.byte	0
 	.byte	0
 	.uleb128 0x8
 	.8byte	.LVL159
-	.4byte	0xf9b
-	.4byte	0x58a
+	.4byte	0xfbd
+	.4byte	0x5ac
 	.uleb128 0x6
 	.uleb128 0x1
 	.byte	0x5a
@@ -3332,9 +3370,9 @@ framebuffer:
 	.byte	0x3
 	.8byte	.LC30
 	.byte	0
-	.uleb128 0x26
+	.uleb128 0x25
 	.8byte	.LVL187
-	.4byte	0xf9b
+	.4byte	0xfbd
 	.uleb128 0x6
 	.uleb128 0x1
 	.byte	0x5a
@@ -3343,56 +3381,56 @@ framebuffer:
 	.8byte	.LC33
 	.byte	0
 	.byte	0
-	.uleb128 0x12
+	.uleb128 0x14
 	.4byte	.LASF42
 	.byte	0x91
 	.8byte	.LFB14
 	.8byte	.LFE14-.LFB14
 	.uleb128 0x1
 	.byte	0x9c
-	.4byte	0x993
+	.4byte	0x9b5
 	.uleb128 0x2
 	.4byte	.LASF30
 	.byte	0x96
 	.byte	0xe
-	.4byte	0x9b
+	.4byte	0x96
 	.4byte	.LLST49
 	.uleb128 0x2
 	.4byte	.LASF31
 	.byte	0x97
 	.byte	0xe
-	.4byte	0x9b
+	.4byte	0x96
 	.4byte	.LLST50
 	.uleb128 0x2
 	.4byte	.LASF43
 	.byte	0x99
 	.byte	0xe
-	.4byte	0x9b
+	.4byte	0x96
 	.4byte	.LLST51
 	.uleb128 0x2
 	.4byte	.LASF44
 	.byte	0xb8
 	.byte	0xe
-	.4byte	0x9b
+	.4byte	0x96
 	.4byte	.LLST52
-	.uleb128 0x13
+	.uleb128 0x15
 	.8byte	.LBB126
 	.8byte	.LBE126-.LBB126
-	.4byte	0x693
+	.4byte	0x6b5
 	.uleb128 0x3
 	.string	"y"
 	.byte	0x9d
 	.byte	0x13
-	.4byte	0x9b
+	.4byte	0x96
 	.4byte	.LLST70
-	.uleb128 0x15
+	.uleb128 0x17
 	.8byte	.LBB127
 	.8byte	.LBE127-.LBB127
 	.uleb128 0x3
 	.string	"x"
 	.byte	0x9e
 	.byte	0x17
-	.4byte	0x9b
+	.4byte	0x96
 	.4byte	.LLST71
 	.uleb128 0x5
 	.4byte	.LLRL72
@@ -3400,27 +3438,27 @@ framebuffer:
 	.4byte	.LASF45
 	.byte	0x9f
 	.byte	0x15
-	.4byte	0x8f
+	.4byte	0x8a
 	.4byte	.LLST73
 	.uleb128 0xa
-	.4byte	0xe1a
+	.4byte	0xe3c
 	.8byte	.LBB129
 	.4byte	.LLRL74
 	.byte	0xa0
 	.byte	0xd
 	.uleb128 0x1
-	.4byte	0xe24
+	.4byte	0xe46
 	.4byte	.LLST75
 	.uleb128 0x1
-	.4byte	0xe2d
+	.4byte	0xe4f
 	.4byte	.LLST76
 	.uleb128 0x1
-	.4byte	0xe36
+	.4byte	0xe58
 	.4byte	.LLST77
 	.uleb128 0x5
 	.4byte	.LLRL74
 	.uleb128 0x4
-	.4byte	0xe41
+	.4byte	0xe63
 	.4byte	.LLST78
 	.byte	0
 	.byte	0
@@ -3429,21 +3467,21 @@ framebuffer:
 	.byte	0
 	.uleb128 0xc
 	.4byte	.LLRL79
-	.4byte	0x71c
+	.4byte	0x73e
 	.uleb128 0x3
 	.string	"y"
 	.byte	0xa6
 	.byte	0x13
-	.4byte	0x9b
+	.4byte	0x96
 	.4byte	.LLST80
-	.uleb128 0x15
+	.uleb128 0x17
 	.8byte	.LBB143
 	.8byte	.LBE143-.LBB143
 	.uleb128 0x3
 	.string	"x"
 	.byte	0xa7
 	.byte	0x17
-	.4byte	0x9b
+	.4byte	0x96
 	.4byte	.LLST81
 	.uleb128 0x5
 	.4byte	.LLRL82
@@ -3451,27 +3489,27 @@ framebuffer:
 	.4byte	.LASF45
 	.byte	0xa8
 	.byte	0x15
-	.4byte	0x8f
+	.4byte	0x8a
 	.4byte	.LLST83
 	.uleb128 0xa
-	.4byte	0xe1a
+	.4byte	0xe3c
 	.8byte	.LBB145
 	.4byte	.LLRL84
 	.byte	0xa9
 	.byte	0xd
 	.uleb128 0x1
-	.4byte	0xe24
+	.4byte	0xe46
 	.4byte	.LLST85
 	.uleb128 0x1
-	.4byte	0xe2d
+	.4byte	0xe4f
 	.4byte	.LLST86
 	.uleb128 0x1
-	.4byte	0xe36
+	.4byte	0xe58
 	.4byte	.LLST87
 	.uleb128 0x5
 	.4byte	.LLRL84
 	.uleb128 0x4
-	.4byte	0xe41
+	.4byte	0xe63
 	.4byte	.LLST88
 	.byte	0
 	.byte	0
@@ -3480,21 +3518,21 @@ framebuffer:
 	.byte	0
 	.uleb128 0xc
 	.4byte	.LLRL60
-	.4byte	0x7a5
+	.4byte	0x7c7
 	.uleb128 0x3
 	.string	"y"
 	.byte	0xaf
 	.byte	0x13
-	.4byte	0x9b
+	.4byte	0x96
 	.4byte	.LLST61
-	.uleb128 0x15
+	.uleb128 0x17
 	.8byte	.LBB115
 	.8byte	.LBE115-.LBB115
 	.uleb128 0x3
 	.string	"x"
 	.byte	0xb0
 	.byte	0x17
-	.4byte	0x9b
+	.4byte	0x96
 	.4byte	.LLST62
 	.uleb128 0x5
 	.4byte	.LLRL63
@@ -3502,51 +3540,51 @@ framebuffer:
 	.4byte	.LASF45
 	.byte	0xb1
 	.byte	0x15
-	.4byte	0x8f
+	.4byte	0x8a
 	.4byte	.LLST64
 	.uleb128 0xa
-	.4byte	0xe1a
+	.4byte	0xe3c
 	.8byte	.LBB117
 	.4byte	.LLRL65
 	.byte	0xb2
 	.byte	0xd
 	.uleb128 0x1
-	.4byte	0xe24
+	.4byte	0xe46
 	.4byte	.LLST66
 	.uleb128 0x1
-	.4byte	0xe2d
+	.4byte	0xe4f
 	.4byte	.LLST67
 	.uleb128 0x1
-	.4byte	0xe36
+	.4byte	0xe58
 	.4byte	.LLST68
 	.uleb128 0x5
 	.4byte	.LLRL65
 	.uleb128 0x4
-	.4byte	0xe41
+	.4byte	0xe63
 	.4byte	.LLST69
 	.byte	0
 	.byte	0
 	.byte	0
 	.byte	0
 	.byte	0
-	.uleb128 0x13
+	.uleb128 0x15
 	.8byte	.LBB152
 	.8byte	.LBE152-.LBB152
-	.4byte	0x849
+	.4byte	0x86b
 	.uleb128 0x3
 	.string	"y"
 	.byte	0xb9
 	.byte	0x13
-	.4byte	0x9b
+	.4byte	0x96
 	.4byte	.LLST89
-	.uleb128 0x15
+	.uleb128 0x17
 	.8byte	.LBB153
 	.8byte	.LBE153-.LBB153
 	.uleb128 0x3
 	.string	"x"
 	.byte	0xba
 	.byte	0x17
-	.4byte	0x9b
+	.4byte	0x96
 	.4byte	.LLST90
 	.uleb128 0x5
 	.4byte	.LLRL91
@@ -3560,67 +3598,67 @@ framebuffer:
 	.4byte	.LASF40
 	.byte	0xbc
 	.byte	0x16
-	.4byte	0x9b
+	.4byte	0x96
 	.4byte	.LLST93
 	.uleb128 0xa
-	.4byte	0xe1a
+	.4byte	0xe3c
 	.8byte	.LBB155
 	.4byte	.LLRL94
 	.byte	0xbd
 	.byte	0xd
 	.uleb128 0x1
-	.4byte	0xe24
+	.4byte	0xe46
 	.4byte	.LLST95
 	.uleb128 0x1
-	.4byte	0xe2d
+	.4byte	0xe4f
 	.4byte	.LLST96
 	.uleb128 0x1
-	.4byte	0xe36
+	.4byte	0xe58
 	.4byte	.LLST97
 	.uleb128 0x5
 	.4byte	.LLRL94
 	.uleb128 0x4
-	.4byte	0xe41
+	.4byte	0xe63
 	.4byte	.LLST98
 	.byte	0
 	.byte	0
 	.byte	0
 	.byte	0
 	.byte	0
-	.uleb128 0x14
-	.4byte	0xdd8
+	.uleb128 0x16
+	.4byte	0xdfa
 	.8byte	.LBB104
 	.4byte	.LLRL53
 	.byte	0x92
 	.byte	0x5
-	.4byte	0x89e
+	.4byte	0x8c0
 	.uleb128 0x1
-	.4byte	0xde2
+	.4byte	0xe04
 	.4byte	.LLST54
 	.uleb128 0x5
 	.4byte	.LLRL53
 	.uleb128 0x4
-	.4byte	0xded
+	.4byte	0xe0f
 	.4byte	.LLST55
 	.uleb128 0x4
-	.4byte	0xdf8
+	.4byte	0xe1a
 	.4byte	.LLST56
 	.uleb128 0x4
-	.4byte	0xe03
+	.4byte	0xe25
 	.4byte	.LLST57
-	.uleb128 0x25
-	.4byte	0xe0e
+	.uleb128 0x24
+	.4byte	0xe30
 	.4byte	.LLRL58
 	.uleb128 0x4
-	.4byte	0xe0f
+	.4byte	0xe31
 	.4byte	.LLST59
 	.byte	0
 	.byte	0
 	.byte	0
 	.uleb128 0x8
 	.8byte	.LVL104
-	.4byte	0xf9b
-	.4byte	0x8bd
+	.4byte	0xfbd
+	.4byte	0x8df
 	.uleb128 0x6
 	.uleb128 0x1
 	.byte	0x5a
@@ -3630,8 +3668,8 @@ framebuffer:
 	.byte	0
 	.uleb128 0x8
 	.8byte	.LVL106
-	.4byte	0xf9b
-	.4byte	0x8dc
+	.4byte	0xfbd
+	.4byte	0x8fe
 	.uleb128 0x6
 	.uleb128 0x1
 	.byte	0x5a
@@ -3641,8 +3679,8 @@ framebuffer:
 	.byte	0
 	.uleb128 0x8
 	.8byte	.LVL116
-	.4byte	0xf9b
-	.4byte	0x8fb
+	.4byte	0xfbd
+	.4byte	0x91d
 	.uleb128 0x6
 	.uleb128 0x1
 	.byte	0x5a
@@ -3652,8 +3690,8 @@ framebuffer:
 	.byte	0
 	.uleb128 0x8
 	.8byte	.LVL125
-	.4byte	0xf9b
-	.4byte	0x91a
+	.4byte	0xfbd
+	.4byte	0x93c
 	.uleb128 0x6
 	.uleb128 0x1
 	.byte	0x5a
@@ -3663,8 +3701,8 @@ framebuffer:
 	.byte	0
 	.uleb128 0x8
 	.8byte	.LVL135
-	.4byte	0xf9b
-	.4byte	0x939
+	.4byte	0xfbd
+	.4byte	0x95b
 	.uleb128 0x6
 	.uleb128 0x1
 	.byte	0x5a
@@ -3674,8 +3712,8 @@ framebuffer:
 	.byte	0
 	.uleb128 0x1d
 	.8byte	.LVL149
-	.4byte	0xf9b
-	.4byte	0x958
+	.4byte	0xfbd
+	.4byte	0x97a
 	.uleb128 0x6
 	.uleb128 0x1
 	.byte	0x5a
@@ -3685,8 +3723,8 @@ framebuffer:
 	.byte	0
 	.uleb128 0x8
 	.8byte	.LVL150
-	.4byte	0xf9b
-	.4byte	0x977
+	.4byte	0xfbd
+	.4byte	0x999
 	.uleb128 0x6
 	.uleb128 0x1
 	.byte	0x5a
@@ -3696,7 +3734,7 @@ framebuffer:
 	.byte	0
 	.uleb128 0x1c
 	.8byte	.LVL151
-	.4byte	0xf9b
+	.4byte	0xfbd
 	.uleb128 0x6
 	.uleb128 0x1
 	.byte	0x5a
@@ -3705,36 +3743,36 @@ framebuffer:
 	.8byte	.LC27
 	.byte	0
 	.byte	0
-	.uleb128 0x12
+	.uleb128 0x14
 	.4byte	.LASF47
 	.byte	0x74
 	.8byte	.LFB13
 	.8byte	.LFE13-.LFB13
 	.uleb128 0x1
 	.byte	0x9c
-	.4byte	0xabf
+	.4byte	0xae1
 	.uleb128 0x2
 	.4byte	.LASF48
 	.byte	0x77
 	.byte	0xe
-	.4byte	0x9b
+	.4byte	0x96
 	.4byte	.LLST46
 	.uleb128 0x2
 	.4byte	.LASF30
 	.byte	0x81
 	.byte	0xe
-	.4byte	0x9b
+	.4byte	0x96
 	.4byte	.LLST47
 	.uleb128 0x2
 	.4byte	.LASF31
 	.byte	0x82
 	.byte	0xe
-	.4byte	0x9b
+	.4byte	0x96
 	.4byte	.LLST48
 	.uleb128 0x8
 	.8byte	.LVL84
-	.4byte	0xf9b
-	.4byte	0x9fb
+	.4byte	0xfbd
+	.4byte	0xa1d
 	.uleb128 0x6
 	.uleb128 0x1
 	.byte	0x5a
@@ -3742,19 +3780,19 @@ framebuffer:
 	.byte	0x3
 	.8byte	.LC19
 	.byte	0
-	.uleb128 0x16
+	.uleb128 0xd
 	.8byte	.LVL85
-	.4byte	0x164
-	.uleb128 0x16
+	.4byte	0x16d
+	.uleb128 0xd
 	.8byte	.LVL87
-	.4byte	0x154
-	.uleb128 0x16
+	.4byte	0x15d
+	.uleb128 0xd
 	.8byte	.LVL88
-	.4byte	0x144
+	.4byte	0x14d
 	.uleb128 0x8
 	.8byte	.LVL90
-	.4byte	0x12d
-	.4byte	0xa41
+	.4byte	0x136
+	.4byte	0xa63
 	.uleb128 0x6
 	.uleb128 0x1
 	.byte	0x5a
@@ -3764,21 +3802,21 @@ framebuffer:
 	.byte	0
 	.uleb128 0x8
 	.8byte	.LVL91
-	.4byte	0x11b
-	.4byte	0xa58
+	.4byte	0x124
+	.4byte	0xa7a
 	.uleb128 0x6
 	.uleb128 0x1
 	.byte	0x5a
 	.uleb128 0x1
 	.byte	0x31
 	.byte	0
-	.uleb128 0x16
+	.uleb128 0xd
 	.8byte	.LVL92
-	.4byte	0x164
+	.4byte	0x16d
 	.uleb128 0x1d
 	.8byte	.LVL94
-	.4byte	0xf9b
-	.4byte	0xa84
+	.4byte	0xfbd
+	.4byte	0xaa6
 	.uleb128 0x6
 	.uleb128 0x1
 	.byte	0x5a
@@ -3788,8 +3826,8 @@ framebuffer:
 	.byte	0
 	.uleb128 0x1d
 	.8byte	.LVL95
-	.4byte	0xf9b
-	.4byte	0xaa3
+	.4byte	0xfbd
+	.4byte	0xac5
 	.uleb128 0x6
 	.uleb128 0x1
 	.byte	0x5a
@@ -3797,9 +3835,9 @@ framebuffer:
 	.byte	0x3
 	.8byte	.LC22
 	.byte	0
-	.uleb128 0x26
+	.uleb128 0x25
 	.8byte	.LVL96
-	.4byte	0xf9b
+	.4byte	0xfbd
 	.uleb128 0x6
 	.uleb128 0x1
 	.byte	0x5a
@@ -3808,17 +3846,17 @@ framebuffer:
 	.8byte	.LC20
 	.byte	0
 	.byte	0
-	.uleb128 0x17
-	.4byte	.LASF51
+	.uleb128 0x18
+	.4byte	.LASF52
 	.byte	0x5c
 	.byte	0xa
-	.4byte	0x9b
+	.4byte	0x96
 	.8byte	.LFB12
 	.8byte	.LFE12-.LFB12
 	.uleb128 0x1
 	.byte	0x9c
-	.4byte	0xbe1
-	.uleb128 0x30
+	.4byte	0xc03
+	.uleb128 0x31
 	.string	"h"
 	.byte	0x1
 	.byte	0x5c
@@ -3827,13 +3865,13 @@ framebuffer:
 	.uleb128 0x2
 	.byte	0x90
 	.uleb128 0x2a
-	.uleb128 0xd
+	.uleb128 0xe
 	.string	"s"
 	.byte	0x5c
 	.byte	0x24
 	.4byte	0x2e
 	.4byte	.LLST30
-	.uleb128 0xd
+	.uleb128 0xe
 	.string	"v"
 	.byte	0x5c
 	.byte	0x2d
@@ -3851,8 +3889,8 @@ framebuffer:
 	.byte	0xb
 	.4byte	0x2e
 	.4byte	.LLST33
-	.uleb128 0xe
-	.4byte	.LASF59
+	.uleb128 0xf
+	.4byte	.LASF51
 	.byte	0x5f
 	.byte	0xb
 	.4byte	0x2e
@@ -3862,7 +3900,7 @@ framebuffer:
 	.byte	0xb
 	.4byte	0x2e
 	.4byte	.LLST34
-	.uleb128 0x31
+	.uleb128 0x32
 	.string	"m"
 	.byte	0x1
 	.byte	0x61
@@ -3893,47 +3931,47 @@ framebuffer:
 	.string	"ri"
 	.byte	0x6c
 	.byte	0xd
-	.4byte	0x8f
+	.4byte	0x8a
 	.4byte	.LLST38
 	.uleb128 0x3
 	.string	"gi"
 	.byte	0x6d
 	.byte	0xd
-	.4byte	0x8f
+	.4byte	0x8a
 	.4byte	.LLST39
 	.uleb128 0x3
 	.string	"bi"
 	.byte	0x6e
 	.byte	0xd
-	.4byte	0x8f
+	.4byte	0x8a
 	.4byte	.LLST40
-	.uleb128 0x14
-	.4byte	0xc92
+	.uleb128 0x16
+	.4byte	0xcb4
 	.8byte	.LBB71
 	.4byte	.LLRL41
 	.byte	0x5f
 	.byte	0x13
-	.4byte	0xbc3
+	.4byte	0xbe5
 	.uleb128 0x1
-	.4byte	0xca0
+	.4byte	0xcc2
 	.4byte	.LLST42
 	.uleb128 0x1
-	.4byte	0xca9
+	.4byte	0xccb
 	.4byte	.LLST43
 	.byte	0
 	.uleb128 0xa
-	.4byte	0xd43
+	.4byte	0xd65
 	.8byte	.LBB76
 	.4byte	.LLRL44
 	.byte	0x60
 	.byte	0x1b
 	.uleb128 0x1
-	.4byte	0xd51
+	.4byte	0xd73
 	.4byte	.LLST45
 	.byte	0
 	.byte	0
-	.uleb128 0x17
-	.4byte	.LASF52
+	.uleb128 0x18
+	.4byte	.LASF53
 	.byte	0x4c
 	.byte	0x7
 	.4byte	0x2e
@@ -3941,34 +3979,34 @@ framebuffer:
 	.8byte	.LFE11-.LFB11
 	.uleb128 0x1
 	.byte	0x9c
-	.4byte	0xc92
-	.uleb128 0xd
+	.4byte	0xcb4
+	.uleb128 0xe
 	.string	"y"
 	.byte	0x4c
 	.byte	0x1a
 	.4byte	0x2e
 	.4byte	.LLST21
-	.uleb128 0xd
+	.uleb128 0xe
 	.string	"x"
 	.byte	0x4c
 	.byte	0x23
 	.4byte	0x2e
 	.4byte	.LLST22
 	.uleb128 0x2
-	.4byte	.LASF53
+	.4byte	.LASF54
 	.byte	0x4d
 	.byte	0xb
 	.4byte	0x2e
 	.4byte	.LLST23
 	.uleb128 0x2
-	.4byte	.LASF54
+	.4byte	.LASF55
 	.byte	0x4e
 	.byte	0xb
 	.4byte	0x2e
 	.4byte	.LLST24
 	.uleb128 0xc
 	.4byte	.LLRL27
-	.4byte	0xc51
+	.4byte	0xc73
 	.uleb128 0x3
 	.string	"r"
 	.byte	0x51
@@ -3976,10 +4014,10 @@ framebuffer:
 	.4byte	0x2e
 	.4byte	.LLST28
 	.byte	0
-	.uleb128 0x13
+	.uleb128 0x15
 	.8byte	.LBB70
 	.8byte	.LBE70-.LBB70
-	.4byte	0xc74
+	.4byte	0xc96
 	.uleb128 0x3
 	.string	"r"
 	.byte	0x54
@@ -3988,21 +4026,21 @@ framebuffer:
 	.4byte	.LLST29
 	.byte	0
 	.uleb128 0xa
-	.4byte	0xd43
+	.4byte	0xd65
 	.8byte	.LBB64
 	.4byte	.LLRL25
 	.byte	0x4d
 	.byte	0x13
 	.uleb128 0x1
-	.4byte	0xd51
+	.4byte	0xd73
 	.4byte	.LLST26
 	.byte	0
 	.byte	0
-	.uleb128 0x18
-	.4byte	.LASF56
+	.uleb128 0x19
+	.4byte	.LASF57
 	.byte	0x47
 	.4byte	0x2e
-	.4byte	0xcb3
+	.4byte	0xcd5
 	.uleb128 0xb
 	.string	"x"
 	.byte	0x47
@@ -4014,8 +4052,8 @@ framebuffer:
 	.byte	0x22
 	.4byte	0x2e
 	.byte	0
-	.uleb128 0x17
-	.4byte	.LASF57
+	.uleb128 0x18
+	.4byte	.LASF58
 	.byte	0x40
 	.byte	0x7
 	.4byte	0x2e
@@ -4023,44 +4061,44 @@ framebuffer:
 	.8byte	.LFE9-.LFB9
 	.uleb128 0x1
 	.byte	0x9c
-	.4byte	0xd17
-	.uleb128 0xd
+	.4byte	0xd39
+	.uleb128 0xe
 	.string	"x"
 	.byte	0x40
 	.byte	0x19
 	.4byte	0x2e
 	.4byte	.LLST15
 	.uleb128 0xa
-	.4byte	0xd17
+	.4byte	0xd39
 	.8byte	.LBB60
 	.4byte	.LLRL16
 	.byte	0x42
 	.byte	0x10
 	.uleb128 0x1
-	.4byte	0xd25
+	.4byte	0xd47
 	.4byte	.LLST17
 	.uleb128 0x5
 	.4byte	.LLRL16
 	.uleb128 0x4
-	.4byte	0xd2e
+	.4byte	0xd50
 	.4byte	.LLST18
 	.uleb128 0x4
-	.4byte	0xd39
+	.4byte	0xd5b
 	.4byte	.LLST19
 	.byte	0
 	.byte	0
 	.byte	0
-	.uleb128 0x18
-	.4byte	.LASF58
+	.uleb128 0x19
+	.4byte	.LASF59
 	.byte	0x36
 	.4byte	0x2e
-	.4byte	0xd43
+	.4byte	0xd65
 	.uleb128 0xb
 	.string	"x"
 	.byte	0x36
 	.byte	0x16
 	.4byte	0x2e
-	.uleb128 0xe
+	.uleb128 0xf
 	.4byte	.LASF60
 	.byte	0x37
 	.byte	0xb
@@ -4071,18 +4109,18 @@ framebuffer:
 	.byte	0x9
 	.4byte	0x5d
 	.byte	0
-	.uleb128 0x18
+	.uleb128 0x19
 	.4byte	.LASF61
 	.byte	0x31
 	.4byte	0x2e
-	.4byte	0xd5b
+	.4byte	0xd7d
 	.uleb128 0xb
 	.string	"x"
 	.byte	0x31
 	.byte	0x12
 	.4byte	0x2e
 	.byte	0
-	.uleb128 0x17
+	.uleb128 0x18
 	.4byte	.LASF62
 	.byte	0x2c
 	.byte	0x7
@@ -4091,35 +4129,35 @@ framebuffer:
 	.8byte	.LFE6-.LFB6
 	.uleb128 0x1
 	.byte	0x9c
-	.4byte	0xdb6
-	.uleb128 0xd
+	.4byte	0xdd8
+	.uleb128 0xe
 	.string	"x"
 	.byte	0x2c
 	.byte	0x16
 	.4byte	0x2e
 	.4byte	.LLST7
 	.uleb128 0xa
-	.4byte	0xdb6
+	.4byte	0xdd8
 	.8byte	.LBB54
 	.4byte	.LLRL8
 	.byte	0x2d
 	.byte	0xc
 	.uleb128 0x1
-	.4byte	0xdc4
+	.4byte	0xde6
 	.4byte	.LLST9
 	.uleb128 0x5
 	.4byte	.LLRL8
 	.uleb128 0x4
-	.4byte	0xdcd
+	.4byte	0xdef
 	.4byte	.LLST10
 	.byte	0
 	.byte	0
 	.byte	0
-	.uleb128 0x18
+	.uleb128 0x19
 	.4byte	.LASF63
 	.byte	0x22
 	.4byte	0x2e
-	.4byte	0xdd8
+	.4byte	0xdfa
 	.uleb128 0xb
 	.string	"x"
 	.byte	0x22
@@ -4131,176 +4169,176 @@ framebuffer:
 	.byte	0xb
 	.4byte	0x2e
 	.byte	0
-	.uleb128 0x27
+	.uleb128 0x26
 	.4byte	.LASF64
 	.byte	0x17
-	.4byte	0xe1a
-	.uleb128 0x28
+	.4byte	0xe3c
+	.uleb128 0x27
 	.4byte	.LASF40
 	.byte	0x17
 	.byte	0x22
-	.4byte	0xac
-	.uleb128 0xe
+	.4byte	0xa7
+	.uleb128 0xf
 	.4byte	.LASF30
 	.byte	0x18
 	.byte	0xe
-	.4byte	0x9b
-	.uleb128 0xe
+	.4byte	0x96
+	.uleb128 0xf
 	.4byte	.LASF31
 	.byte	0x19
 	.byte	0xe
-	.4byte	0x9b
-	.uleb128 0xe
+	.4byte	0x96
+	.uleb128 0xf
 	.4byte	.LASF65
 	.byte	0x1a
 	.byte	0xe
-	.4byte	0x9b
-	.uleb128 0x32
+	.4byte	0x96
+	.uleb128 0x33
 	.uleb128 0x1e
 	.string	"i"
 	.byte	0x1c
 	.byte	0x13
-	.4byte	0x9b
+	.4byte	0x96
 	.byte	0
 	.byte	0
-	.uleb128 0x27
+	.uleb128 0x26
 	.4byte	.LASF66
 	.byte	0x12
-	.4byte	0xe4d
+	.4byte	0xe6f
 	.uleb128 0xb
 	.string	"x"
 	.byte	0x12
 	.byte	0x1a
-	.4byte	0x69
+	.4byte	0x64
 	.uleb128 0xb
 	.string	"y"
 	.byte	0x12
 	.byte	0x27
-	.4byte	0x69
-	.uleb128 0x28
+	.4byte	0x64
+	.uleb128 0x27
 	.4byte	.LASF40
 	.byte	0x12
 	.byte	0x39
-	.4byte	0xac
-	.uleb128 0xe
+	.4byte	0xa7
+	.uleb128 0xf
 	.4byte	.LASF30
 	.byte	0x13
 	.byte	0xe
-	.4byte	0x9b
+	.4byte	0x96
 	.byte	0
-	.uleb128 0xf
-	.4byte	0xe1a
+	.uleb128 0x10
+	.4byte	0xe3c
 	.8byte	.LFB3
 	.8byte	.LFE3-.LFB3
 	.uleb128 0x1
 	.byte	0x9c
-	.4byte	0xe87
-	.uleb128 0x10
-	.4byte	0xe24
+	.4byte	0xea9
+	.uleb128 0x11
+	.4byte	0xe46
 	.uleb128 0x1
 	.byte	0x5a
-	.uleb128 0x10
-	.4byte	0xe2d
+	.uleb128 0x11
+	.4byte	0xe4f
 	.uleb128 0x1
 	.byte	0x5b
-	.uleb128 0x10
-	.4byte	0xe36
+	.uleb128 0x11
+	.4byte	0xe58
 	.uleb128 0x1
 	.byte	0x5c
 	.uleb128 0x4
-	.4byte	0xe41
+	.4byte	0xe63
 	.4byte	.LLST0
 	.byte	0
-	.uleb128 0xf
-	.4byte	0xdd8
+	.uleb128 0x10
+	.4byte	0xdfa
 	.8byte	.LFB4
 	.8byte	.LFE4-.LFB4
 	.uleb128 0x1
 	.byte	0x9c
-	.4byte	0xee4
-	.uleb128 0x10
-	.4byte	0xde2
+	.4byte	0xf06
+	.uleb128 0x11
+	.4byte	0xe04
 	.uleb128 0x1
 	.byte	0x5a
 	.uleb128 0x4
-	.4byte	0xded
+	.4byte	0xe0f
 	.4byte	.LLST1
 	.uleb128 0x4
-	.4byte	0xdf8
+	.4byte	0xe1a
 	.4byte	.LLST2
 	.uleb128 0x4
-	.4byte	0xe03
+	.4byte	0xe25
 	.4byte	.LLST3
-	.uleb128 0x33
-	.4byte	0xe0e
+	.uleb128 0x34
+	.4byte	0xe30
 	.8byte	.LBB51
 	.8byte	.LBE51-.LBB51
 	.uleb128 0x4
-	.4byte	0xe0f
+	.4byte	0xe31
 	.4byte	.LLST4
 	.byte	0
 	.byte	0
-	.uleb128 0xf
-	.4byte	0xdb6
+	.uleb128 0x10
+	.4byte	0xdd8
 	.8byte	.LFB5
 	.8byte	.LFE5-.LFB5
 	.uleb128 0x1
 	.byte	0x9c
-	.4byte	0xf12
+	.4byte	0xf34
 	.uleb128 0x1
-	.4byte	0xdc4
+	.4byte	0xde6
 	.4byte	.LLST5
 	.uleb128 0x4
-	.4byte	0xdcd
+	.4byte	0xdef
 	.4byte	.LLST6
 	.byte	0
-	.uleb128 0xf
-	.4byte	0xd43
+	.uleb128 0x10
+	.4byte	0xd65
 	.8byte	.LFB7
 	.8byte	.LFE7-.LFB7
 	.uleb128 0x1
 	.byte	0x9c
-	.4byte	0xf37
+	.4byte	0xf59
 	.uleb128 0x1
-	.4byte	0xd51
+	.4byte	0xd73
 	.4byte	.LLST11
 	.byte	0
-	.uleb128 0xf
-	.4byte	0xd17
+	.uleb128 0x10
+	.4byte	0xd39
 	.8byte	.LFB8
 	.8byte	.LFE8-.LFB8
 	.uleb128 0x1
 	.byte	0x9c
-	.4byte	0xf6e
+	.4byte	0xf90
 	.uleb128 0x1
-	.4byte	0xd25
+	.4byte	0xd47
 	.4byte	.LLST12
 	.uleb128 0x4
-	.4byte	0xd2e
+	.4byte	0xd50
 	.4byte	.LLST13
 	.uleb128 0x4
-	.4byte	0xd39
+	.4byte	0xd5b
 	.4byte	.LLST14
 	.byte	0
-	.uleb128 0xf
-	.4byte	0xc92
+	.uleb128 0x10
+	.4byte	0xcb4
 	.8byte	.LFB10
 	.8byte	.LFE10-.LFB10
 	.uleb128 0x1
 	.byte	0x9c
-	.4byte	0xf9b
+	.4byte	0xfbd
 	.uleb128 0x1
-	.4byte	0xca0
+	.4byte	0xcc2
 	.4byte	.LLST20
-	.uleb128 0x10
-	.4byte	0xca9
+	.uleb128 0x11
+	.4byte	0xccb
 	.uleb128 0x2
 	.byte	0x90
 	.uleb128 0x2b
 	.byte	0
-	.uleb128 0x34
-	.4byte	.LASF69
+	.uleb128 0x35
 	.4byte	.LASF70
+	.4byte	.LASF71
 	.byte	0x6
 	.byte	0
 	.byte	0
@@ -4460,6 +4498,15 @@ framebuffer:
 	.byte	0
 	.byte	0
 	.uleb128 0xd
+	.uleb128 0x48
+	.byte	0
+	.uleb128 0x7d
+	.uleb128 0x1
+	.uleb128 0x7f
+	.uleb128 0x13
+	.byte	0
+	.byte	0
+	.uleb128 0xe
 	.uleb128 0x5
 	.byte	0
 	.uleb128 0x3
@@ -4477,7 +4524,7 @@ framebuffer:
 	.uleb128 0x17
 	.byte	0
 	.byte	0
-	.uleb128 0xe
+	.uleb128 0xf
 	.uleb128 0x34
 	.byte	0
 	.uleb128 0x3
@@ -4493,7 +4540,7 @@ framebuffer:
 	.uleb128 0x13
 	.byte	0
 	.byte	0
-	.uleb128 0xf
+	.uleb128 0x10
 	.uleb128 0x2e
 	.byte	0x1
 	.uleb128 0x31
@@ -4510,7 +4557,7 @@ framebuffer:
 	.uleb128 0x13
 	.byte	0
 	.byte	0
-	.uleb128 0x10
+	.uleb128 0x11
 	.uleb128 0x5
 	.byte	0
 	.uleb128 0x31
@@ -4519,7 +4566,7 @@ framebuffer:
 	.uleb128 0x18
 	.byte	0
 	.byte	0
-	.uleb128 0x11
+	.uleb128 0x12
 	.uleb128 0x16
 	.byte	0
 	.uleb128 0x3
@@ -4534,7 +4581,12 @@ framebuffer:
 	.uleb128 0x13
 	.byte	0
 	.byte	0
-	.uleb128 0x12
+	.uleb128 0x13
+	.uleb128 0x18
+	.byte	0
+	.byte	0
+	.byte	0
+	.uleb128 0x14
 	.uleb128 0x2e
 	.byte	0x1
 	.uleb128 0x3f
@@ -4563,7 +4615,7 @@ framebuffer:
 	.uleb128 0x13
 	.byte	0
 	.byte	0
-	.uleb128 0x13
+	.uleb128 0x15
 	.uleb128 0xb
 	.byte	0x1
 	.uleb128 0x11
@@ -4574,7 +4626,7 @@ framebuffer:
 	.uleb128 0x13
 	.byte	0
 	.byte	0
-	.uleb128 0x14
+	.uleb128 0x16
 	.uleb128 0x1d
 	.byte	0x1
 	.uleb128 0x31
@@ -4594,7 +4646,7 @@ framebuffer:
 	.uleb128 0x13
 	.byte	0
 	.byte	0
-	.uleb128 0x15
+	.uleb128 0x17
 	.uleb128 0xb
 	.byte	0x1
 	.uleb128 0x11
@@ -4603,16 +4655,7 @@ framebuffer:
 	.uleb128 0x7
 	.byte	0
 	.byte	0
-	.uleb128 0x16
-	.uleb128 0x48
-	.byte	0
-	.uleb128 0x7d
-	.uleb128 0x1
-	.uleb128 0x7f
-	.uleb128 0x13
-	.byte	0
-	.byte	0
-	.uleb128 0x17
+	.uleb128 0x18
 	.uleb128 0x2e
 	.byte	0x1
 	.uleb128 0x3f
@@ -4642,7 +4685,7 @@ framebuffer:
 	.uleb128 0x13
 	.byte	0
 	.byte	0
-	.uleb128 0x18
+	.uleb128 0x19
 	.uleb128 0x2e
 	.byte	0x1
 	.uleb128 0x3f
@@ -4668,14 +4711,14 @@ framebuffer:
 	.uleb128 0x13
 	.byte	0
 	.byte	0
-	.uleb128 0x19
+	.uleb128 0x1a
 	.uleb128 0x26
 	.byte	0
 	.uleb128 0x49
 	.uleb128 0x13
 	.byte	0
 	.byte	0
-	.uleb128 0x1a
+	.uleb128 0x1b
 	.uleb128 0x34
 	.byte	0
 	.uleb128 0x3
@@ -4693,11 +4736,6 @@ framebuffer:
 	.uleb128 0x19
 	.uleb128 0x2
 	.uleb128 0x18
-	.byte	0
-	.byte	0
-	.uleb128 0x1b
-	.uleb128 0x18
-	.byte	0
 	.byte	0
 	.byte	0
 	.uleb128 0x1c
@@ -4739,13 +4777,6 @@ framebuffer:
 	.byte	0
 	.byte	0
 	.uleb128 0x1f
-	.uleb128 0x35
-	.byte	0
-	.uleb128 0x49
-	.uleb128 0x13
-	.byte	0
-	.byte	0
-	.uleb128 0x20
 	.uleb128 0xf
 	.byte	0
 	.uleb128 0xb
@@ -4755,14 +4786,14 @@ framebuffer:
 	.uleb128 0x13
 	.byte	0
 	.byte	0
-	.uleb128 0x21
+	.uleb128 0x20
 	.uleb128 0x5
 	.byte	0
 	.uleb128 0x49
 	.uleb128 0x13
 	.byte	0
 	.byte	0
-	.uleb128 0x22
+	.uleb128 0x21
 	.uleb128 0x2e
 	.byte	0x1
 	.uleb128 0x3f
@@ -4785,7 +4816,7 @@ framebuffer:
 	.uleb128 0x13
 	.byte	0
 	.byte	0
-	.uleb128 0x23
+	.uleb128 0x22
 	.uleb128 0x34
 	.byte	0
 	.uleb128 0x3
@@ -4804,7 +4835,7 @@ framebuffer:
 	.uleb128 0xd
 	.byte	0
 	.byte	0
-	.uleb128 0x24
+	.uleb128 0x23
 	.uleb128 0x1d
 	.byte	0x1
 	.uleb128 0x31
@@ -4823,7 +4854,7 @@ framebuffer:
 	.sleb128 17
 	.byte	0
 	.byte	0
-	.uleb128 0x25
+	.uleb128 0x24
 	.uleb128 0xb
 	.byte	0x1
 	.uleb128 0x31
@@ -4832,7 +4863,7 @@ framebuffer:
 	.uleb128 0x17
 	.byte	0
 	.byte	0
-	.uleb128 0x26
+	.uleb128 0x25
 	.uleb128 0x48
 	.byte	0x1
 	.uleb128 0x7d
@@ -4843,7 +4874,7 @@ framebuffer:
 	.uleb128 0x13
 	.byte	0
 	.byte	0
-	.uleb128 0x27
+	.uleb128 0x26
 	.uleb128 0x2e
 	.byte	0x1
 	.uleb128 0x3f
@@ -4867,7 +4898,7 @@ framebuffer:
 	.uleb128 0x13
 	.byte	0
 	.byte	0
-	.uleb128 0x28
+	.uleb128 0x27
 	.uleb128 0x5
 	.byte	0
 	.uleb128 0x3
@@ -4883,7 +4914,7 @@ framebuffer:
 	.uleb128 0x13
 	.byte	0
 	.byte	0
-	.uleb128 0x29
+	.uleb128 0x28
 	.uleb128 0x11
 	.byte	0x1
 	.uleb128 0x25
@@ -4902,7 +4933,7 @@ framebuffer:
 	.uleb128 0x17
 	.byte	0
 	.byte	0
-	.uleb128 0x2a
+	.uleb128 0x29
 	.uleb128 0x24
 	.byte	0
 	.uleb128 0xb
@@ -4911,6 +4942,13 @@ framebuffer:
 	.uleb128 0xb
 	.uleb128 0x3
 	.uleb128 0x8
+	.byte	0
+	.byte	0
+	.uleb128 0x2a
+	.uleb128 0x35
+	.byte	0
+	.uleb128 0x49
+	.uleb128 0x13
 	.byte	0
 	.byte	0
 	.uleb128 0x2b
@@ -4926,8 +4964,6 @@ framebuffer:
 	.uleb128 0xb
 	.uleb128 0x39
 	.uleb128 0xb
-	.uleb128 0x27
-	.uleb128 0x19
 	.uleb128 0x3c
 	.uleb128 0x19
 	.uleb128 0x1
@@ -4949,6 +4985,27 @@ framebuffer:
 	.uleb128 0xb
 	.uleb128 0x27
 	.uleb128 0x19
+	.uleb128 0x3c
+	.uleb128 0x19
+	.uleb128 0x1
+	.uleb128 0x13
+	.byte	0
+	.byte	0
+	.uleb128 0x2d
+	.uleb128 0x2e
+	.byte	0x1
+	.uleb128 0x3f
+	.uleb128 0x19
+	.uleb128 0x3
+	.uleb128 0xe
+	.uleb128 0x3a
+	.uleb128 0xb
+	.uleb128 0x3b
+	.uleb128 0xb
+	.uleb128 0x39
+	.uleb128 0xb
+	.uleb128 0x27
+	.uleb128 0x19
 	.uleb128 0x49
 	.uleb128 0x13
 	.uleb128 0x3c
@@ -4957,7 +5014,7 @@ framebuffer:
 	.uleb128 0x13
 	.byte	0
 	.byte	0
-	.uleb128 0x2d
+	.uleb128 0x2e
 	.uleb128 0x2e
 	.byte	0
 	.uleb128 0x3f
@@ -4978,7 +5035,7 @@ framebuffer:
 	.uleb128 0x19
 	.byte	0
 	.byte	0
-	.uleb128 0x2e
+	.uleb128 0x2f
 	.uleb128 0x5
 	.byte	0
 	.uleb128 0x3
@@ -4995,11 +5052,11 @@ framebuffer:
 	.uleb128 0x17
 	.byte	0
 	.byte	0
-	.uleb128 0x2f
+	.uleb128 0x30
 	.uleb128 0x34
 	.byte	0
 	.uleb128 0x3
-	.uleb128 0x8
+	.uleb128 0xe
 	.uleb128 0x3a
 	.uleb128 0xb
 	.uleb128 0x3b
@@ -5008,29 +5065,10 @@ framebuffer:
 	.uleb128 0xb
 	.uleb128 0x49
 	.uleb128 0x13
-	.uleb128 0x2
-	.uleb128 0x18
-	.byte	0
-	.byte	0
-	.uleb128 0x30
-	.uleb128 0x5
-	.byte	0
-	.uleb128 0x3
-	.uleb128 0x8
-	.uleb128 0x3a
-	.uleb128 0xb
-	.uleb128 0x3b
-	.uleb128 0xb
-	.uleb128 0x39
-	.uleb128 0xb
-	.uleb128 0x49
-	.uleb128 0x13
-	.uleb128 0x2
-	.uleb128 0x18
 	.byte	0
 	.byte	0
 	.uleb128 0x31
-	.uleb128 0x34
+	.uleb128 0x5
 	.byte	0
 	.uleb128 0x3
 	.uleb128 0x8
@@ -5047,11 +5085,28 @@ framebuffer:
 	.byte	0
 	.byte	0
 	.uleb128 0x32
+	.uleb128 0x34
+	.byte	0
+	.uleb128 0x3
+	.uleb128 0x8
+	.uleb128 0x3a
+	.uleb128 0xb
+	.uleb128 0x3b
+	.uleb128 0xb
+	.uleb128 0x39
+	.uleb128 0xb
+	.uleb128 0x49
+	.uleb128 0x13
+	.uleb128 0x2
+	.uleb128 0x18
+	.byte	0
+	.byte	0
+	.uleb128 0x33
 	.uleb128 0xb
 	.byte	0x1
 	.byte	0
 	.byte	0
-	.uleb128 0x33
+	.uleb128 0x34
 	.uleb128 0xb
 	.byte	0x1
 	.uleb128 0x31
@@ -5062,7 +5117,7 @@ framebuffer:
 	.uleb128 0x7
 	.byte	0
 	.byte	0
-	.uleb128 0x34
+	.uleb128 0x35
 	.uleb128 0x2e
 	.byte	0
 	.uleb128 0x3f
@@ -5098,36 +5153,41 @@ framebuffer:
 	.uleb128 .LVL189-.Ltext0
 	.uleb128 .LFE16-.Ltext0
 	.uleb128 0x1
-	.byte	0x59
+	.byte	0x64
 	.byte	0
 .LLST135:
 	.byte	0x4
 	.uleb128 .LVL191-.Ltext0
-	.uleb128 .LVL220-.Ltext0
+	.uleb128 .LVL224-.Ltext0
 	.uleb128 0x1
-	.byte	0x63
+	.byte	0x66
 	.byte	0x4
-	.uleb128 .LVL220-.Ltext0
-	.uleb128 .LVL222-.Ltext0
+	.uleb128 .LVL224-.Ltext0
+	.uleb128 .LVL226-.Ltext0
 	.uleb128 0x1
-	.byte	0x59
+	.byte	0x64
 	.byte	0x4
-	.uleb128 .LVL222-.Ltext0
+	.uleb128 .LVL226-.Ltext0
 	.uleb128 .LFE16-.Ltext0
 	.uleb128 0x1
-	.byte	0x63
+	.byte	0x66
 	.byte	0
 .LLST136:
 	.byte	0x4
 	.uleb128 .LVL192-.Ltext0
-	.uleb128 .LVL223-.Ltext0
+	.uleb128 .LVL198-.Ltext0
 	.uleb128 0x1
-	.byte	0x64
+	.byte	0x68
 	.byte	0x4
-	.uleb128 .LVL223-.Ltext0
+	.uleb128 .LVL199-.Ltext0
+	.uleb128 .LVL227-.Ltext0
+	.uleb128 0x1
+	.byte	0x68
+	.byte	0x4
+	.uleb128 .LVL227-.Ltext0
 	.uleb128 .LFE16-.Ltext0
 	.uleb128 0x1
-	.byte	0x59
+	.byte	0x64
 	.byte	0
 .LLST137:
 	.byte	0x4
@@ -5138,9 +5198,14 @@ framebuffer:
 	.byte	0x9f
 	.byte	0x4
 	.uleb128 .LVL193-.Ltext0
+	.uleb128 .LVL200-.Ltext0
+	.uleb128 0x1
+	.byte	0x6b
+	.byte	0x4
+	.uleb128 .LVL202-.Ltext0
 	.uleb128 .LFE16-.Ltext0
 	.uleb128 0x1
-	.byte	0x61
+	.byte	0x6b
 	.byte	0
 .LLST138:
 	.byte	0x4
@@ -5151,16 +5216,21 @@ framebuffer:
 	.byte	0x9f
 	.byte	0x4
 	.uleb128 .LVL193-.Ltext0
+	.uleb128 .LVL203-.Ltext0
+	.uleb128 0x1
+	.byte	0x62
+	.byte	0x4
+	.uleb128 .LVL205-.Ltext0
 	.uleb128 .LFE16-.Ltext0
 	.uleb128 0x1
-	.byte	0x56
+	.byte	0x62
 	.byte	0
-.LLST140:
+.LLST141:
 	.byte	0x4
 	.uleb128 .LVL193-.Ltext0
 	.uleb128 .LVL194-.Ltext0
 	.uleb128 0x4
-	.byte	0x79
+	.byte	0x84
 	.sleb128 0
 	.byte	0x1f
 	.byte	0x9f
@@ -5170,7 +5240,7 @@ framebuffer:
 	.uleb128 0x6
 	.byte	0x7d
 	.sleb128 0
-	.byte	0x84
+	.byte	0x88
 	.sleb128 0
 	.byte	0x1c
 	.byte	0x9f
@@ -5180,74 +5250,74 @@ framebuffer:
 	.uleb128 0x8
 	.byte	0x7d
 	.sleb128 0
-	.byte	0x84
+	.byte	0x88
 	.sleb128 0
 	.byte	0x1c
 	.byte	0x23
 	.uleb128 0x1
 	.byte	0x9f
 	.byte	0x4
-	.uleb128 .LVL208-.Ltext0
-	.uleb128 .LVL214-.Ltext0
+	.uleb128 .LVL212-.Ltext0
+	.uleb128 .LVL218-.Ltext0
 	.uleb128 0x6
 	.byte	0x7d
 	.sleb128 0
-	.byte	0x84
+	.byte	0x88
 	.sleb128 0
 	.byte	0x1c
 	.byte	0x9f
 	.byte	0
-.LLST142:
+.LLST143:
 	.byte	0x4
 	.uleb128 .LVL194-.Ltext0
 	.uleb128 .LVL196-.Ltext0
 	.uleb128 0x1
 	.byte	0x5d
 	.byte	0x4
-	.uleb128 .LVL208-.Ltext0
-	.uleb128 .LVL214-.Ltext0
+	.uleb128 .LVL212-.Ltext0
+	.uleb128 .LVL218-.Ltext0
 	.uleb128 0x1
 	.byte	0x5d
 	.byte	0
-.LLST144:
+.LLST145:
 	.byte	0x4
-	.uleb128 .LVL209-.Ltext0
 	.uleb128 .LVL213-.Ltext0
+	.uleb128 .LVL217-.Ltext0
 	.uleb128 0x8
 	.byte	0x7e
 	.sleb128 0
-	.byte	0x83
+	.byte	0x86
 	.sleb128 0
 	.byte	0x1c
 	.byte	0x23
 	.uleb128 0x1
 	.byte	0x9f
 	.byte	0
-.LLST146:
+.LLST147:
 	.byte	0x4
-	.uleb128 .LVL209-.Ltext0
 	.uleb128 .LVL213-.Ltext0
-	.uleb128 0x1
-	.byte	0x5e
-	.byte	0
-.LLST148:
-	.byte	0x4
-	.uleb128 .LVL209-.Ltext0
-	.uleb128 .LVL212-.Ltext0
+	.uleb128 .LVL217-.Ltext0
 	.uleb128 0x1
 	.byte	0x5e
 	.byte	0
 .LLST149:
 	.byte	0x4
-	.uleb128 .LVL209-.Ltext0
-	.uleb128 .LVL212-.Ltext0
+	.uleb128 .LVL213-.Ltext0
+	.uleb128 .LVL216-.Ltext0
 	.uleb128 0x1
-	.byte	0x5d
+	.byte	0x5e
 	.byte	0
 .LLST150:
 	.byte	0x4
-	.uleb128 .LVL209-.Ltext0
-	.uleb128 .LVL212-.Ltext0
+	.uleb128 .LVL213-.Ltext0
+	.uleb128 .LVL216-.Ltext0
+	.uleb128 0x1
+	.byte	0x5d
+	.byte	0
+.LLST151:
+	.byte	0x4
+	.uleb128 .LVL213-.Ltext0
+	.uleb128 .LVL216-.Ltext0
 	.uleb128 0x5
 	.byte	0x40
 	.byte	0x44
@@ -5255,81 +5325,81 @@ framebuffer:
 	.byte	0x1f
 	.byte	0x9f
 	.byte	0
-.LLST151:
+.LLST152:
 	.byte	0x4
-	.uleb128 .LVL210-.Ltext0
-	.uleb128 .LVL211-.Ltext0
+	.uleb128 .LVL214-.Ltext0
+	.uleb128 .LVL215-.Ltext0
 	.uleb128 0x1
 	.byte	0x5f
 	.byte	0x4
-	.uleb128 .LVL211-.Ltext0
-	.uleb128 .LVL212-.Ltext0
+	.uleb128 .LVL215-.Ltext0
+	.uleb128 .LVL216-.Ltext0
 	.uleb128 0x9
 	.byte	0x3
 	.8byte	display_width
 	.byte	0
 .LLST154:
 	.byte	0x4
-	.uleb128 .LVL203-.Ltext0
-	.uleb128 .LVL204-.Ltext0
+	.uleb128 .LVL205-.Ltext0
+	.uleb128 .LVL206-.Ltext0
 	.uleb128 0x4
-	.byte	0x79
+	.byte	0x84
 	.sleb128 0
 	.byte	0x1f
 	.byte	0x9f
 	.byte	0x4
-	.uleb128 .LVL204-.Ltext0
-	.uleb128 .LVL205-.Ltext0
+	.uleb128 .LVL206-.Ltext0
+	.uleb128 .LVL207-.Ltext0
 	.uleb128 0x6
 	.byte	0x7d
 	.sleb128 0
-	.byte	0x84
+	.byte	0x88
 	.sleb128 0
 	.byte	0x1c
 	.byte	0x9f
 	.byte	0x4
-	.uleb128 .LVL205-.Ltext0
-	.uleb128 .LVL206-.Ltext0
+	.uleb128 .LVL207-.Ltext0
+	.uleb128 .LVL208-.Ltext0
 	.uleb128 0x8
 	.byte	0x7d
 	.sleb128 0
-	.byte	0x84
+	.byte	0x88
 	.sleb128 0
 	.byte	0x1c
 	.byte	0x23
 	.uleb128 0x1
 	.byte	0x9f
 	.byte	0x4
-	.uleb128 .LVL214-.Ltext0
-	.uleb128 .LVL220-.Ltext0
+	.uleb128 .LVL218-.Ltext0
+	.uleb128 .LVL224-.Ltext0
 	.uleb128 0x6
 	.byte	0x7d
 	.sleb128 0
-	.byte	0x84
+	.byte	0x88
 	.sleb128 0
 	.byte	0x1c
 	.byte	0x9f
 	.byte	0
 .LLST156:
 	.byte	0x4
-	.uleb128 .LVL204-.Ltext0
 	.uleb128 .LVL206-.Ltext0
+	.uleb128 .LVL208-.Ltext0
 	.uleb128 0x1
 	.byte	0x5d
 	.byte	0x4
-	.uleb128 .LVL214-.Ltext0
-	.uleb128 .LVL220-.Ltext0
+	.uleb128 .LVL218-.Ltext0
+	.uleb128 .LVL224-.Ltext0
 	.uleb128 0x1
 	.byte	0x5d
 	.byte	0
 .LLST158:
 	.byte	0x4
-	.uleb128 .LVL215-.Ltext0
 	.uleb128 .LVL219-.Ltext0
+	.uleb128 .LVL223-.Ltext0
 	.uleb128 0x8
 	.byte	0x7e
 	.sleb128 0
-	.byte	0x83
+	.byte	0x86
 	.sleb128 0
 	.byte	0x1c
 	.byte	0x23
@@ -5338,29 +5408,29 @@ framebuffer:
 	.byte	0
 .LLST160:
 	.byte	0x4
-	.uleb128 .LVL215-.Ltext0
 	.uleb128 .LVL219-.Ltext0
+	.uleb128 .LVL223-.Ltext0
 	.uleb128 0x1
 	.byte	0x5e
 	.byte	0
 .LLST162:
 	.byte	0x4
-	.uleb128 .LVL215-.Ltext0
-	.uleb128 .LVL218-.Ltext0
+	.uleb128 .LVL219-.Ltext0
+	.uleb128 .LVL222-.Ltext0
 	.uleb128 0x1
 	.byte	0x5e
 	.byte	0
 .LLST163:
 	.byte	0x4
-	.uleb128 .LVL215-.Ltext0
-	.uleb128 .LVL218-.Ltext0
+	.uleb128 .LVL219-.Ltext0
+	.uleb128 .LVL222-.Ltext0
 	.uleb128 0x1
 	.byte	0x5d
 	.byte	0
 .LLST164:
 	.byte	0x4
-	.uleb128 .LVL215-.Ltext0
-	.uleb128 .LVL218-.Ltext0
+	.uleb128 .LVL219-.Ltext0
+	.uleb128 .LVL222-.Ltext0
 	.uleb128 0x3
 	.byte	0x9
 	.byte	0xff
@@ -5368,13 +5438,13 @@ framebuffer:
 	.byte	0
 .LLST165:
 	.byte	0x4
-	.uleb128 .LVL216-.Ltext0
-	.uleb128 .LVL217-.Ltext0
+	.uleb128 .LVL220-.Ltext0
+	.uleb128 .LVL221-.Ltext0
 	.uleb128 0x1
 	.byte	0x5f
 	.byte	0x4
-	.uleb128 .LVL217-.Ltext0
-	.uleb128 .LVL218-.Ltext0
+	.uleb128 .LVL221-.Ltext0
+	.uleb128 .LVL222-.Ltext0
 	.uleb128 0x9
 	.byte	0x3
 	.8byte	display_width
@@ -8008,25 +8078,33 @@ framebuffer:
 	.uleb128 .LBB201-.Ltext0
 	.uleb128 .LBE201-.Ltext0
 	.byte	0x4
-	.uleb128 .LBB224-.Ltext0
-	.uleb128 .LBE224-.Ltext0
+	.uleb128 .LBB249-.Ltext0
+	.uleb128 .LBE249-.Ltext0
 	.byte	0x4
-	.uleb128 .LBB226-.Ltext0
-	.uleb128 .LBE226-.Ltext0
+	.uleb128 .LBB250-.Ltext0
+	.uleb128 .LBE250-.Ltext0
 	.byte	0x4
-	.uleb128 .LBB244-.Ltext0
-	.uleb128 .LBE244-.Ltext0
-	.byte	0x4
-	.uleb128 .LBB247-.Ltext0
-	.uleb128 .LBE247-.Ltext0
+	.uleb128 .LBB251-.Ltext0
+	.uleb128 .LBE251-.Ltext0
 	.byte	0
-.LLRL141:
+.LLRL140:
 	.byte	0x4
 	.uleb128 .LBB202-.Ltext0
 	.uleb128 .LBE202-.Ltext0
 	.byte	0x4
-	.uleb128 .LBB220-.Ltext0
-	.uleb128 .LBE220-.Ltext0
+	.uleb128 .LBB223-.Ltext0
+	.uleb128 .LBE223-.Ltext0
+	.byte	0x4
+	.uleb128 .LBB245-.Ltext0
+	.uleb128 .LBE245-.Ltext0
+	.byte	0x4
+	.uleb128 .LBB247-.Ltext0
+	.uleb128 .LBE247-.Ltext0
+	.byte	0
+.LLRL142:
+	.byte	0x4
+	.uleb128 .LBB203-.Ltext0
+	.uleb128 .LBE203-.Ltext0
 	.byte	0x4
 	.uleb128 .LBB221-.Ltext0
 	.uleb128 .LBE221-.Ltext0
@@ -8034,38 +8112,35 @@ framebuffer:
 	.uleb128 .LBB222-.Ltext0
 	.uleb128 .LBE222-.Ltext0
 	.byte	0
-.LLRL143:
-	.byte	0x4
-	.uleb128 .LBB203-.Ltext0
-	.uleb128 .LBE203-.Ltext0
-	.byte	0x4
-	.uleb128 .LBB218-.Ltext0
-	.uleb128 .LBE218-.Ltext0
-	.byte	0x4
-	.uleb128 .LBB219-.Ltext0
-	.uleb128 .LBE219-.Ltext0
-	.byte	0
-.LLRL145:
+.LLRL144:
 	.byte	0x4
 	.uleb128 .LBB204-.Ltext0
 	.uleb128 .LBE204-.Ltext0
 	.byte	0x4
-	.uleb128 .LBB215-.Ltext0
-	.uleb128 .LBE215-.Ltext0
+	.uleb128 .LBB219-.Ltext0
+	.uleb128 .LBE219-.Ltext0
+	.byte	0x4
+	.uleb128 .LBB220-.Ltext0
+	.uleb128 .LBE220-.Ltext0
+	.byte	0
+.LLRL146:
+	.byte	0x4
+	.uleb128 .LBB205-.Ltext0
+	.uleb128 .LBE205-.Ltext0
 	.byte	0x4
 	.uleb128 .LBB216-.Ltext0
 	.uleb128 .LBE216-.Ltext0
 	.byte	0x4
 	.uleb128 .LBB217-.Ltext0
 	.uleb128 .LBE217-.Ltext0
+	.byte	0x4
+	.uleb128 .LBB218-.Ltext0
+	.uleb128 .LBE218-.Ltext0
 	.byte	0
-.LLRL147:
+.LLRL148:
 	.byte	0x4
-	.uleb128 .LBB205-.Ltext0
-	.uleb128 .LBE205-.Ltext0
-	.byte	0x4
-	.uleb128 .LBB211-.Ltext0
-	.uleb128 .LBE211-.Ltext0
+	.uleb128 .LBB206-.Ltext0
+	.uleb128 .LBE206-.Ltext0
 	.byte	0x4
 	.uleb128 .LBB212-.Ltext0
 	.uleb128 .LBE212-.Ltext0
@@ -8075,52 +8150,50 @@ framebuffer:
 	.byte	0x4
 	.uleb128 .LBB214-.Ltext0
 	.uleb128 .LBE214-.Ltext0
-	.byte	0
-.LLRL152:
 	.byte	0x4
-	.uleb128 .LBB223-.Ltext0
-	.uleb128 .LBE223-.Ltext0
-	.byte	0x4
-	.uleb128 .LBB225-.Ltext0
-	.uleb128 .LBE225-.Ltext0
-	.byte	0x4
-	.uleb128 .LBB246-.Ltext0
-	.uleb128 .LBE246-.Ltext0
+	.uleb128 .LBB215-.Ltext0
+	.uleb128 .LBE215-.Ltext0
 	.byte	0
 .LLRL153:
 	.byte	0x4
-	.uleb128 .LBB227-.Ltext0
-	.uleb128 .LBE227-.Ltext0
+	.uleb128 .LBB224-.Ltext0
+	.uleb128 .LBE224-.Ltext0
 	.byte	0x4
-	.uleb128 .LBB245-.Ltext0
-	.uleb128 .LBE245-.Ltext0
+	.uleb128 .LBB246-.Ltext0
+	.uleb128 .LBE246-.Ltext0
 	.byte	0x4
 	.uleb128 .LBB248-.Ltext0
 	.uleb128 .LBE248-.Ltext0
 	.byte	0
 .LLRL155:
 	.byte	0x4
-	.uleb128 .LBB228-.Ltext0
-	.uleb128 .LBE228-.Ltext0
-	.byte	0x4
-	.uleb128 .LBB242-.Ltext0
-	.uleb128 .LBE242-.Ltext0
+	.uleb128 .LBB225-.Ltext0
+	.uleb128 .LBE225-.Ltext0
 	.byte	0x4
 	.uleb128 .LBB243-.Ltext0
 	.uleb128 .LBE243-.Ltext0
+	.byte	0x4
+	.uleb128 .LBB244-.Ltext0
+	.uleb128 .LBE244-.Ltext0
 	.byte	0
 .LLRL157:
 	.byte	0x4
-	.uleb128 .LBB229-.Ltext0
-	.uleb128 .LBE229-.Ltext0
+	.uleb128 .LBB226-.Ltext0
+	.uleb128 .LBE226-.Ltext0
 	.byte	0x4
 	.uleb128 .LBB241-.Ltext0
 	.uleb128 .LBE241-.Ltext0
+	.byte	0x4
+	.uleb128 .LBB242-.Ltext0
+	.uleb128 .LBE242-.Ltext0
 	.byte	0
 .LLRL159:
 	.byte	0x4
-	.uleb128 .LBB230-.Ltext0
-	.uleb128 .LBE230-.Ltext0
+	.uleb128 .LBB227-.Ltext0
+	.uleb128 .LBE227-.Ltext0
+	.byte	0x4
+	.uleb128 .LBB238-.Ltext0
+	.uleb128 .LBE238-.Ltext0
 	.byte	0x4
 	.uleb128 .LBB239-.Ltext0
 	.uleb128 .LBE239-.Ltext0
@@ -8130,33 +8203,36 @@ framebuffer:
 	.byte	0
 .LLRL161:
 	.byte	0x4
-	.uleb128 .LBB231-.Ltext0
-	.uleb128 .LBE231-.Ltext0
+	.uleb128 .LBB228-.Ltext0
+	.uleb128 .LBE228-.Ltext0
+	.byte	0x4
+	.uleb128 .LBB234-.Ltext0
+	.uleb128 .LBE234-.Ltext0
+	.byte	0x4
+	.uleb128 .LBB235-.Ltext0
+	.uleb128 .LBE235-.Ltext0
 	.byte	0x4
 	.uleb128 .LBB236-.Ltext0
 	.uleb128 .LBE236-.Ltext0
 	.byte	0x4
 	.uleb128 .LBB237-.Ltext0
 	.uleb128 .LBE237-.Ltext0
-	.byte	0x4
-	.uleb128 .LBB238-.Ltext0
-	.uleb128 .LBE238-.Ltext0
 	.byte	0
 .Ldebug_ranges3:
 	.section	.debug_line,"",@progbits
 .Ldebug_line0:
 	.section	.debug_str,"MS",@progbits,1
-.LASF55:
+.LASF56:
 	.string	"printf"
 .LASF18:
 	.string	"framebuffer"
 .LASF7:
 	.string	"__uint8_t"
-.LASF58:
+.LASF59:
 	.string	"inv_sqrt"
 .LASF17:
 	.string	"long long unsigned int"
-.LASF54:
+.LASF55:
 	.string	"angle"
 .LASF19:
 	.string	"display_width"
@@ -8164,19 +8240,19 @@ framebuffer:
 	.string	"long long int"
 .LASF4:
 	.string	"signed char"
-.LASF57:
+.LASF58:
 	.string	"sqrt_approx"
-.LASF52:
+.LASF53:
 	.string	"atan2_approx"
 .LASF63:
 	.string	"fast_sin"
-.LASF68:
+.LASF69:
 	.string	"get_display_status"
 .LASF10:
 	.string	"long int"
 .LASF50:
 	.string	"h_prime"
-.LASF70:
+.LASF71:
 	.string	"__builtin_puts"
 .LASF44:
 	.string	"checker_size"
@@ -8192,16 +8268,18 @@ framebuffer:
 	.string	"unsigned int"
 .LASF45:
 	.string	"intensity"
-.LASF51:
+.LASF52:
 	.string	"hsv_to_rgb"
 .LASF11:
 	.string	"long unsigned int"
 .LASF29:
 	.string	"draw_cool_pattern"
-.LASF59:
+.LASF51:
 	.string	"x_val"
 .LASF67:
 	.string	"GNU C17 14.2.0 -mtune=rocket -mabi=lp64d -misa-spec=20191213 -march=rv64imafdc_zicsr -g -O2"
+.LASF68:
+	.string	"update_display"
 .LASF30:
 	.string	"width"
 .LASF6:
@@ -8212,7 +8290,7 @@ framebuffer:
 	.string	"total"
 .LASF32:
 	.string	"total_pixels"
-.LASF69:
+.LASF70:
 	.string	"puts"
 .LASF41:
 	.string	"percent"
@@ -8226,7 +8304,7 @@ framebuffer:
 	.string	"last_percent"
 .LASF66:
 	.string	"set_pixel"
-.LASF53:
+.LASF54:
 	.string	"abs_y"
 .LASF2:
 	.string	"float"
@@ -8262,7 +8340,7 @@ framebuffer:
 	.string	"char"
 .LASF28:
 	.string	"run_bouncing_ball_demo_size"
-.LASF56:
+.LASF57:
 	.string	"fmod_simple"
 .LASF35:
 	.string	"dist"
