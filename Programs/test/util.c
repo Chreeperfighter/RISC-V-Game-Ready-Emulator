@@ -34,8 +34,15 @@ unsigned int get_display_status(void) {
     return a0;
 }
 
+void set_display_config(const bool enable, const bool auto_refresh) {
+    const uint32_t config = enable | auto_refresh << 1;
+    register int a0 asm("a0") = (int)config;
+    register int a7 asm("a7") = 204; // DISPLAY_CONFIG
+    asm volatile ("ecall" :: "r"(a0), "r"(a7) : "memory");
+}
+
 void update_display() {
-    register int a7 asm("a7") = 204; // DISPLAY_UPDATE
+    register int a7 asm("a7") = 205; // DISPLAY_UPDATE
     asm volatile ("ecall" :: "r"(a7) : "memory");
 }
 

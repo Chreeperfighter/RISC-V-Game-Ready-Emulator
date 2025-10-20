@@ -1,6 +1,7 @@
 MEMORY {
     RAM (rwx) : ORIGIN = 0x00000000, LENGTH = 512K
-    VRAM (rw) : ORIGIN = 0x10000000, LENGTH = 8M
+    MMIO (rw) : ORIGIN = 0x10000000, LENGTH = 64K
+    VRAM (rw) : ORIGIN = 0x11000000, LENGTH = 16M
 }
 
 SECTIONS {
@@ -40,6 +41,9 @@ SECTIONS {
     
     PROVIDE(__vram_start = ORIGIN(VRAM));
     PROVIDE(__vram_end = ORIGIN(VRAM) + LENGTH(VRAM));
+    
+    PROVIDE(__mmio_start = ORIGIN(MMIO));
+    PROVIDE(__mmio_end = ORIGIN(MMIO) + LENGTH(MMIO));
     
     /DISCARD/ : { *(.eh_frame) *(.eh_frame*) }
 }

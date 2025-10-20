@@ -4,11 +4,8 @@
 
 #include "framebuffer_test.h"
 #include <stdint.h>
-#include "util.h"
 #include <stdio.h>
 #include <stdbool.h>
-
-#define VRAM_BASE 0x10000000
 
 volatile uint32_t *framebuffer = (volatile uint32_t *)VRAM_BASE;
 
@@ -131,7 +128,7 @@ void init_display(void) {
 
     printf("Display resolution: %lux%lu\n", width, height);
 
-    set_display_enable(0x1);
+    set_display_config(true, false);
     status = get_display_status();
     if (status & 0x1) {
         printf("Display enabled successfully\n");
@@ -304,9 +301,10 @@ void run_bouncing_ball_demo_size(int ball_radius) {
             }
         }
         uint32_t status = get_display_status();
-        //if (status == 0x2) {
-            update_display();
-        //}
+        while (!(status & 0x2)) {
+            status = get_display_status();
+        }
+        update_display();
     }
 }
 

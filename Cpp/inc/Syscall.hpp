@@ -12,24 +12,22 @@ enum class Syscall : uint32_t {
     GET_CHAR = 2,
     // a0 <- char
     READ = 63,
-    // a0 -> fd (0 = stdin)
+    // a0 -> fd (0 = stdin, 1 = stdout, 2 = stderr)
     // a1 -> buffer address
     // a2 -> max length
     // a0 <- bytes read
     WRITE = 64,
-    // a0 -> fd (0 = stdin)
+    // a0 -> fd (0 = stdin, 1 = stdout, 2 = stderr)
     // a1 -> buffer address
     // a2 -> number of bytes
     // a0 <- bytes written
-    GET_SCREEN_WIDTH = 200,
-    // a0 <- screen width
-    GET_SCREEN_HEIGHT = 201,
-    // a0 <- screen height
-    DISPLAY_ENABLE = 202,
-    // a0 -> display enable
-    DISPLAY_STATUS = 203,
-    // a0 <- display status
-    DISPLAY_UPDATE = 204,
+    FSTAT = 80,
+    // a0 -> fd (0 = stdin, 1 = stdout, 2 = stderr)
+    // a1 -> stat buffer
+    // a0 <- status (0: success, -1: error)
+    BRK = 214,
+    // a0 -> break address (0 = don't change)
+    // a0 <- program break address
     GET_CYCLES = 100,
     // a0 <- lower 32 bit
     // a1 <- upper 32 bit

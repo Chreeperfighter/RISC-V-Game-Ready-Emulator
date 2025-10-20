@@ -7,9 +7,10 @@ set(CMAKE_C_STANDARD 11)
 set(SOURCES
         ../start.S
         main.c
-        util.c
+        #util.c
         #instruction_test.c
-        framebuffer_test.c
+        #framebuffer_test.c
+        display.h
 )
 
 # Build executable

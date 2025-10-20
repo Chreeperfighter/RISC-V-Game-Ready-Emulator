@@ -31,6 +31,7 @@ add_executable(Cpp
         inc/ISA.hpp
         inc/Syscall.hpp
         inc/Registers.hpp
+        inc/Devices.hpp
 )
 
 target_include_directories(Cpp PRIVATE
