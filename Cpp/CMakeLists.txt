@@ -32,6 +32,9 @@ add_executable(Cpp
         inc/Syscall.hpp
         inc/Registers.hpp
         inc/Devices.hpp
+        src/SimpleELFLoader.cpp
+        inc/SimpleELFLoader.hpp
+        inc/elf.h
 )
 
 target_include_directories(Cpp PRIVATE

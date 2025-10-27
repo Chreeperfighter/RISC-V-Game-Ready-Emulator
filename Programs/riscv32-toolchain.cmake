@@ -22,12 +22,6 @@ set(RV32_DEBUG_FLAGS "-O0 -g3 -ggdb -fno-omit-frame-pointer -Wall -Wextra")
 
 # Release: maximum performance, safe optimizations for RV32I
 # -O3: aggressive optimization
-# -funroll-loops: unrolls where beneficial
-# -fno-tree-vectorize: disable pointless vectorization (RV32I has no SIMD)
-# -fdata-sections / -ffunction-sections + --gc-sections: remove unused code
-# -DNDEBUG: disable assert() and similar
-# -fno-builtin: prevent compiler from replacing code with builtin functions
-# -ffreestanding: this is bare-metal, no hosted environment
 set(RV32_RELEASE_FLAGS "-O3")
 
 # Apply flags

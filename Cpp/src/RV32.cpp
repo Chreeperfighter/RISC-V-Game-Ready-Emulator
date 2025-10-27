@@ -12,15 +12,13 @@
 #include <random>
 #include <iostream>
 #include <mutex>
+#include <chrono>
+#include <algorithm>
 
 RV32::RV32(const bool randomizeRegs, const bool randomizeMemory) : rng(std::random_device{}()), pc(0),
                                                                    update_pc(true),
                                                                    ram(Config::RAM_SIZE, 0),
-                                                                   vram(Config::VRAM_SIZE, 0),
-                                                                   heap_start(0),
-                                                                   heap_end(0) {
-    front_buffer = &vram[Config::FB_A_OFFSET];
-    back_buffer  = &vram[Config::FB_B_OFFSET];
+                                                                   transfer_buffer(Config::FB_SIZE) {
     init_regs(randomizeRegs);
     if (randomizeMemory) {
         for (auto &byte: ram) {
@@ -29,16 +27,23 @@ RV32::RV32(const bool randomizeRegs, const bool randomizeMemory) : rng(std::rand
     }
 }
 
+void RV32::load_bin(const std::vector<uint8_t>& bin, const size_t size, const uint32_t start_address) {
+    // Make sure RAM is large enough
+    if (start_address + size > ram.size()) {
+        std::cerr << "load_bin(): binary too large or address out of range\n";
+        running = false;
+        return;
+    }
+
+    // Copy data into RAM
+    std::copy(bin.begin(), bin.begin() + static_cast<long>(size), ram.begin() + start_address);
+}
+
 void RV32::print_inst(DecodedInstruction inst) const {
     std::cerr << std::hex << std::showbase << pc << ": " << std::dec << "opcode=" << static_cast<int>(inst.opcode)
             << " funct3=" << static_cast<int>(inst.funct3)
             << " funct7=" << static_cast<int>(inst.funct7) << std::endl;
-}
-
-void RV32::load_bin(const uint8_t *bin, const size_t size, const uint32_t start_address) {
-    std::memcpy(&ram[start_address], bin, size);
-    heap_start = start_address + size;
-    heap_end = heap_start;
+    running = false;
 }
 
 void RV32::step() {
@@ -55,7 +60,7 @@ uint32_t RV32::fetch() const {
     return read_u32(pc);
 }
 
-DecodedInstruction RV32::decode(const uint32_t data) {
+DecodedInstruction RV32::decode(const uint32_t data) const {
     const auto opcode = static_cast<Opcode>(data & 0x7F);
     DecodedInstruction instruction{};
     instruction.opcode = opcode;
@@ -85,6 +90,7 @@ DecodedInstruction RV32::decode(const uint32_t data) {
             break;
         default:
             std::cerr << "Unknown opcode: " << static_cast<int>(opcode) << "\n";
+            running = false;
             break;
     }
     return instruction;
@@ -108,7 +114,6 @@ void RV32::execute(const DecodedInstruction inst) {
                             break;
                         default:
                             print_inst(inst);
-                            running = false;
                             break;
                     }
                     break;
@@ -149,14 +154,12 @@ void RV32::execute(const DecodedInstruction inst) {
                             break;
                         default:
                             print_inst(inst);
-                            running = false;
                             break;
                     }
                     break;
                 }
                 default:
                     print_inst(inst);
-                    running = false;
                     break;
             }
             break;
@@ -197,7 +200,6 @@ void RV32::execute(const DecodedInstruction inst) {
                         regs.write(inst.rd, static_cast<uint32_t>(rs1_value << amount));
                     } else {
                         print_inst(inst);
-                        running = false;
                     }
                     break;
                 }
@@ -212,14 +214,12 @@ void RV32::execute(const DecodedInstruction inst) {
                             break;
                         default:
                             print_inst(inst);
-                            running = false;
                             break;
                     }
                     break;
                 }
                 default:
                     print_inst(inst);
-                    running = false;
                     break;
             }
             break;
@@ -257,12 +257,11 @@ void RV32::execute(const DecodedInstruction inst) {
                     break;
                 }
                 case Funct3::LBU: {
-                    regs.write(inst.rd, static_cast<uint32_t>(read_u8(address)));
+                    regs.write(inst.rd, read_u8(address));
                     break;
                 }
                 default:
                     print_inst(inst);
-                    running = false;
                     break;
             }
             break;
@@ -271,6 +270,7 @@ void RV32::execute(const DecodedInstruction inst) {
         case Opcode::MISC_MEM: {
             // TODO: Implement MISC_MEM
             std::cerr << "MISC_MEM not implemented" << std::endl;
+            running = false;
             break;
         }
 
@@ -286,17 +286,24 @@ void RV32::execute(const DecodedInstruction inst) {
                         running = false;
                         break;
                     }
+                    case Syscall::READ: {
+                        const uint32_t fd = regs.read(Register::a0);
+                        const uint32_t buffer_address = regs.read(Register::a1);
+                        const uint32_t max_size = regs.read(Register::a2);
+                    }
                     case Syscall::WRITE: {
                         const uint32_t fd = regs.read(Register::a0);
                         const uint32_t buffer_address = regs.read(Register::a1);
                         const uint32_t buffer_size = regs.read(Register::a2);
 
                         if (fd == 0x1 | fd == 0x2) {
-                            const unsigned char *buffer = read_bytes(buffer_address, buffer_size);
-                            for (size_t i = 0; i < buffer_size; i++) {
-                                std::cout << buffer[i];
+                            const std::vector<unsigned char> buffer = read_bytes(buffer_address, buffer_size);
+
+                            for (unsigned char c: buffer) {
+                                std::cout << c;
                             }
-                            regs.write(Register::a0, buffer_size);
+
+                            regs.write(Register::a0, buffer.size());
                         } else {
                             regs.write(Register::a0, -1);
                         }
@@ -305,19 +312,19 @@ void RV32::execute(const DecodedInstruction inst) {
                     case Syscall::FSTAT: {
                         const uint32_t fd = regs.read(Register::a0);
                         const uint32_t stat_buf = regs.read(Register::a1);
-                        if (fd == 0x1 | fd == 0x2) {
+                        if (fd == 0x1 || fd == 0x2) {
                             // Write dummy stat structure
                             // For stdout (fd=1), pretend it's a character device
-                            write_u64(stat_buf + 0, 0); // st_dev
-                            write_u64(stat_buf + 8, 0); // st_ino
-                            write_u32(stat_buf + 16, 0x2000); // st_mode (S_IFCHR - char device)
-                            write_u32(stat_buf + 20, 1); // st_nlink
-                            write_u32(stat_buf + 24, 0); // st_uid
-                            write_u32(stat_buf + 28, 0); // st_gid
-                            write_u64(stat_buf + 32, 0); // st_rdev
-                            write_u64(stat_buf + 40, 0); // st_size
-                            write_u64(stat_buf + 48, 4096); // st_blksize
-                            write_u64(stat_buf + 56, 0); // st_blocks
+                            write_u32(stat_buf + 0, 0); // st_dev
+                            write_u32(stat_buf + 4, 0); // st_ino
+                            write_u32(stat_buf + 8, 0x2000); // st_mode (S_IFCHR)
+                            write_u32(stat_buf + 12, 1); // st_nlink
+                            write_u32(stat_buf + 16, 0); // st_uid
+                            write_u32(stat_buf + 20, 0); // st_gid
+                            write_u32(stat_buf + 24, 0); // st_rdev
+                            write_u32(stat_buf + 28, 0); // st_size
+                            write_u32(stat_buf + 32, 4096); // st_blksize
+                            write_u32(stat_buf + 36, 0); // st_blocks
                             regs.write(Register::a0, 0); // success
                         } else {
                             regs.write(Register::a0, -1); // error
@@ -327,20 +334,65 @@ void RV32::execute(const DecodedInstruction inst) {
                     case Syscall::BRK: {
                         const uint32_t new_break_address = regs.read(Register::a0);
                         if (new_break_address != 0) {
-                            if (new_break_address < heap_start || new_break_address > Config::RAM_END -
+                            if (new_break_address >= heap_start && new_break_address <= Config::RAM_END -
                                 Config::STACK_MARGIN) {
-                                regs.write(Register::a0, heap_end); // fail
-                                break;
+                                heap_end = new_break_address;
+                            } else {
+                                std::cerr << "[WARN] brk: address 0x" << std::hex << new_break_address
+                                        << " out of range, ignoring" << std::dec << std::endl;
                             }
-                            heap_end = new_break_address;
                         }
                         regs.write(Register::a0, heap_end);
+                        break;
+                    }
+                    case Syscall::SHOW_BUFFER: {
+                        transfer_buffer_address = regs.read(Register::a0);
+                        std::lock_guard<std::mutex> lock(transfer_buffer_mtx);
+                        transfer_buffer = read_bytes(transfer_buffer_address, Config::FB_SIZE);
+                        break;
+                    }
+                    case Syscall::GET_FRAMEBUFFER_INFO: {
+                        const uint32_t address = regs.read(Register::a0);
+                        if (address < Config::RAM_ORIGIN || address > Config::RAM_END) {
+                            regs.write(Register::a0, -1); // Failure
+                            break;
+                        }
+                        write_u32(address, Config::FB_WIDTH);
+                        write_u32(address + 4, Config::FB_HEIGHT);
+                        write_u32(address + 8, Config::FB_BPP);
+                        regs.write(Register::a0, 0); // Success
+                        break;
+                    }
+                    case Syscall::GET_US: {
+                        const uint32_t time_us = std::chrono::duration_cast<std::chrono::microseconds>(
+                            std::chrono::steady_clock::now().time_since_epoch()
+                        ).count();
+                        regs.write(Register::a0, time_us);
+                        break;
+                    }
+                    case Syscall::SLEEP_US: {
+                        const uint32_t time_us = regs.read(Register::a0);
+                        std::this_thread::sleep_for(std::chrono::microseconds(time_us));
+                        break;
+                    }
+                    case Syscall::KEY_AVAILABLE: {
+                        if (is_queue_empty()) {
+                            regs.write(Register::a0, 0);
+                        }
+                        else {
+                            regs.write(Register::a0, 1);
+                        }
+                        break;
+                    }
+                    case Syscall::GET_KEY: {
+                        const uint32_t key = pop_from_queue();
+                        regs.write(Register::a0, key);
                         break;
                     }
                     default:
                         std::cerr << "Unknown syscall ID: " << static_cast<uint32_t>(syscall_id)
                                 << std::endl;
-                    // running = false;
+                        running = false;
                         break;
                 }
             }
@@ -367,7 +419,6 @@ void RV32::execute(const DecodedInstruction inst) {
                 }
                 default:
                     print_inst(inst);
-                    running = false;
                     break;
             }
             break;
@@ -422,7 +473,6 @@ void RV32::execute(const DecodedInstruction inst) {
                 }
                 default:
                     print_inst(inst);
-                    running = false;
                     break;
             }
             break;
@@ -448,7 +498,6 @@ void RV32::execute(const DecodedInstruction inst) {
 
         default:
             print_inst(inst);
-            running = false;
             break;
     }
 }
@@ -539,39 +588,36 @@ uint8_t RV32::read_u8(const uint32_t address) const {
     return read_value<uint8_t>(address);
 }
 
-const uint8_t *RV32::read_bytes(uint32_t address, const size_t size) const {
+std::vector<uint8_t> RV32::read_bytes(uint32_t address, size_t size) const {
     const uint32_t upper_address = address + size;
-    if (Config::RAM_ORIGIN <= address && upper_address <= Config::RAM_END) {
-        address -= Config::RAM_ORIGIN;
-        return &ram[address - Config::RAM_ORIGIN];
+    if (!(Config::RAM_ORIGIN <= address && upper_address <= Config::RAM_END)) {
+        std::cerr << std::hex << std::showbase
+                  << "RV32::read_bytes(): address " << address << " out of range"
+                  << std::dec << std::endl;
+        running = false;
+        return {};
     }
-    std::cerr << std::hex << std::showbase
-            << "RV32::read_bytes(): address " << address << " out of range"
-            << std::dec << std::endl;
-    return nullptr;
+
+    address -= Config::RAM_ORIGIN;
+    return {ram.begin() + address, ram.begin() + address + static_cast<long>(size)};
 }
 
 template<typename T>
 T RV32::read_value(uint32_t address) const {
     const uint32_t upper_address = address + sizeof(T);
-    T value;
-    if (Config::RAM_ORIGIN <= address && upper_address <= Config::RAM_END) {
-        address -= Config::RAM_ORIGIN;
-        std::memcpy(&value, &ram[address], sizeof(value));
-        return value;
+    if (!(Config::RAM_ORIGIN <= address && upper_address <= Config::RAM_END)) {
+        std::cerr << std::hex << std::showbase
+                  << "RV32::read_value(): address " << address << " out of range"
+                  << std::dec << std::endl;
+        running = false;
+        return {};
     }
-    if (Config::MMIO_ORIGIN <= address && upper_address <= Config::MMIO_END) {
-        address -= Config::MMIO_ORIGIN;
-        uint8_t buffer[12];
-        display->get(buffer, 12);
 
-        std::memcpy(&value, buffer + address, sizeof(value));
-        return value;
-    }
-    std::cerr << std::hex << std::showbase
-            << "RV32::read_value(): address " << address << " out of range"
-            << std::dec << std::endl;
-    return 0;
+    address -= Config::RAM_ORIGIN;
+    T value;
+
+    std::copy(ram.begin() + address, ram.begin() + address + sizeof(T), reinterpret_cast<uint8_t*>(&value));
+    return value;
 }
 
 void RV32::write_u64(const uint32_t address, const uint64_t value) {
@@ -593,31 +639,25 @@ void RV32::write_u8(const uint32_t address, const uint8_t value) {
 template<typename T>
 void RV32::write_value(uint32_t address, T value) {
     const uint32_t upper_address = address + sizeof(T);
-    if (Config::RAM_ORIGIN <= address && upper_address <= Config::RAM_END) {
-        if (address < 0x3000) {
-            std::cout << std::hex << std::showbase << pc << ": " << address << std::dec << std::endl;
-        }
-        address -= Config::RAM_ORIGIN;
-        std::memcpy(&ram[address], &value, sizeof(value));
-    } else if (Config::MMIO_ORIGIN <= address && upper_address <= Config::MMIO_END) {
-        address -= Config::MMIO_ORIGIN;
 
-        uint8_t buffer[sizeof(T)];
-        std::memcpy(buffer, &value, sizeof(value));
-        // TODO: Handle MMIOs in the CPU
-        // swap should happen before telling main thread
-        display->set(address, buffer, sizeof(T));
-        if (display->new_frame) {
-            swap_framebuffers();
-        }
-    } else if (Config::VRAM_ORIGIN <= address && upper_address <= Config::VRAM_END) {
-        address -= Config::VRAM_ORIGIN;
-        std::memcpy(&vram[address], &value, sizeof(value));
-    } else {
-        std::cerr << std::hex << std::showbase
-                << pc << ": " << "RV32::write_value(): address " << address << " out of range"
-                << std::dec << std::endl;
+    if (text_start <= address && upper_address < text_end) {
+        std::cerr << std::hex << std::showbase << "[WRN] "
+                  << pc << ": " << "RV32::write_value(): address " << address << " overwriting program code"
+                  << std::endl;
     }
+
+    if (Config::RAM_ORIGIN <= address && upper_address <= Config::RAM_END) {
+        address -= Config::RAM_ORIGIN;
+        std::copy(reinterpret_cast<const uint8_t*>(&value),
+                  reinterpret_cast<const uint8_t*>(&value) + sizeof(T),
+                  ram.begin() + address);
+        return;
+    }
+
+    std::cerr << std::hex << std::showbase
+              << pc << ": " << "RV32::write_value(): address " << address << " out of range"
+              << std::dec << std::endl;
+    running = false;
 }
 
 void inline RV32::init_regs(const bool initRandom) {

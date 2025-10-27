@@ -7,10 +7,6 @@
 #include <cstdint>
 
 enum class Syscall : uint32_t {
-    PUT_CHAR = 1,
-    // a0 -> char to print
-    GET_CHAR = 2,
-    // a0 <- char
     READ = 63,
     // a0 -> fd (0 = stdin, 1 = stdout, 2 = stderr)
     // a1 -> buffer address
@@ -31,8 +27,21 @@ enum class Syscall : uint32_t {
     GET_CYCLES = 100,
     // a0 <- lower 32 bit
     // a1 <- upper 32 bit
-    EXIT =  10
+    SHOW_BUFFER = 101,
+    // a0 -> framebuffer address
+    GET_FRAMEBUFFER_INFO = 200,
+    // a0 -> address to write info
+    // a0 <- status (0: success, !=0: error)
+    EXIT = 10,
     // a0 -> exit code
+    GET_US = 11,
+    // a0 <- time in us
+    SLEEP_US = 12,
+    // a0 -> time in us
+    KEY_AVAILABLE = 13,
+    // a0 <- available (0: queue empty)
+    GET_KEY = 14,
+    // a0 <- key code
 };
 
 #endif //SYSCALL_HPP

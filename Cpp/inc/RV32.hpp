@@ -7,8 +7,8 @@
 
 #include <cstdint>
 #include <random>
+#include <queue>
 
-#include "Config.hpp"
 #include "ISA.hpp"
 #include "Registers.hpp"
 #include "Devices.hpp"
@@ -36,35 +36,41 @@ class RV32 {
 public:
     RV32(bool randomizeRegs, bool randomizeMemory);
     void step();
-	void load_bin(const uint8_t* bin, size_t size, uint32_t start_address);
+	void load_bin(const std::vector<uint8_t>& bin, size_t size, uint32_t start_address);
 	uint32_t get_pc() const {
 		return pc;
 	}
 	Registers get_regs() const {
 		return regs;
 	}
-	uint8_t* get_framebuffer() const {
-		return front_buffer.load(std::memory_order_acquire);
+	void set_heap(const uint32_t heap) {
+		heap_start = heap;
+		heap_end = heap;
 	}
-	void swap_framebuffers() {
-		uint8_t* old_front = front_buffer.load(std::memory_order_acquire);
-		front_buffer.store(back_buffer, std::memory_order_release);
-		back_buffer = old_front;
-
+	void set_text_range(const uint32_t start, const uint32_t end) {
+		text_start = start;
+		text_end = end;
 	}
-	bool running = true;
-	Display *display = nullptr;
+	void get_transfer_buffer(std::vector<uint8_t>& display_buffer) const {
+		std::lock_guard<std::mutex> lock(transfer_buffer_mtx);
+		display_buffer = transfer_buffer;
+	}
+	void add_key_to_queue(const uint32_t key) {
+		std::lock_guard<std::mutex> lock(queue_mtx);
+		key_queue.push(key);
+	}
+	mutable bool running = true;
 
 private:
 	uint32_t fetch() const;
-    static DecodedInstruction decode(uint32_t data);
+	DecodedInstruction decode(uint32_t data) const;
     void execute(DecodedInstruction inst);
     void init_regs(bool initRandom);
 	uint64_t read_u64(uint32_t address) const;
 	uint32_t read_u32(uint32_t address) const;
 	uint16_t read_u16(uint32_t address) const;
 	uint8_t read_u8(uint32_t address) const;
-	const uint8_t* read_bytes(uint32_t address, size_t size) const;
+	std::vector<uint8_t> read_bytes(uint32_t address, size_t size) const;
 	void write_u64(uint32_t address, uint64_t value);
 	void write_u32(uint32_t address, uint32_t value);
 	void write_u16(uint32_t address, uint16_t value);
@@ -82,18 +88,34 @@ private:
 	T read_value(uint32_t address) const;
 	template<typename T>
 	void write_value(uint32_t address, T value);
+	bool is_queue_empty() const {
+		std::lock_guard<std::mutex> lock(queue_mtx);
+		return key_queue.empty();
+	}
+	uint32_t pop_from_queue() {
+		std::lock_guard<std::mutex> lock(queue_mtx);
+		if (key_queue.empty()) {
+			return 0;
+		}
+		const uint32_t key = key_queue.front();
+		key_queue.pop();
+		return key;
+	}
 
     std::mt19937 rng;
     uint32_t pc;
     Registers regs;
 	bool update_pc;
 	std::vector<uint8_t> ram;
-	std::vector<uint8_t> vram;
-	mutable std::mutex vram_mutex;
-	uint32_t heap_start;
-	uint32_t heap_end;
-	std::atomic<uint8_t*> front_buffer{nullptr};
-	uint8_t* back_buffer = nullptr;
+	std::vector<uint8_t> transfer_buffer;
+	uint32_t transfer_buffer_address{};
+	mutable std::mutex transfer_buffer_mtx;
+	uint32_t heap_start{};
+	uint32_t heap_end{};
+	uint32_t text_start{};
+	uint32_t text_end{};
+	std::queue<uint32_t> key_queue;
+	mutable std::mutex queue_mtx;
 };
 
 

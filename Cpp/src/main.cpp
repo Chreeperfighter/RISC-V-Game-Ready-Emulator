@@ -4,8 +4,8 @@
 
 #include "RV32.hpp"
 #include "Config.hpp"
-#include "Devices.hpp"
-#include "Registers.hpp"
+#include "SimpleELFLoader.hpp"
+#include "elf.h"
 
 #include <fstream>
 #include <vector>
@@ -19,9 +19,9 @@
 #define DEBUG 0
 
 struct DisplayContext {
-    SDL_Window *window;
-    SDL_Renderer *renderer;
-    SDL_Texture *texture;
+    SDL_Window* window;
+    SDL_Renderer* renderer;
+    SDL_Texture* texture;
 };
 
 DisplayContext init_display() {
@@ -50,58 +50,41 @@ DisplayContext init_display() {
     return ctx;
 }
 
-void update_display(const DisplayContext &ctx, const uint8_t *framebuffer) {
+void update_display(const DisplayContext& ctx, const uint8_t* framebuffer) {
     SDL_UpdateTexture(ctx.texture, nullptr, framebuffer, Config::FB_WIDTH * 4);
     SDL_RenderClear(ctx.renderer);
     SDL_RenderCopy(ctx.renderer, ctx.texture, nullptr, nullptr);
-    // unlock
     SDL_RenderPresent(ctx.renderer);
 }
 
-void cleanup_display(const DisplayContext &ctx) {
+void cleanup_display(const DisplayContext& ctx) {
     SDL_DestroyTexture(ctx.texture);
     SDL_DestroyRenderer(ctx.renderer);
     SDL_DestroyWindow(ctx.window);
     SDL_Quit();
 }
 
-void load_bin_into_cpu(RV32 &cpu, const std::string &path, const uint32_t start_address) {
-    std::ifstream file(path, std::ios::binary | std::ios::ate);
-    if (!file) {
-        std::cerr << "Failed to open file: " << path << std::endl;
-        return;
-    }
-
-    const size_t size = file.tellg();
-    file.seekg(0, std::ios::beg);
-
-    std::vector<uint8_t> buffer(size);
-    if (!file.read(reinterpret_cast<char *>(buffer.data()), static_cast<long>(size))) {
-        std::cerr << "Failed to read file: " << path << std::endl;
-        return;
-    }
-
-    cpu.load_bin(buffer.data(), size, start_address);
-}
-
-
 int main() {
+    std::vector<uint8_t> buffer(Config::FB_SIZE);
     std::atomic<bool> running(true);
+
 #if !DEBUG
+    uint32_t frames = 0;
     std::atomic<long long> cycles(0);
 #endif
 
     RV32 rv32i(true, true);
-    Display display_ctrl{};
-    rv32i.display = &display_ctrl;
-    load_bin_into_cpu(
-        rv32i,
-        "/Users/mark.verbeek/CLionProjects/RISC-V-Game-Ready-Emulator/Programs/test/cmake-build-rv32i-release/test.bin",
-        0);
+    std::vector<uint8_t> elf = read_file("/Users/mark.verbeek/CLionProjects/RISC-V-Game-Ready-Emulator/Programs/test/cmake-build-rv32i-release/test.elf");
+    const uint32_t entry_point = get_entry_point(elf);
+    const uint32_t bss_end = get_bss_end(elf);
+    rv32i.set_heap(bss_end);
+    const uint32_t text_start = get_text_start(elf);
+    const uint32_t text_end = get_text_end(elf);
+    rv32i.set_text_range(text_start, text_end);
+    const std::vector<uint8_t> code = get_binary(elf);
+    rv32i.load_bin(code, code.size(), entry_point);
+
     const DisplayContext display = init_display();
-    display_ctrl.ready = true;
-    display_ctrl.width = Config::FB_WIDTH;
-    display_ctrl.height = Config::FB_HEIGHT;
 
     // CPU worker thread
     std::thread cpu_thread([&]() {
@@ -127,14 +110,14 @@ int main() {
                             break;
                         case 'r': {
                             Registers regs = rv32i.get_regs();
-                            std::array<uint32_t, Registers::NUM_REGS> regs_values = regs.get_registers();
+                            auto regs_values = regs.get_registers();
                             for (int reg = 0; reg < Registers::NUM_REGS; reg++) {
                                 const uint32_t value = regs_values[reg];
-                                const char *reg_name = register_names[reg];
+                                const char* reg_name = register_names[reg];
                                 std::cout
-                                        << std::setw(8) << std::left << reg_name << ": "
-                                        << std::hex << std::showbase << std::setw(10) << std::right << value
-                                        << " (" << std::dec << std::setw(10) << value << ")" << std::endl;
+                                    << std::setw(8) << std::left << reg_name << ": "
+                                    << std::hex << std::showbase << std::setw(10) << std::right << value
+                                    << " (" << std::dec << std::setw(10) << value << ")" << std::endl;
                             }
                             break;
                         }
@@ -145,18 +128,15 @@ int main() {
                             pc_break = pc;
                             break;
                         }
-                        case 'c': {
+                        case 'c':
                             debug = false;
                             break;
-                        }
                         default:
                             break;
                     }
                 }
             }
-            if (running) {
-                rv32i.step();
-            }
+            if (running) rv32i.step();
         }
         running = false;
 #else
@@ -170,42 +150,35 @@ int main() {
 
     // Main thread handles display and events
     auto start = std::chrono::steady_clock::now();
-    auto last_display = start;
     while (running) {
         SDL_Event event;
         while (SDL_PollEvent(&event)) {
             if (event.type == SDL_QUIT) running = false;
+            if (event.type == SDL_KEYDOWN) {
+                SDL_Keycode keycode = event.key.keysym.sym;
+                rv32i.add_key_to_queue(keycode);
+            }
             if (event.type == SDL_KEYDOWN && event.key.keysym.scancode == SDL_SCANCODE_ESCAPE)
                 running = false;
         }
 
         auto now = std::chrono::steady_clock::now();
-        if (display_ctrl.auto_refresh) {
-            const auto elapsed_display = std::chrono::duration_cast<std::chrono::milliseconds>(now - last_display).
-                    count();
-            if (elapsed_display >= 1000 / 60) {
-                update_display(display, rv32i.get_vram());
-                last_display = now;
-            }
-        } else {
-            if (display_ctrl.new_frame) {
-                display_ctrl.new_frame = false;
-                display_ctrl.ready = false;
-                const uint8_t* framebuffer = rv32i.get_framebuffer();
-                update_display(display, framebuffer);
-                display_ctrl.ready = true;
-            }
-        }
+        rv32i.get_transfer_buffer(buffer);
+        update_display(display, buffer.data());
+        frames++;
 
-        const auto elapsed_sec = std::chrono::duration_cast<std::chrono::milliseconds>(now - start).count();
-        if (elapsed_sec >= 1000) {
+        const auto elapsed_ms = std::chrono::duration_cast<std::chrono::milliseconds>(now - start).count();
+        if (elapsed_ms >= 1000) {
 #if !DEBUG
+            //std::cout << "Display FPS: " << frames << std::endl;
+            frames = 0;
             std::cout << "Cycles/s: " << cycles << std::endl;
             start = now;
             cycles = 0;
 #endif
         }
     }
+
     cpu_thread.join();
     cleanup_display(display);
 }

@@ -1,8 +1,11 @@
-    .section .text
+    .section .text.init
     .globl _start
 
 _start:
-    la sp, _end
+    .option push
+    .option norelax
+    la sp, _stack_top
+    .option pop
     
     .option push
     .option norelax

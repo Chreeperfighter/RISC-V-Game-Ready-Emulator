@@ -1,49 +1,60 @@
 MEMORY {
-    RAM (rwx) : ORIGIN = 0x00000000, LENGTH = 512K
-    MMIO (rw) : ORIGIN = 0x10000000, LENGTH = 64K
-    VRAM (rw) : ORIGIN = 0x11000000, LENGTH = 16M
+    RAM (rwx) : ORIGIN = 0x00000000, LENGTH = 8M
 }
 
 SECTIONS {
     . = 0x00000000;
     
-    .text : {
+    .text : ALIGN(4) {
         PROVIDE(_text_start = .);
-        KEEP(*(.text))   /* Keep _start even with --gc-sections */
-        *(.text*)               /* All other code */
+        KEEP(*(.text.init))      /* Force _start first and keep it */
+        *(.text.startup)
+        *(.text)
+        *(.text*)
+        . = ALIGN(4);
         PROVIDE(_etext = .);
     } > RAM
     
-    .rodata : {
+    .rodata : ALIGN(4) {
+        *(.rodata)
         *(.rodata*)
+        *(.srodata*)
+        . = ALIGN(4);
     } > RAM
 
-    .data : {
+    .data : ALIGN(4) {
         PROVIDE(__data_start = .);
+        *(.data)
         *(.data*)
+        *(.sdata)
         *(.sdata*)
         . = ALIGN(4);
         PROVIDE(__data_end = .);
-        PROVIDE(__global_pointer$ = __data_start + 0x800);
     } > RAM
+    
+    PROVIDE(__global_pointer$ = __data_start + 0x800);
 
-    .bss (NOLOAD) : {
-        . = ALIGN(4);
+    .bss (NOLOAD) : ALIGN(4) {
         PROVIDE(__bss_start = .);
-        *(.bss*)
+        *(.sbss)
         *(.sbss*)
+        *(.bss)
+        *(.bss*)
         *(COMMON)
         . = ALIGN(4);
         PROVIDE(__bss_end = .);
     } > RAM
     
-    PROVIDE(_end = ORIGIN(RAM) + LENGTH(RAM));
+    . = ALIGN(16);
+    PROVIDE(_end = .);
+    PROVIDE(_heap_start = .);
     
-    PROVIDE(__vram_start = ORIGIN(VRAM));
-    PROVIDE(__vram_end = ORIGIN(VRAM) + LENGTH(VRAM));
+    /* ADD THIS LINE: */
+    PROVIDE(_stack_top = ORIGIN(RAM) + LENGTH(RAM));
     
-    PROVIDE(__mmio_start = ORIGIN(MMIO));
-    PROVIDE(__mmio_end = ORIGIN(MMIO) + LENGTH(MMIO));
-    
-    /DISCARD/ : { *(.eh_frame) *(.eh_frame*) }
+    /DISCARD/ : {
+        *(.eh_frame)
+        *(.eh_frame_hdr)
+        *(.comment)
+    }
 }
