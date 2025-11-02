@@ -13,8 +13,8 @@ namespace Config {
 
     constexpr uint32_t STACK_MARGIN = 16 * 1024;
 
-    constexpr uint32_t FB_WIDTH = 800;
-    constexpr uint32_t FB_HEIGHT = 600;
+    constexpr uint32_t FB_WIDTH = 1920;
+    constexpr uint32_t FB_HEIGHT = 1080;
     constexpr uint32_t FB_BPP = 4; // Bytes per pixel
     constexpr uint32_t FB_SIZE = FB_WIDTH * FB_HEIGHT * FB_BPP;
 }

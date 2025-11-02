@@ -20,11 +20,11 @@
 typedef struct {
     uint32_t width;
     uint32_t height;
-    uint32_t bpp;  // bits per pixel
+    uint32_t bpp;  // byte per pixel
 } fb_info_t;
 
-static inline void show_buffer(const uint32_t buffer_address) {
-    register int a0 asm("a0") = buffer_address;
+static inline void show_buffer(uint8_t *buffer) {
+    register int a0 asm("a0") = (uintptr_t)buffer;
     register int a7 asm("a7") = SHOW_BUFFER;
     asm volatile ("ecall" :: "r"(a0), "r"(a7) : "memory");
 }

@@ -22,7 +22,7 @@ set(RV32_DEBUG_FLAGS "-O0 -g3 -ggdb -fno-omit-frame-pointer -Wall -Wextra")
 
 # Release: maximum performance, safe optimizations for RV32I
 # -O3: aggressive optimization
-set(RV32_RELEASE_FLAGS "-O3")
+set(RV32_RELEASE_FLAGS "-O2")
 
 # Apply flags
 set(CMAKE_C_FLAGS_DEBUG "${RV32_DEBUG_FLAGS}" CACHE STRING "" FORCE)

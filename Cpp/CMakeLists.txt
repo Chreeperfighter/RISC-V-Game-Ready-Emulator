@@ -31,10 +31,10 @@ add_executable(Cpp
         inc/ISA.hpp
         inc/Syscall.hpp
         inc/Registers.hpp
-        inc/Devices.hpp
         src/SimpleELFLoader.cpp
         inc/SimpleELFLoader.hpp
         inc/elf.h
+        inc/ascii.h
 )
 
 target_include_directories(Cpp PRIVATE

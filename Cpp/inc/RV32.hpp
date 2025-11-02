@@ -8,10 +8,10 @@
 #include <cstdint>
 #include <random>
 #include <queue>
+#include <set>
 
 #include "ISA.hpp"
 #include "Registers.hpp"
-#include "Devices.hpp"
 
 struct DecodedInstruction {
   	Opcode opcode;
@@ -59,6 +59,22 @@ public:
 		std::lock_guard<std::mutex> lock(queue_mtx);
 		key_queue.push(key);
 	}
+	void add_key_state(const uint32_t key) {
+		key_state[key] = true;
+	}
+	void remove_key_state(const uint32_t key) {
+		key_state[key] = false;
+	}
+	void add_mouse_button_state(const uint32_t mouse_button) {
+		mouse_button_state[mouse_button] = true;
+	}
+	void remove_mouse_button_state(const uint32_t mouse_button) {
+		mouse_button_state[mouse_button] = false;
+	}
+	void set_mouse_pos(const int32_t x, const int32_t y) {
+		mouse_pos_x = x;
+		mouse_pos_y = y;
+	}
 	mutable bool running = true;
 
 private:
@@ -75,6 +91,7 @@ private:
 	void write_u32(uint32_t address, uint32_t value);
 	void write_u16(uint32_t address, uint16_t value);
 	void write_u8(uint32_t address, uint8_t value);
+	void write_bytes(uint32_t address, const std::vector<uint8_t> &value);
 	static void decode_r_type(DecodedInstruction &inst, uint32_t data);
 	static void decode_i_type(DecodedInstruction &inst, uint32_t data);
 	static void decode_s_type(DecodedInstruction &inst, uint32_t data);
@@ -114,8 +131,13 @@ private:
 	uint32_t heap_end{};
 	uint32_t text_start{};
 	uint32_t text_end{};
+	uint64_t cycles = 0;
 	std::queue<uint32_t> key_queue;
 	mutable std::mutex queue_mtx;
+	bool key_state[512] = {false};
+	bool mouse_button_state[3] = {false};
+	int32_t mouse_pos_x = 0;
+	int32_t mouse_pos_y = 0;
 };
 
 

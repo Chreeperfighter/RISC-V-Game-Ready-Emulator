@@ -1,4 +1,5 @@
-/Users/mark.verbeek/CLionProjects/RISC-V-Game-Ready-Emulator/Programs/test/cmake-build-rv32i-release/CMakeFiles/test.dir
-/Users/mark.verbeek/CLionProjects/RISC-V-Game-Ready-Emulator/Programs/test/cmake-build-rv32i-release/CMakeFiles/asm_main.dir
-/Users/mark.verbeek/CLionProjects/RISC-V-Game-Ready-Emulator/Programs/test/cmake-build-rv32i-release/CMakeFiles/edit_cache.dir
-/Users/mark.verbeek/CLionProjects/RISC-V-Game-Ready-Emulator/Programs/test/cmake-build-rv32i-release/CMakeFiles/rebuild_cache.dir
+/Users/mark.verbeek/Data/Projects/RISC-V-Game-Ready-Emulator/Programs/test/cmake-build-rv32i-release/CMakeFiles/test.dir
+/Users/mark.verbeek/Data/Projects/RISC-V-Game-Ready-Emulator/Programs/test/cmake-build-rv32i-release/CMakeFiles/asm_main.dir
+/Users/mark.verbeek/Data/Projects/RISC-V-Game-Ready-Emulator/Programs/test/cmake-build-rv32i-release/CMakeFiles/asm_mouse_test.dir
+/Users/mark.verbeek/Data/Projects/RISC-V-Game-Ready-Emulator/Programs/test/cmake-build-rv32i-release/CMakeFiles/edit_cache.dir
+/Users/mark.verbeek/Data/Projects/RISC-V-Game-Ready-Emulator/Programs/test/cmake-build-rv32i-release/CMakeFiles/rebuild_cache.dir

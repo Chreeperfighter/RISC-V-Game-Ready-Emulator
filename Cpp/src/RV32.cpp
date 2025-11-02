@@ -6,14 +6,12 @@
 #include "Config.hpp"
 #include "ISA.hpp"
 #include "Syscall.hpp"
-#include "Devices.hpp"
 
 #include <cstdint>
 #include <random>
 #include <iostream>
 #include <mutex>
-#include <chrono>
-#include <algorithm>
+#include <thread>
 
 RV32::RV32(const bool randomizeRegs, const bool randomizeMemory) : rng(std::random_device{}()), pc(0),
                                                                    update_pc(true),
@@ -54,6 +52,7 @@ void RV32::step() {
     if (update_pc) {
         pc += 4;
     }
+    cycles++;
 }
 
 uint32_t RV32::fetch() const {
@@ -290,6 +289,31 @@ void RV32::execute(const DecodedInstruction inst) {
                         const uint32_t fd = regs.read(Register::a0);
                         const uint32_t buffer_address = regs.read(Register::a1);
                         const uint32_t max_size = regs.read(Register::a2);
+
+                        if (fd == 0x0) { // stdin
+                            std::string line;
+                            if (std::getline(std::cin, line)) {
+                                // add back the newline character that getline strips
+                                line += '\n';
+
+                                // truncate if longer than max_size
+                                if (line.size() > max_size)
+                                    line.resize(max_size);
+
+                                // copy into emulated memory
+                                std::vector<uint8_t> buffer(line.begin(), line.end());
+                                write_bytes(buffer_address, buffer);
+
+                                regs.write(Register::a0, buffer.size()); // bytes read
+                            } else {
+                                // EOF reached
+                                regs.write(Register::a0, 0);
+                            }
+                        } else {
+                            // non-stdin fds: return -1 (error) for unsupported fds
+                            regs.write(Register::a0, static_cast<uint32_t>(-1));
+                        }
+                        break;
                     }
                     case Syscall::WRITE: {
                         const uint32_t fd = regs.read(Register::a0);
@@ -387,6 +411,37 @@ void RV32::execute(const DecodedInstruction inst) {
                     case Syscall::GET_KEY: {
                         const uint32_t key = pop_from_queue();
                         regs.write(Register::a0, key);
+                        break;
+                    }
+                    case Syscall::IS_KEY_DOWN: {
+                        const uint8_t key = regs.read(Register::a0) & 0xFF;
+                        regs.write(Register::a0, key_state[key] ? 1 : 0);
+                        break;
+                    }
+                    case Syscall::CLEAR_KEY_QUEUE: {
+                        while (!is_queue_empty()) {
+                            pop_from_queue();
+                        }
+                        regs.write(Register::a0, 0);
+                        break;
+                    }
+                    case Syscall::GET_MOUSE_POS: {
+                        regs.write(Register::a0, mouse_pos_x);
+                        regs.write(Register::a1, mouse_pos_y);
+                        break;
+                    }
+                    case Syscall::IS_MOUSE_BUTTON_DOWN: {
+                        const uint8_t mouse_button = regs.read(Register::a0);
+                        if (mouse_button > 2) {
+                            std::cerr << "[WARN] mouse_button: "<< mouse_button << " out of range!" << std::endl;
+                            break;
+                        }
+                        regs.write(Register::a0, mouse_button_state[mouse_button] ? 1 : 0);
+                        break;
+                    }
+                    case Syscall::GET_CYCLES: {
+                        regs.write(Register::a0, cycles & 0xFFFFFFFF);
+                        regs.write(Register::a1, cycles >> 32);
                         break;
                     }
                     default:
@@ -634,6 +689,20 @@ void RV32::write_u16(const uint32_t address, const uint16_t value) {
 
 void RV32::write_u8(const uint32_t address, const uint8_t value) {
     write_value<uint8_t>(address, value);
+}
+
+void RV32::write_bytes(uint32_t address, const std::vector<uint8_t> &value) {
+    const uint32_t upper_address = address + value.size();
+    if (!(Config::RAM_ORIGIN <= address && upper_address <= Config::RAM_END)) {
+        std::cerr << std::hex << std::showbase
+                  << "RV32::read_bytes(): address " << address << " out of range"
+                  << std::dec << std::endl;
+        running = false;
+        return;
+    }
+
+    address -= Config::RAM_ORIGIN;
+    std::copy(value.begin(), value.end(), ram.begin() + address);
 }
 
 template<typename T>

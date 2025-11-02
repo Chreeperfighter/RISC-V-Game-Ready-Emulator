@@ -1,293 +1,369 @@
+#include <stdbool.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+#include "MinecraftRegular_Bmg3.h"
 #include "display.h"
 #include "keyboard.h"
 #include "timer.h"
-#include <stdint.h>
-#include <stdlib.h>
+#include "german_keyboard_map.h"
 
-#define TARGET_FPS 60
-#define FRAME_TIME_US (1000000 / TARGET_FPS)  // 16666 microseconds per frame
+// Constants
+#define MAX_LINE_LENGTH 1024
+#define MAX_COMMAND_LENGTH 64
+#define MAX_ARGS_LENGTH 256
+#define CURSOR_BLINK_US 500000
+#define POLL_DELAY_US 32000
+#define PROMPT_TEXT "mark@rv32i: "
+#define PROMPT_COLOR 0x24d686
+#define TEXT_COLOR 0xFFFFFF
+#define ERROR_COLOR 0xdb3030
+#define SECONDARY_TEXT_COLOR 0x1f879c
+#define BG_COLOR 0x00000000
 
-// Colors (assuming 32-bit RGBA or similar)
-#define COLOR_BLACK   0x00000000
-#define COLOR_WHITE   0xFFFFFFFF
-#define COLOR_PADDLE  0xFF00FF00  // Green
-#define COLOR_BALL    0xFFFF0000  // Red
-#define COLOR_DEBUG   0xFFFFFF00  // Yellow
+// Terminal state
+typedef struct {
+    uint8_t* framebuffer;
+    fb_info_t fb_info;
+    int cursor_x;
+    int cursor_y;
+    char input_line[MAX_LINE_LENGTH];
+    uint32_t line_index;
+    bool shift_pressed;
+    bool cursor_visible;
+    uint64_t last_blink_time;
+} Terminal;
 
-// Game constants
-#define PADDLE_WIDTH  8
-#define PADDLE_HEIGHT 80
-#define BALL_SIZE     6
-#define PADDLE_SPEED  20
-#define BALL_SPEED_X  3
-#define BALL_SPEED_Y  2
+// Forward declarations
+static void terminal_init(Terminal* term);
+static void terminal_cleanup(Terminal* term);
+static void terminal_update_cursor(Terminal* term);
+static void terminal_clear_cursor(Terminal* term);
+static void terminal_newline(Terminal* term);
+static void terminal_print(Terminal* term, const char* text, uint32_t color);
+static void terminal_print_prompt(Terminal* term);
+static void terminal_handle_backspace(Terminal* term);
+static void terminal_handle_enter(Terminal* term);
+static void terminal_handle_char(Terminal* term, char c);
+static void terminal_process_input(Terminal* term);
+
+// Command handlers
+typedef bool (*CommandHandler)(Terminal* term, const char* args);
 
 typedef struct {
-    int x, y;
-    int vx, vy;
-} Ball;
+    const char* name;
+    CommandHandler handler;
+    const char* description;
+} Command;
 
-typedef struct {
-    int y;
-} Paddle;
+static bool cmd_echo(Terminal* term, const char* args);
+static bool cmd_clear(Terminal* term, const char* args);
+static bool cmd_help(Terminal* term, const char* args);
+static bool cmd_neofetch(Terminal* term, const char* args);
+// Add more command handlers here
 
-// Ultra-fast memset for clearing (word-aligned)
-static inline void fast_clear(uint32_t *fb, uint32_t count) {
-    uint32_t *end = fb + count;
-    while (fb < end) {
-        *fb++ = COLOR_BLACK;
-    }
-}
+static const Command commands[] = {
+    {"neofetch", cmd_neofetch, "Print information"},
+    {"echo", cmd_echo, "Print text to the screen"},
+    {"clear", cmd_clear, "Clear the screen"},
+    {"help", cmd_help, "Show available commands"},
+    // Add more commands here
+    {NULL, NULL, NULL} // Sentinel
+};
 
-// Optimized rectangle fill with bounds checking once
-static inline void fill_rect(uint32_t *fb, int width, int height,
-                             int x, int y, int w, int h, uint32_t color) {
-    // Clip rectangle to screen bounds
-    if (x < 0) { w += x; x = 0; }
-    if (y < 0) { h += y; y = 0; }
-    if (x + w > width) w = width - x;
-    if (y + h > height) h = height - y;
-    if (w <= 0 || h <= 0) return;
+// Display helper functions
+static void display_glyph(const Glyph* glyph, int x, int y,
+                         uint8_t* fb, const fb_info_t* fb_info, uint32_t color) {
+    for (int i = 0; i < glyph->width * glyph->height; i++) {
+        const uint32_t index = i >> 3;
+        const uint8_t byte = glyph->data[index];
+        const uint8_t bit = 7 - (i & 0x7);
 
-    // Draw optimized scanlines
-    uint32_t *row = fb + y * width + x;
-    for (int j = 0; j < h; j++) {
-        uint32_t *pixel = row;
-        for (int i = 0; i < w; i++) {
-            *pixel++ = color;
-        }
-        row += width;
-    }
-}
+        if (byte & (1 << bit)) {
+            const int relative_x = i % glyph->width;
+            const int relative_y = i / glyph->width;
+            const int fb_x = x + glyph->x_offset + relative_x;
+            const int fb_y = y + glyph->y_offset + relative_y;
 
-// Simple number drawing (using rectangles for digits)
-static void draw_digit(uint32_t *fb, int width, int height, int x, int y, int digit) {
-    // 3x5 pixel font representation
-    const uint8_t font[10][5] = {
-        {0x7, 0x5, 0x5, 0x5, 0x7}, // 0
-        {0x2, 0x6, 0x2, 0x2, 0x7}, // 1
-        {0x7, 0x1, 0x7, 0x4, 0x7}, // 2
-        {0x7, 0x1, 0x7, 0x1, 0x7}, // 3
-        {0x5, 0x5, 0x7, 0x1, 0x1}, // 4
-        {0x7, 0x4, 0x7, 0x1, 0x7}, // 5
-        {0x7, 0x4, 0x7, 0x5, 0x7}, // 6
-        {0x7, 0x1, 0x1, 0x1, 0x1}, // 7
-        {0x7, 0x5, 0x7, 0x5, 0x7}, // 8
-        {0x7, 0x5, 0x7, 0x1, 0x7}, // 9
-    };
-
-    if (digit < 0 || digit > 9) return;
-
-    for (int row = 0; row < 5; row++) {
-        for (int col = 0; col < 3; col++) {
-            if (font[digit][row] & (1 << (2 - col))) {
-                fill_rect(fb, width, height, x + col * 3, y + row * 3, 2, 2, COLOR_WHITE);
+            if (fb_x >= 0 && fb_x < fb_info->width &&
+                fb_y >= 0 && fb_y < fb_info->height) {
+                const uint32_t fb_index = (fb_x + fb_y * fb_info->width) * fb_info->bpp;
+                fb[fb_index + 3] = (color >> 24) & 0xFF;
+                fb[fb_index + 2] = (color >> 16) & 0xFF;
+                fb[fb_index + 1] = (color >> 8) & 0xFF;
+                fb[fb_index + 0] = color & 0xFF;
             }
         }
     }
 }
 
-static void draw_number(uint32_t *fb, int width, int height, int x, int y, int num) {
-    if (num == 0) {
-        draw_digit(fb, width, height, x, y, 0);
+static void display_char(char c, int* x, int y,
+                        uint8_t* fb, const fb_info_t* fb_info, uint32_t color) {
+    const Glyph* glyph = MinecraftRegular_Bmg3_table[(unsigned char)c];
+    if (glyph != NULL) {
+        display_glyph(glyph, *x, y, fb, fb_info, color);
+        *x += glyph->advance;
+    }
+}
+
+static void display_string(const char* str, int* x, int y,
+                          uint8_t* fb, const fb_info_t* fb_info, uint32_t color) {
+    for (size_t i = 0; i < strlen(str); i++) {
+        display_char(str[i], x, y, fb, fb_info, color);
+    }
+}
+
+// Terminal functions
+static void terminal_init(Terminal* term) {
+    if (get_framebuffer_info(&term->fb_info) == -1) {
+        exit(1);
+    }
+
+    size_t fb_size = (size_t)term->fb_info.width * term->fb_info.height * term->fb_info.bpp;
+    term->framebuffer = malloc(fb_size);
+    if (term->framebuffer == NULL) {
+        exit(1);
+    }
+
+    memset(term->framebuffer, 0, fb_size);
+    term->cursor_x = 0;
+    term->cursor_y = FONT_ASCENT;
+    term->line_index = 0;
+    term->shift_pressed = false;
+    term->cursor_visible = false;
+    term->last_blink_time = get_us();
+
+    terminal_print_prompt(term);
+}
+
+static void terminal_cleanup(Terminal* term) {
+    if (term->framebuffer) {
+        free(term->framebuffer);
+        term->framebuffer = NULL;
+    }
+}
+
+static void terminal_clear_cursor(Terminal* term) {
+    const Glyph* cursor = MinecraftRegular_Bmg3_table['_'];
+    if (cursor != NULL) {
+        display_glyph(cursor, term->cursor_x, term->cursor_y,
+                     term->framebuffer, &term->fb_info, BG_COLOR);
+    }
+}
+
+static void terminal_update_cursor(Terminal* term) {
+    const uint64_t current_time = get_us();
+    if (current_time - term->last_blink_time > CURSOR_BLINK_US) {
+        term->last_blink_time = current_time;
+        const Glyph* cursor = MinecraftRegular_Bmg3_table['_'];
+        if (cursor != NULL) {
+            uint32_t color = term->cursor_visible ? TEXT_COLOR : BG_COLOR;
+            display_glyph(cursor, term->cursor_x, term->cursor_y,
+                         term->framebuffer, &term->fb_info, color);
+            show_buffer(term->framebuffer);
+            term->cursor_visible = !term->cursor_visible;
+        }
+    }
+}
+
+static void terminal_newline(Terminal* term) {
+    term->cursor_x = 0;
+    term->cursor_y += FONT_LINEHEIGHT;
+
+    // Simple scrolling if we're at the bottom
+    if (term->cursor_y >= term->fb_info.height) {
+        term->cursor_y = term->fb_info.height - FONT_LINEHEIGHT;
+        // TODO: Implement proper scrolling
+    }
+}
+
+static void terminal_print(Terminal* term, const char* text, uint32_t color) {
+    display_string(text, &term->cursor_x, term->cursor_y,
+                  term->framebuffer, &term->fb_info, color);
+}
+
+static void terminal_print_prompt(Terminal* term) {
+    terminal_print(term, PROMPT_TEXT, PROMPT_COLOR);
+}
+
+static void terminal_handle_backspace(Terminal* term) {
+    if (term->line_index > 0) {
+        const char c = term->input_line[--term->line_index];
+        const Glyph* glyph = MinecraftRegular_Bmg3_table[(unsigned char)c];
+        if (glyph != NULL) {
+            term->cursor_x -= glyph->advance;
+            display_glyph(glyph, term->cursor_x, term->cursor_y,
+                         term->framebuffer, &term->fb_info, BG_COLOR);
+        }
+    }
+}
+
+static void terminal_handle_char(Terminal* term, char c) {
+    const Glyph* glyph = MinecraftRegular_Bmg3_table[(unsigned char)c];
+    if (glyph != NULL && term->line_index < MAX_LINE_LENGTH - 1) {
+        display_glyph(glyph, term->cursor_x, term->cursor_y,
+                     term->framebuffer, &term->fb_info, TEXT_COLOR);
+        term->input_line[term->line_index++] = c;
+        term->cursor_x += glyph->advance;
+    }
+}
+
+static bool terminal_execute_command(Terminal* term, const char* input) {
+    char command[MAX_COMMAND_LENGTH] = {0};
+    char args[MAX_ARGS_LENGTH] = {0};
+
+    // Parse command and arguments
+    if (sscanf(input, "%63s %255[^\n]", command, args) < 1) {
+        return false;
+    }
+
+    // Find and execute command
+    for (int i = 0; commands[i].name != NULL; i++) {
+        if (strcmp(command, commands[i].name) == 0) {
+            return commands[i].handler(term, args);
+        }
+    }
+
+    // Unknown command
+    terminal_print(term, "Unknown command: ", ERROR_COLOR);
+    terminal_print(term, command, TEXT_COLOR);
+    return false;
+}
+
+static void terminal_handle_enter(Terminal* term) {
+    term->input_line[term->line_index] = '\0';
+    term->line_index = 0;
+
+    terminal_newline(term);
+
+    if (strlen(term->input_line) > 0) {
+        if (!terminal_execute_command(term, term->input_line)) {
+            terminal_newline(term);
+        }
+    }
+    terminal_print_prompt(term);
+}
+
+static void terminal_process_input(Terminal* term) {
+    if (!key_available()) {
+        sleep_us(POLL_DELAY_US);
+        terminal_update_cursor(term);
         return;
     }
 
-    int digits[10];
-    int count = 0;
-    while (num > 0) {
-        digits[count++] = num % 10;
-        num /= 10;
+    uint32_t scancode = get_key();
+
+    // Handle key release
+    if (scancode & 0x8000) {
+        scancode &= 0x7FFF;
+        if (scancode == SDL_SCANCODE_LSHIFT || scancode == SDL_SCANCODE_RSHIFT) {
+            term->shift_pressed = false;
+        }
+        return;
     }
 
-    // Draw in reverse order
-    for (int i = count - 1; i >= 0; i--) {
-        draw_digit(fb, width, height, x, y, digits[i]);
-        x += 12;
+    // Handle shift press
+    if (scancode == SDL_SCANCODE_LSHIFT || scancode == SDL_SCANCODE_RSHIFT) {
+        term->shift_pressed = true;
+        return;
     }
+
+    // Clear cursor before typing
+    terminal_clear_cursor(term);
+
+    // Handle special keys
+    if (scancode == SDL_SCANCODE_BACKSPACE) {
+        terminal_handle_backspace(term);
+    }
+    else if (scancode == SDL_SCANCODE_RETURN) {
+        terminal_handle_enter(term);
+    }
+    else {
+        // Regular character
+        char c = german_scancode_to_char(scancode, term->shift_pressed);
+        terminal_handle_char(term, c);
+    }
+
+    show_buffer(term->framebuffer);
 }
 
+// Command implementations
+static bool cmd_echo(Terminal* term, const char* args) {
+    terminal_print(term, args, TEXT_COLOR);
+    return false;
+}
+
+static bool cmd_clear(Terminal* term, const char* args) {
+    (void)args; // Unused
+    size_t fb_size = (size_t)term->fb_info.width * term->fb_info.height * term->fb_info.bpp;
+    memset(term->framebuffer, 0, fb_size);
+    term->cursor_x = 0;
+    term->cursor_y = FONT_ASCENT;
+    return true;
+}
+
+static bool cmd_help(Terminal* term, const char* args) {
+    (void)args; // Unused
+    terminal_print(term, "Available commands:", TEXT_COLOR);
+
+    for (int i = 0; commands[i].name != NULL; i++) {
+        terminal_newline(term);
+        terminal_print(term, "  ", TEXT_COLOR);
+        terminal_print(term, commands[i].name, PROMPT_COLOR);
+        terminal_print(term, " - ", TEXT_COLOR);
+        terminal_print(term, commands[i].description, TEXT_COLOR);
+    }
+
+    return false;
+}
+
+static bool cmd_neofetch(Terminal* term, const char* args) {
+    (void)args;
+    terminal_print(term, "OS", SECONDARY_TEXT_COLOR);
+    terminal_print(term, ": None", TEXT_COLOR);
+    terminal_newline(term);
+    terminal_print(term, "Host", SECONDARY_TEXT_COLOR);
+    terminal_print(term, ": Unknown", TEXT_COLOR);
+    terminal_newline(term);
+    terminal_print(term, "Kernel", SECONDARY_TEXT_COLOR);
+    terminal_print(term, ": None", TEXT_COLOR);
+    terminal_newline(term);
+    terminal_print(term, "Uptime", SECONDARY_TEXT_COLOR);
+    terminal_print(term, ": x min", TEXT_COLOR);
+    terminal_newline(term);
+    terminal_print(term, "Shell", SECONDARY_TEXT_COLOR);
+    terminal_print(term, ": Custom", TEXT_COLOR);
+    terminal_newline(term);
+    terminal_print(term, "Resolution", SECONDARY_TEXT_COLOR);
+    char resolution[256];
+    sprintf(resolution, "%dx%d", term->fb_info.width, term->fb_info.height);
+    terminal_print(term, ": ", TEXT_COLOR);
+    terminal_print(term, resolution, TEXT_COLOR);
+    terminal_newline(term);
+    terminal_print(term, "Terminal", SECONDARY_TEXT_COLOR);
+    terminal_print(term, ": Custom", TEXT_COLOR);
+    terminal_newline(term);
+    terminal_print(term, "CPU", SECONDARY_TEXT_COLOR);
+    terminal_print(term, ": RV32I @ 200MI/s", TEXT_COLOR);
+    terminal_newline(term);
+    terminal_print(term, "GPU", SECONDARY_TEXT_COLOR);
+    terminal_print(term, ": RV32I @ 200MI/s", TEXT_COLOR);
+    terminal_newline(term);
+    terminal_print(term, "Memory", SECONDARY_TEXT_COLOR);
+    terminal_print(term, ": 32MB", TEXT_COLOR);
+    return false;
+}
+
+// Main entry point
 int main(void) {
-    fb_info_t fb_info;
-    if (get_framebuffer_info(&fb_info) != 0) {
-        return -1;
-    }
-
-    int width = fb_info.width;
-    int height = fb_info.height;
-    int total_pixels = width * height;
-
-    // Allocate framebuffer
-    uint32_t *framebuffer = (uint32_t*)malloc(total_pixels * sizeof(uint32_t));
-    if (!framebuffer) return -1;
-
-    // Debug: Draw initial screen
-    fast_clear(framebuffer, total_pixels);
-    draw_number(framebuffer, width, height, 10, 10, width);
-    draw_number(framebuffer, width, height, 10, 30, height);
-    show_buffer((uint32_t)framebuffer);
-
-    // Wait for keypress to start
-    while (!key_available()) {
-        sleep_us(FRAME_TIME_US);
-    }
-    get_key();
-
-    // Game state
-    Paddle left_paddle = {height / 2 - PADDLE_HEIGHT / 2};
-    Paddle right_paddle = {height / 2 - PADDLE_HEIGHT / 2};
-    Ball ball = {width / 2, height / 2, BALL_SPEED_X, BALL_SPEED_Y};
-
-    int left_score = 0;
-    int right_score = 0;
-    int frame_count = 0;
-
-    // FPS tracking
-    uint32_t last_fps_time = get_us();
-    uint32_t fps_counter = 0;
-    uint32_t current_fps = 60;
+    Terminal term = {0};
+    terminal_init(&term);
 
     while (1) {
-        uint32_t frame_start = get_us();
-        frame_count++;
-        fps_counter++;
-
-        // Process all available keys this frame
-        while (key_available()) {
-            unsigned char key = get_key();
-
-            // Left paddle: W/S
-            if (key == 'w' || key == 'W') {
-                left_paddle.y -= PADDLE_SPEED;
-                if (left_paddle.y < 0) left_paddle.y = 0;
-            }
-            else if (key == 's' || key == 'S') {
-                left_paddle.y += PADDLE_SPEED;
-                if (left_paddle.y + PADDLE_HEIGHT > height)
-                    left_paddle.y = height - PADDLE_HEIGHT;
-            }
-
-            // Right paddle: I/K
-            else if (key == 'i' || key == 'I') {
-                right_paddle.y -= PADDLE_SPEED;
-                if (right_paddle.y < 0) right_paddle.y = 0;
-            }
-            else if (key == 'k' || key == 'K') {
-                right_paddle.y += PADDLE_SPEED;
-                if (right_paddle.y + PADDLE_HEIGHT > height)
-                    right_paddle.y = height - PADDLE_HEIGHT;
-            }
-
-            // ESC to quit
-            else if (key == 27) {
-                free(framebuffer);
-                return 0;
-            }
-        }
-
-        // Update ball position
-        ball.x += ball.vx;
-        ball.y += ball.vy;
-
-        // Ball collision with top/bottom
-        if (ball.y <= 0) {
-            ball.y = 0;
-            ball.vy = BALL_SPEED_Y;
-        }
-        if (ball.y >= height - BALL_SIZE) {
-            ball.y = height - BALL_SIZE;
-            ball.vy = -BALL_SPEED_Y;
-        }
-
-        // Ball collision with left paddle
-        if (ball.vx < 0 && ball.x <= PADDLE_WIDTH) {
-            if (ball.y + BALL_SIZE >= left_paddle.y &&
-                ball.y <= left_paddle.y + PADDLE_HEIGHT) {
-                ball.vx = BALL_SPEED_X;
-                ball.x = PADDLE_WIDTH;
-                // Add spin based on where it hit
-                int hit_pos = (ball.y + BALL_SIZE/2) - (left_paddle.y + PADDLE_HEIGHT/2);
-                ball.vy = hit_pos / 8;
-            }
-        }
-
-        // Ball collision with right paddle
-        if (ball.vx > 0 && ball.x >= width - PADDLE_WIDTH - BALL_SIZE) {
-            if (ball.y + BALL_SIZE >= right_paddle.y &&
-                ball.y <= right_paddle.y + PADDLE_HEIGHT) {
-                ball.vx = -BALL_SPEED_X;
-                ball.x = width - PADDLE_WIDTH - BALL_SIZE;
-                // Add spin based on where it hit
-                int hit_pos = (ball.y + BALL_SIZE/2) - (right_paddle.y + PADDLE_HEIGHT/2);
-                ball.vy = hit_pos / 8;
-            }
-        }
-
-        // Clamp ball Y velocity
-        if (ball.vy > 4) ball.vy = 4;
-        if (ball.vy < -4) ball.vy = -4;
-
-        // Score and reset
-        if (ball.x < -BALL_SIZE) {
-            right_score++;
-            ball.x = width / 2;
-            ball.y = height / 2;
-            ball.vx = BALL_SPEED_X;
-            ball.vy = BALL_SPEED_Y;
-        }
-        if (ball.x > width) {
-            left_score++;
-            ball.x = width / 2;
-            ball.y = height / 2;
-            ball.vx = -BALL_SPEED_X;
-            ball.vy = BALL_SPEED_Y;
-        }
-
-        // Render - single clear operation
-        fast_clear(framebuffer, total_pixels);
-
-        // Draw paddles
-        fill_rect(framebuffer, width, height, 0, left_paddle.y,
-                  PADDLE_WIDTH, PADDLE_HEIGHT, COLOR_PADDLE);
-        fill_rect(framebuffer, width, height, width - PADDLE_WIDTH, right_paddle.y,
-                  PADDLE_WIDTH, PADDLE_HEIGHT, COLOR_PADDLE);
-
-        // Draw ball
-        fill_rect(framebuffer, width, height, ball.x, ball.y,
-                  BALL_SIZE, BALL_SIZE, COLOR_BALL);
-
-        // Draw center line (dashed) - only every 4th frame for efficiency
-        for (int y = 0; y < height; y += 20) {
-            fill_rect(framebuffer, width, height, width / 2 - 1, y, 2, 10, COLOR_WHITE);
-        }
-
-        // Draw scores using digit rendering
-        draw_number(framebuffer, width, height, width / 4, 20, left_score);
-        draw_number(framebuffer, width, height, 3 * width / 4, 20, right_score);
-
-        // Debug info (top right) - FPS and frame count
-        draw_number(framebuffer, width, height, width - 100, 10, current_fps);
-
-        // Show buffer (single syscall per frame)
-        show_buffer((uint32_t)framebuffer);
-
-        // Calculate FPS every second
-        uint32_t current_time = get_us();
-        if (current_time - last_fps_time >= 1000000) {  // 1 second
-            current_fps = fps_counter;
-            fps_counter = 0;
-            last_fps_time = current_time;
-        }
-
-        // Frame limiting - sleep to maintain 60 FPS
-        uint32_t frame_end = get_us();
-        uint32_t frame_duration = frame_end - frame_start;
-
-        if (frame_duration < FRAME_TIME_US) {
-            sleep_us(FRAME_TIME_US - frame_duration);
-        }
+        terminal_process_input(&term);
     }
 
-    free(framebuffer);
+    terminal_cleanup(&term);
     return 0;
 }

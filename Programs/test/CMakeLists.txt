@@ -10,6 +10,10 @@ set(SOURCES
         display.h
         timer.h
         keyboard.h
+        MinecraftRegular_Bmg3.h
+        SDL_scancode.h
+        mouse.h
+        mouse_test.c
 )
 
 # Build executable

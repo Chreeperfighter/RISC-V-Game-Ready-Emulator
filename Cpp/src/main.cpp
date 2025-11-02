@@ -19,9 +19,9 @@
 #define DEBUG 0
 
 struct DisplayContext {
-    SDL_Window* window;
-    SDL_Renderer* renderer;
-    SDL_Texture* texture;
+    SDL_Window *window;
+    SDL_Renderer *renderer;
+    SDL_Texture *texture;
 };
 
 DisplayContext init_display() {
@@ -37,7 +37,7 @@ DisplayContext init_display() {
 
     ctx.renderer = SDL_CreateRenderer(
         ctx.window, -1,
-        SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC
+        SDL_RENDERER_ACCELERATED
     );
 
     ctx.texture = SDL_CreateTexture(
@@ -50,14 +50,36 @@ DisplayContext init_display() {
     return ctx;
 }
 
-void update_display(const DisplayContext& ctx, const uint8_t* framebuffer) {
-    SDL_UpdateTexture(ctx.texture, nullptr, framebuffer, Config::FB_WIDTH * 4);
+void update_display(const DisplayContext &ctx, const uint8_t *framebuffer) {
+    void* pixels;
+    int pitch;
+
+    // Lock the texture to get direct access to pixel memory
+    if (SDL_LockTexture(ctx.texture, nullptr, &pixels, &pitch) == 0) {
+        // Copy framebuffer data to texture
+        // If pitch matches your framebuffer width, you can do a single memcpy
+        if (pitch == Config::FB_WIDTH * 4) {
+            memcpy(pixels, framebuffer, Config::FB_SIZE);
+        } else {
+            // If pitch differs, copy row by row
+            for (int y = 0; y < Config::FB_HEIGHT; y++) {
+                memcpy(
+                    static_cast<uint8_t*>(pixels) + y * pitch,
+                    framebuffer + y * Config::FB_WIDTH * 4,
+                    Config::FB_WIDTH * 4
+                );
+            }
+        }
+
+        SDL_UnlockTexture(ctx.texture);
+    }
+
     SDL_RenderClear(ctx.renderer);
     SDL_RenderCopy(ctx.renderer, ctx.texture, nullptr, nullptr);
     SDL_RenderPresent(ctx.renderer);
 }
 
-void cleanup_display(const DisplayContext& ctx) {
+void cleanup_display(const DisplayContext &ctx) {
     SDL_DestroyTexture(ctx.texture);
     SDL_DestroyRenderer(ctx.renderer);
     SDL_DestroyWindow(ctx.window);
@@ -68,13 +90,9 @@ int main() {
     std::vector<uint8_t> buffer(Config::FB_SIZE);
     std::atomic<bool> running(true);
 
-#if !DEBUG
-    uint32_t frames = 0;
-    std::atomic<long long> cycles(0);
-#endif
-
     RV32 rv32i(true, true);
-    std::vector<uint8_t> elf = read_file("/Users/mark.verbeek/CLionProjects/RISC-V-Game-Ready-Emulator/Programs/test/cmake-build-rv32i-release/test.elf");
+    std::vector<uint8_t> elf = read_file(
+        "/Users/mark.verbeek/Data/Projects/RISC-V-Game-Ready-Emulator/Programs/test/cmake-build-rv32i-release/test.elf");
     const uint32_t entry_point = get_entry_point(elf);
     const uint32_t bss_end = get_bss_end(elf);
     rv32i.set_heap(bss_end);
@@ -83,100 +101,69 @@ int main() {
     rv32i.set_text_range(text_start, text_end);
     const std::vector<uint8_t> code = get_binary(elf);
     rv32i.load_bin(code, code.size(), entry_point);
-
     const DisplayContext display = init_display();
+    int window_w, window_h;
+    SDL_GetWindowSize(display.window, &window_w, &window_h);
 
-    // CPU worker thread
+    // CPU worker thread - move emulation off main thread
     std::thread cpu_thread([&]() {
-#if DEBUG
-        uint32_t pc_break = 0;
-        bool debug = false;
-        while (running && rv32i.running) {
-            if (rv32i.get_pc() == pc_break) {
-                debug = true;
-                while (debug) {
-                    char c;
-                    std::cout << std::hex << std::showbase << rv32i.get_pc() << ": > ";
-                    std::cin >> c;
-                    switch (c) {
-                        case 'q':
-                            running = false;
-                            debug = false;
-                            break;
-                        case 's':
-                            rv32i.step();
-                            std::cout << "Stepped once" << std::endl;
-                            pc_break = rv32i.get_pc();
-                            break;
-                        case 'r': {
-                            Registers regs = rv32i.get_regs();
-                            auto regs_values = regs.get_registers();
-                            for (int reg = 0; reg < Registers::NUM_REGS; reg++) {
-                                const uint32_t value = regs_values[reg];
-                                const char* reg_name = register_names[reg];
-                                std::cout
-                                    << std::setw(8) << std::left << reg_name << ": "
-                                    << std::hex << std::showbase << std::setw(10) << std::right << value
-                                    << " (" << std::dec << std::setw(10) << value << ")" << std::endl;
-                            }
-                            break;
-                        }
-                        case 'b': {
-                            uint32_t pc;
-                            std::cout << "Enter PC to break on: ";
-                            std::cin >> std::hex >> pc;
-                            pc_break = pc;
-                            break;
-                        }
-                        case 'c':
-                            debug = false;
-                            break;
-                        default:
-                            break;
-                    }
-                }
-            }
-            if (running) rv32i.step();
-        }
-        running = false;
-#else
         while (running && rv32i.running) {
             rv32i.step();
-            ++cycles;
         }
         running = false;
-#endif
     });
 
-    // Main thread handles display and events
-    auto start = std::chrono::steady_clock::now();
+    // Frame timing for 60 FPS display updates
+    const std::chrono::microseconds frame_duration(16667); // ~60 FPS (1000000/60)
+    auto last_display_time = std::chrono::steady_clock::now();
+
+    // Main thread handles SDL events and display
+    SDL_Event event;
     while (running) {
-        SDL_Event event;
+        // Poll events at full speed (required on macOS main thread)
+        SDL_GetWindowSize(display.window, &window_w, &window_h);
+
         while (SDL_PollEvent(&event)) {
-            if (event.type == SDL_QUIT) running = false;
-            if (event.type == SDL_KEYDOWN) {
-                SDL_Keycode keycode = event.key.keysym.sym;
-                rv32i.add_key_to_queue(keycode);
-            }
-            if (event.type == SDL_KEYDOWN && event.key.keysym.scancode == SDL_SCANCODE_ESCAPE)
+            if (event.type == SDL_QUIT) {
                 running = false;
+            }
+            if (event.type == SDL_MOUSEMOTION) {
+                const int32_t mouse_x = event.motion.x;
+                const int32_t mouse_y = event.motion.y;
+                const int32_t scaled_x = (mouse_x * Config::FB_WIDTH) / window_w;
+                const int32_t scaled_y = (mouse_y * Config::FB_HEIGHT) / window_h;
+                rv32i.set_mouse_pos(scaled_x, scaled_y);
+            } else if (event.type == SDL_MOUSEBUTTONDOWN) {
+                const uint32_t button = event.button.button;
+                rv32i.add_mouse_button_state(button - 1);
+            } else if (event.type == SDL_MOUSEBUTTONUP) {
+                const uint32_t button = event.button.button;
+                rv32i.remove_mouse_button_state(button - 1);
+            } else if (event.type == SDL_KEYDOWN) {
+                SDL_Scancode scancode = event.key.keysym.scancode;
+                rv32i.add_key_to_queue(scancode);
+                rv32i.add_key_state(scancode);
+            } else if (event.type == SDL_KEYUP) {
+                SDL_Scancode scancode = event.key.keysym.scancode;
+                rv32i.add_key_to_queue(scancode | 0x8000);
+                rv32i.remove_key_state(scancode);
+            }
+
+            if (event.type == SDL_KEYDOWN && event.key.keysym.scancode == SDL_SCANCODE_ESCAPE) {
+                running = false;
+            }
         }
 
+        // Update display only at 60 FPS
         auto now = std::chrono::steady_clock::now();
-        rv32i.get_transfer_buffer(buffer);
-        update_display(display, buffer.data());
-        frames++;
+        auto elapsed = std::chrono::duration_cast<std::chrono::microseconds>(now - last_display_time);
 
-        const auto elapsed_ms = std::chrono::duration_cast<std::chrono::milliseconds>(now - start).count();
-        if (elapsed_ms >= 1000) {
-#if !DEBUG
-            //std::cout << "Display FPS: " << frames << std::endl;
-            frames = 0;
-            std::cout << "Cycles/s: " << cycles << std::endl;
-            start = now;
-            cycles = 0;
-#endif
+        if (elapsed >= frame_duration) {
+            rv32i.get_transfer_buffer(buffer);
+            update_display(display, buffer.data());
+            last_display_time = now;
         }
+        SDL_Delay(1);
     }
 
     cpu_thread.join();

@@ -31,7 +31,7 @@ enum class Syscall : uint32_t {
     // a0 -> framebuffer address
     GET_FRAMEBUFFER_INFO = 200,
     // a0 -> address to write info
-    // a0 <- status (0: success, !=0: error)
+    // a0 <- status (0: success, != 0: error)
     EXIT = 10,
     // a0 -> exit code
     GET_US = 11,
@@ -42,6 +42,17 @@ enum class Syscall : uint32_t {
     // a0 <- available (0: queue empty)
     GET_KEY = 14,
     // a0 <- key code
+    IS_KEY_DOWN = 15,
+    // a0 -> key code to check
+    // a0 <- key down (1 if down, 0 if up)
+    CLEAR_KEY_QUEUE = 16,
+    // a0 <- success (0 if success, -1 if fail)
+    GET_MOUSE_POS = 17,
+    // a0 <- x position
+    // a1 <- y position
+    IS_MOUSE_BUTTON_DOWN = 18,
+    // a0 -> button
+    // a0 <- key down (1 if down, 0 if up)
 };
 
 #endif //SYSCALL_HPP
