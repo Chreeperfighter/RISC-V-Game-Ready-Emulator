@@ -70,6 +70,34 @@ build CMakeFiles/Cpp.dir/src/SimpleELFLoader.cpp.o: CXX_COMPILER__Cpp_unscanned_
   OBJECT_DIR = CMakeFiles/Cpp.dir
   OBJECT_FILE_DIR = CMakeFiles/Cpp.dir/src
 
+build CMakeFiles/Cpp.dir/src/Display.cpp.o: CXX_COMPILER__Cpp_unscanned_Release /Users/mark.verbeek/Data/Projects/RISC-V-Game-Ready-Emulator/Cpp/src/Display.cpp || cmake_object_order_depends_target_Cpp
+  DEP_FILE = CMakeFiles/Cpp.dir/src/Display.cpp.o.d
+  FLAGS = -O3 -DNDEBUG -arch arm64 -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.0.sdk -mmacosx-version-min=15.6 -fcolor-diagnostics
+  INCLUDES = -I/opt/homebrew/include -I/Users/mark.verbeek/Data/Projects/RISC-V-Game-Ready-Emulator/Cpp/inc -I/opt/homebrew/Cellar/sdl2/2.32.10/include -isystem /opt/homebrew/Cellar/sdl2/2.32.10/include/SDL2
+  OBJECT_DIR = CMakeFiles/Cpp.dir
+  OBJECT_FILE_DIR = CMakeFiles/Cpp.dir/src
+
+build CMakeFiles/Cpp.dir/src/Input.cpp.o: CXX_COMPILER__Cpp_unscanned_Release /Users/mark.verbeek/Data/Projects/RISC-V-Game-Ready-Emulator/Cpp/src/Input.cpp || cmake_object_order_depends_target_Cpp
+  DEP_FILE = CMakeFiles/Cpp.dir/src/Input.cpp.o.d
+  FLAGS = -O3 -DNDEBUG -arch arm64 -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.0.sdk -mmacosx-version-min=15.6 -fcolor-diagnostics
+  INCLUDES = -I/opt/homebrew/include -I/Users/mark.verbeek/Data/Projects/RISC-V-Game-Ready-Emulator/Cpp/inc -I/opt/homebrew/Cellar/sdl2/2.32.10/include -isystem /opt/homebrew/Cellar/sdl2/2.32.10/include/SDL2
+  OBJECT_DIR = CMakeFiles/Cpp.dir
+  OBJECT_FILE_DIR = CMakeFiles/Cpp.dir/src
+
+build CMakeFiles/Cpp.dir/src/RV32Debugger.cpp.o: CXX_COMPILER__Cpp_unscanned_Release /Users/mark.verbeek/Data/Projects/RISC-V-Game-Ready-Emulator/Cpp/src/RV32Debugger.cpp || cmake_object_order_depends_target_Cpp
+  DEP_FILE = CMakeFiles/Cpp.dir/src/RV32Debugger.cpp.o.d
+  FLAGS = -O3 -DNDEBUG -arch arm64 -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.0.sdk -mmacosx-version-min=15.6 -fcolor-diagnostics
+  INCLUDES = -I/opt/homebrew/include -I/Users/mark.verbeek/Data/Projects/RISC-V-Game-Ready-Emulator/Cpp/inc -I/opt/homebrew/Cellar/sdl2/2.32.10/include -isystem /opt/homebrew/Cellar/sdl2/2.32.10/include/SDL2
+  OBJECT_DIR = CMakeFiles/Cpp.dir
+  OBJECT_FILE_DIR = CMakeFiles/Cpp.dir/src
+
+build CMakeFiles/Cpp.dir/src/ELFLoader.cpp.o: CXX_COMPILER__Cpp_unscanned_Release /Users/mark.verbeek/Data/Projects/RISC-V-Game-Ready-Emulator/Cpp/src/ELFLoader.cpp || cmake_object_order_depends_target_Cpp
+  DEP_FILE = CMakeFiles/Cpp.dir/src/ELFLoader.cpp.o.d
+  FLAGS = -O3 -DNDEBUG -arch arm64 -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.0.sdk -mmacosx-version-min=15.6 -fcolor-diagnostics
+  INCLUDES = -I/opt/homebrew/include -I/Users/mark.verbeek/Data/Projects/RISC-V-Game-Ready-Emulator/Cpp/inc -I/opt/homebrew/Cellar/sdl2/2.32.10/include -isystem /opt/homebrew/Cellar/sdl2/2.32.10/include/SDL2
+  OBJECT_DIR = CMakeFiles/Cpp.dir
+  OBJECT_FILE_DIR = CMakeFiles/Cpp.dir/src
+
 
 # =============================================================================
 # Link build statements for EXECUTABLE target Cpp
@@ -78,7 +106,7 @@ build CMakeFiles/Cpp.dir/src/SimpleELFLoader.cpp.o: CXX_COMPILER__Cpp_unscanned_
 #############################################
 # Link the executable Cpp
 
-build Cpp: CXX_EXECUTABLE_LINKER__Cpp_Release CMakeFiles/Cpp.dir/src/main.cpp.o CMakeFiles/Cpp.dir/src/RV32.cpp.o CMakeFiles/Cpp.dir/src/SimpleELFLoader.cpp.o | /opt/homebrew/Cellar/sdl2/2.32.10/lib/libSDL2.dylib
+build Cpp: CXX_EXECUTABLE_LINKER__Cpp_Release CMakeFiles/Cpp.dir/src/main.cpp.o CMakeFiles/Cpp.dir/src/RV32.cpp.o CMakeFiles/Cpp.dir/src/SimpleELFLoader.cpp.o CMakeFiles/Cpp.dir/src/Display.cpp.o CMakeFiles/Cpp.dir/src/Input.cpp.o CMakeFiles/Cpp.dir/src/RV32Debugger.cpp.o CMakeFiles/Cpp.dir/src/ELFLoader.cpp.o | /opt/homebrew/Cellar/sdl2/2.32.10/lib/libSDL2.dylib
   FLAGS = -O3 -DNDEBUG -arch arm64 -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.0.sdk -mmacosx-version-min=15.6
   LINK_LIBRARIES = -Wl,-rpath,/opt/homebrew/lib -Wl,-rpath,/opt/homebrew/Cellar/sdl2/2.32.10/lib  /opt/homebrew/Cellar/sdl2/2.32.10/lib/libSDL2.dylib
   LINK_PATH = -L/opt/homebrew/lib   -L/opt/homebrew/Cellar/sdl2/2.32.10/lib

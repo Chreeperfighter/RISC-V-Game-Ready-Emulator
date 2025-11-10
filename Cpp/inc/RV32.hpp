@@ -12,6 +12,7 @@
 
 #include "ISA.hpp"
 #include "Registers.hpp"
+#include "ELFLoader.hpp"
 
 struct DecodedInstruction {
   	Opcode opcode;
@@ -36,7 +37,8 @@ class RV32 {
 public:
     RV32(bool randomizeRegs, bool randomizeMemory);
     void step();
-	void load_bin(const std::vector<uint8_t>& bin, size_t size, uint32_t start_address);
+	void load_section(const ELFSection &section);
+	void set_entry(uint32_t entry);
 	uint32_t get_pc() const {
 		return pc;
 	}
@@ -105,6 +107,7 @@ private:
 	T read_value(uint32_t address) const;
 	template<typename T>
 	void write_value(uint32_t address, T value);
+	void handle_semihosting();
 	bool is_queue_empty() const {
 		std::lock_guard<std::mutex> lock(queue_mtx);
 		return key_queue.empty();
@@ -138,6 +141,9 @@ private:
 	bool mouse_button_state[3] = {false};
 	int32_t mouse_pos_x = 0;
 	int32_t mouse_pos_y = 0;
+	int semihosting_step = 0;
+	bool semihosting_instruction = false;
+	std::vector<FILE*> file_table = { stdout, stderr, stdin };
 };
 
 

@@ -12,6 +12,7 @@
 #include <iostream>
 #include <mutex>
 #include <thread>
+#include <stdio.h>
 
 RV32::RV32(const bool randomizeRegs, const bool randomizeMemory) : rng(std::random_device{}()), pc(0),
                                                                    update_pc(true),
@@ -25,18 +26,6 @@ RV32::RV32(const bool randomizeRegs, const bool randomizeMemory) : rng(std::rand
     }
 }
 
-void RV32::load_bin(const std::vector<uint8_t>& bin, const size_t size, const uint32_t start_address) {
-    // Make sure RAM is large enough
-    if (start_address + size > ram.size()) {
-        std::cerr << "load_bin(): binary too large or address out of range\n";
-        running = false;
-        return;
-    }
-
-    // Copy data into RAM
-    std::copy(bin.begin(), bin.begin() + static_cast<long>(size), ram.begin() + start_address);
-}
-
 void RV32::print_inst(DecodedInstruction inst) const {
     std::cerr << std::hex << std::showbase << pc << ": " << std::dec << "opcode=" << static_cast<int>(inst.opcode)
             << " funct3=" << static_cast<int>(inst.funct3)
@@ -45,14 +34,58 @@ void RV32::print_inst(DecodedInstruction inst) const {
 }
 
 void RV32::step() {
-    update_pc = true;
     const uint32_t data = fetch();
     const DecodedInstruction instruction = decode(data);
+    if (pc == 0)
+        std::cout << std::hex
+            << "PC: " << pc << ": "
+            << "Opcode: 0x" << static_cast<int>(instruction.opcode) << ", "
+            << "rd: 0x" << static_cast<int>(instruction.rd) << ", "
+            << "rs1: 0x" << static_cast<int>(instruction.rs1) << ", "
+            << "rs2: 0x" << static_cast<int>(instruction.rs2) << ", "
+            << "imm: 0x" << static_cast<int>(instruction.imm) << ", "
+            << "raw data: " << data
+        << std::endl;
+    update_pc = true;
     execute(instruction);
+    if (!semihosting_instruction && semihosting_step != 0) {
+        semihosting_step = 0;
+    }
     if (update_pc) {
         pc += 4;
     }
     cycles++;
+}
+
+void RV32::load_section(const ELFSection &section) {
+    if (section.address + section.size > Config::RAM_SIZE) {
+        std::cerr <<
+            "Section: '" << section.name << "' doesn't fit in RAM" <<
+        std::endl;
+        return;
+    }
+    if (section.name == ".text") {
+        text_start = Config::RAM_ORIGIN + section.address;
+        text_end = text_start + section.size;
+    }
+    else if (section.type == SHT_NOBITS) {
+        heap_start = Config::RAM_ORIGIN + section.address + section.size;
+        heap_end = heap_start;
+        std::fill_n(ram.begin() + section.address, section.size, 0);
+        return;
+    }
+    else {
+        return;
+    }
+    std::copy_n(
+        section.data.begin(),
+        section.size,
+        ram.begin() + section.address + Config::RAM_ORIGIN
+        );
+}
+
+void RV32::set_entry(const uint32_t entry) {
+    pc = entry;
 }
 
 uint32_t RV32::fetch() const {
@@ -196,6 +229,11 @@ void RV32::execute(const DecodedInstruction inst) {
                 case Funct3::SLLI: {
                     const auto amount = static_cast<uint8_t>(inst.imm & 0x1F);
                     if (inst.funct7 == Funct7::SLLI) {
+                        // possible semihosting EBREAK
+                        if (inst.rd == 0x0 && inst.rs1 == 0x0 && inst.imm == 0x1F) {
+                            semihosting_step = 1;
+                            semihosting_instruction = true;
+                        }
                         regs.write(inst.rd, static_cast<uint32_t>(rs1_value << amount));
                     } else {
                         print_inst(inst);
@@ -209,6 +247,13 @@ void RV32::execute(const DecodedInstruction inst) {
                             regs.write(inst.rd, static_cast<uint32_t>(rs1_value) >> amount);
                             break;
                         case Funct7::SRAI:
+                            if (inst.rd == 0x0 && inst.rs1 == 0x0 && amount == 7) {
+                                if (semihosting_instruction && semihosting_step == 2) {
+                                    semihosting_step = 0;
+                                    semihosting_instruction = false;
+                                    handle_semihosting();
+                                }
+                            }
                             regs.write(inst.rd, static_cast<uint32_t>(rs1_value >> amount));
                             break;
                         default:
@@ -275,7 +320,7 @@ void RV32::execute(const DecodedInstruction inst) {
 
         case Opcode::SYSTEM: {
             const uint16_t func12 = inst.imm & 0xFFF;
-            // ECALL
+            // ECALL (not used in semihosting)
             if (func12 == 0x0) {
                 const auto syscall_id = static_cast<Syscall>(regs.read(Register::a7));
                 switch (syscall_id) {
@@ -451,6 +496,16 @@ void RV32::execute(const DecodedInstruction inst) {
                         break;
                 }
             }
+            // EBREAK
+            else if (func12 == 0x1) {
+                if (semihosting_instruction && semihosting_step == 1) {
+                    semihosting_step = 2;
+                    semihosting_instruction = true;
+                }
+                else {
+
+                }
+            }
             break;
         }
 
@@ -557,6 +612,116 @@ void RV32::execute(const DecodedInstruction inst) {
     }
 }
 
+void RV32::handle_semihosting() {
+    const auto operation_number = static_cast<Syscall>(regs.read(Register::a0));
+    const uint32_t parameter = regs.read(Register::a1);
+
+    switch (operation_number) {
+        case Syscall::SYS_EXIT: {
+            running = false;
+            break;
+        }
+        case Syscall::SYS_FLEN: {
+            const uint32_t handle = read_u32(parameter);
+            if (handle >= file_table.size()) {
+                regs.write(Register::a0, -1);
+                break;
+            }
+
+            // stdin/stdout/stderr don't support flen
+            if (handle <= 2) {
+                regs.write(Register::a0, -1);
+                errno = EINVAL;
+                break;
+            }
+
+            FILE* file = file_table[handle];
+            long current = ftell(file);
+            if (current == -1) {
+                regs.write(Register::a0, -1);
+                break;
+            }
+
+            fseek(file, 0, SEEK_END);
+            long size = ftell(file);
+            fseek(file, current, SEEK_SET);
+
+            regs.write(Register::a0, size);
+            break;
+        }
+        case Syscall::SYS_ISTTY: {
+            const uint32_t handle = read_u32(parameter);
+            if (handle >= file_table.size()) {
+                regs.write(Register::a0, -1);
+                break;
+            }
+            const bool is_tty = (handle <= 2);
+            regs.write(Register::a0, is_tty ? 1 : 0);
+            break;
+        }
+        case Syscall::SYS_WRITE: {
+            struct WriteArgs {
+                uint32_t handle;
+                uint32_t buffer_ptr;
+                uint32_t length;
+            };
+            std::vector<uint8_t> raw = read_bytes(parameter, sizeof(WriteArgs));
+            const WriteArgs* args = reinterpret_cast<WriteArgs *>(raw.data());
+            std::vector<uint8_t> buffer = read_bytes(args->buffer_ptr, args->length);
+            const char* str = reinterpret_cast<char*>(buffer.data());
+
+            if (args->handle >= file_table.size()) {
+                regs.write(Register::a0, args->length); // number of bytes not written
+                break;
+            }
+
+            FILE* file = file_table[args->handle];
+            size_t written = fwrite(str, sizeof(char), args->length, file);
+
+            regs.write(Register::a0, (written == args->length) ? 0 : (args->length - written));
+            break;
+        }
+        case Syscall::SYS_OPEN: {
+            struct OpenArgs {
+                uint32_t string_ptr;
+                uint32_t mode;
+                uint32_t length;
+            };
+            std::vector<uint8_t> raw = read_bytes(parameter, sizeof(OpenArgs));
+            const OpenArgs* args = reinterpret_cast<OpenArgs *>(raw.data());
+            std::vector<uint8_t> buffer = read_bytes(args->string_ptr, args->length + 1);
+            const char* name = reinterpret_cast<char*>(buffer.data());
+
+            FILE* handle = nullptr;
+            switch (args->mode) {
+                case 0: handle = fopen(name, "r"); break;
+                case 1: handle = fopen(name, "rb"); break;
+                default:
+                    std::cerr << "[DEBUG] SYS_WRITE: Unknown mode: " << args->mode << std::endl;
+                    break;
+            }
+
+            if (!handle) {
+                regs.write(Register::a0, -1);
+                break;
+            }
+
+            file_table.push_back(handle);
+            regs.write(Register::a0, file_table.size() - 1);
+            break;
+        }
+        case Syscall::SYS_ERRNO: {
+            const errno_t err = errno;
+            regs.write(Register::a0, err);
+            break;
+        }
+        default:
+            std::cerr << "[DEBUG] Unknown Syscall: operation=0x"
+                      << std::hex << static_cast<int>(operation_number)
+                      << ", parameter=0x" << parameter << std::dec << std::endl;
+            break;
+    }
+}
 
 inline int32_t RV32::sign_extend(const uint32_t value, const unsigned int fromBits) {
     return static_cast<int32_t>(value << (32 - fromBits)) >> (32 - fromBits);
@@ -662,6 +827,7 @@ T RV32::read_value(uint32_t address) const {
     const uint32_t upper_address = address + sizeof(T);
     if (!(Config::RAM_ORIGIN <= address && upper_address <= Config::RAM_END)) {
         std::cerr << std::hex << std::showbase
+                  << pc << ": "
                   << "RV32::read_value(): address " << address << " out of range"
                   << std::dec << std::endl;
         running = false;
@@ -671,7 +837,11 @@ T RV32::read_value(uint32_t address) const {
     address -= Config::RAM_ORIGIN;
     T value;
 
-    std::copy(ram.begin() + address, ram.begin() + address + sizeof(T), reinterpret_cast<uint8_t*>(&value));
+    std::copy_n(
+        ram.begin() + address,
+        sizeof(T),
+        reinterpret_cast<uint8_t*>(&value)
+        );
     return value;
 }
 
@@ -693,6 +863,11 @@ void RV32::write_u8(const uint32_t address, const uint8_t value) {
 
 void RV32::write_bytes(uint32_t address, const std::vector<uint8_t> &value) {
     const uint32_t upper_address = address + value.size();
+    if (text_start <= address && upper_address < text_end) {
+        std::cerr << std::hex << std::showbase << "[WRN] "
+                  << pc << ": " << "RV32::write_value(): address " << address << " overwriting program code"
+                  << std::endl;
+    }
     if (!(Config::RAM_ORIGIN <= address && upper_address <= Config::RAM_END)) {
         std::cerr << std::hex << std::showbase
                   << "RV32::read_bytes(): address " << address << " out of range"

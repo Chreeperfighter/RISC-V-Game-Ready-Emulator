@@ -356,7 +356,7 @@ static bool cmd_neofetch(Terminal* term, const char* args) {
 }
 
 // Main entry point
-int main(void) {
+int main1(void) {
     Terminal term = {0};
     terminal_init(&term);
 

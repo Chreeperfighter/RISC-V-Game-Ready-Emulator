@@ -1,3 +1,5 @@
+ENTRY(_start)
+
 MEMORY {
     RAM (rwx) : ORIGIN = 0x00000000, LENGTH = 8M
 }
@@ -5,16 +7,18 @@ MEMORY {
 SECTIONS {
     . = 0x00000000;
     
+    /* ---- TEXT ---- */
     .text : ALIGN(4) {
         PROVIDE(_text_start = .);
-        KEEP(*(.text.init))      /* Force _start first and keep it */
+        KEEP(*(.text.init))      /* Ensure _start is first */
         *(.text.startup)
         *(.text)
         *(.text*)
         . = ALIGN(4);
         PROVIDE(_etext = .);
     } > RAM
-    
+
+    /* ---- RODATA ---- */
     .rodata : ALIGN(4) {
         *(.rodata)
         *(.rodata*)
@@ -22,20 +26,36 @@ SECTIONS {
         . = ALIGN(4);
     } > RAM
 
+    /* ---- EH FRAME ---- */
+    .eh_frame : {
+        PROVIDE(__EH_FRAME_BEGIN__ = .);
+        KEEP(*(.eh_frame))
+        PROVIDE(__EH_FRAME_END__ = .);
+    } > RAM
+
+    /* ---- DATA ---- */
     .data : ALIGN(4) {
         PROVIDE(__data_start = .);
+        PROVIDE(_sdata = .);
         *(.data)
         *(.data*)
         *(.sdata)
         *(.sdata*)
         . = ALIGN(4);
         PROVIDE(__data_end = .);
+        PROVIDE(_edata = .);
     } > RAM
-    
-    PROVIDE(__global_pointer$ = __data_start + 0x800);
 
+    /* source of .data in flash (simulated) */
+    PROVIDE(_sidata = _etext);
+
+    /* ---- GLOBAL POINTER ---- */
+    PROVIDE(__global_pointer$ = _sdata + 0x800);
+
+    /* ---- BSS ---- */
     .bss (NOLOAD) : ALIGN(4) {
         PROVIDE(__bss_start = .);
+        PROVIDE(_sbss = .);
         *(.sbss)
         *(.sbss*)
         *(.bss)
@@ -43,18 +63,16 @@ SECTIONS {
         *(COMMON)
         . = ALIGN(4);
         PROVIDE(__bss_end = .);
+        PROVIDE(_ebss = .);
     } > RAM
-    
+
+    /* ---- HEAP AND STACK ---- */
     . = ALIGN(16);
     PROVIDE(_end = .);
     PROVIDE(_heap_start = .);
-    
-    /* ADD THIS LINE: */
+    PROVIDE(_heap_end = ORIGIN(RAM) + LENGTH(RAM) - 0x1000); /* optional heap limit */
+
     PROVIDE(_stack_top = ORIGIN(RAM) + LENGTH(RAM));
-    
-    /DISCARD/ : {
-        *(.eh_frame)
-        *(.eh_frame_hdr)
-        *(.comment)
-    }
+    PROVIDE(__stack_top = _stack_top);
+    PROVIDE(__stack = _stack_top);
 }

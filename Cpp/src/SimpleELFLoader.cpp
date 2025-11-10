@@ -26,20 +26,35 @@ std::vector<uint8_t> read_file(const char* path) {
     return buffer;
 }
 
-std::vector<uint8_t> get_binary(const std::vector<uint8_t>& elf) {
+std::vector<uint8_t> get_binary(const std::vector<uint8_t>& elf, uint32_t& load_address) {
     auto* ehdr = (Elf32_Ehdr*)elf.data();
     Elf32_Phdr* phdrs = (Elf32_Phdr*)(elf.data() + ehdr->e_phoff);
 
-    std::vector<uint8_t> code;
+    // Find memory range needed
+    uint32_t min_addr = UINT32_MAX;
+    uint32_t max_addr = 0;
 
     for (int i = 0; i < ehdr->e_phnum; i++) {
         if (phdrs[i].p_type == PT_LOAD) {
-            const uint8_t* segment_data = elf.data() + phdrs[i].p_offset;
-            size_t size = phdrs[i].p_filesz;
-            code.insert(code.end(), segment_data, segment_data + size);
+            min_addr = std::min(min_addr, phdrs[i].p_vaddr);
+            max_addr = std::max(max_addr, phdrs[i].p_vaddr + phdrs[i].p_memsz);
         }
     }
-    return code;
+
+    load_address = min_addr;
+    std::vector<uint8_t> memory(max_addr - min_addr, 0);
+
+    // Load each segment at correct offset
+    for (int i = 0; i < ehdr->e_phnum; i++) {
+        if (phdrs[i].p_type == PT_LOAD) {
+            const uint8_t* segment_data = elf.data() + phdrs[i].p_offset;
+            uint32_t offset = phdrs[i].p_vaddr - min_addr;
+            std::copy(segment_data, segment_data + phdrs[i].p_filesz,
+                     memory.begin() + offset);
+        }
+    }
+
+    return memory;
 }
 
 uint32_t get_entry_point(const std::vector<uint8_t>& elf) {
