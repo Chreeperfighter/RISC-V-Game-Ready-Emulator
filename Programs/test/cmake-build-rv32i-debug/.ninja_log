@@ -1,0 +1,5 @@
+# ninja log v6
+1	7	1762524094535336186	clean	ad90e366ad70d77b
+0	23	1762469680814849046	CMakeFiles/test.dir/Users/mark.verbeek/Data/Projects/RISC-V-Game-Ready-Emulator/Programs/start.S.obj	d1a1de788630c62c
+0	75	1762524094723534450	CMakeFiles/test.dir/video_test.c.obj	198a3d7fb5568035
+75	116	1762524094798213205	test.elf	efd3f7ef7cb50a90
