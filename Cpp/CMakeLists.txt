@@ -24,7 +24,10 @@ add_executable(Cpp
         # Sources
         src/main.cpp
         src/RV32.cpp
-        src/SimpleELFLoader.cpp
+        src/Input.cpp
+        src/RV32Debugger.cpp
+        src/ELFLoader.cpp
+        src/Display.cpp
 
         # Headers (optional)
         inc/RV32.hpp
@@ -32,16 +35,11 @@ add_executable(Cpp
         inc/ISA.hpp
         inc/Syscall.hpp
         inc/Registers.hpp
-        inc/SimpleELFLoader.hpp
         inc/elf.h
         inc/ascii.h
-        src/Display.cpp
         inc/Display.hpp
-        src/Input.cpp
         inc/Input.hpp
         inc/RV32Debugger.hpp
-        src/RV32Debugger.cpp
-        src/ELFLoader.cpp
         inc/ELFLoader.hpp
 )
 

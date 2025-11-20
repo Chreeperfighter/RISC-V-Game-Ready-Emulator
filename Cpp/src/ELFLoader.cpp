@@ -64,6 +64,7 @@ std::vector<ELFSection> ELFLoader::get_sections() const {
         section.address = shdr.sh_addr;
         section.size = shdr.sh_size;
         section.type = shdr.sh_type;
+        section.flags = shdr.sh_flags;
         if (shdr.sh_type == SHT_PROGBITS) {
             section.data.resize(shdr.sh_size);
             std::copy_n(

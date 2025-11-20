@@ -12,10 +12,11 @@
 
 class Input {
 public:
-    explicit Input(RV32 obj) : rv32(obj) {}
-    bool process_event(const SDL_Event &event, const DisplayContext &display);
+    explicit Input(RV32 &cpu, Display &display) : rv32(cpu), display(display) {}
+    bool process_event(const SDL_Event &event);
 private:
     RV32 &rv32;
+    Display &display;
 };
 
 

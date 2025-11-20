@@ -5,9 +5,10 @@
 #include "Input.hpp"
 #include "Config.hpp"
 
-bool Input::process_event(const SDL_Event &event, const DisplayContext &display) {
+bool Input::process_event(const SDL_Event &event) {
     int window_w, window_h;
-    SDL_GetWindowSize(display.window, &window_w, &window_h);
+    const DisplayContext context = display.get_context();
+    SDL_GetWindowSize(context.window, &window_w, &window_h);
     if (event.type == SDL_QUIT) {
         return true;
     }

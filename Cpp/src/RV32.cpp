@@ -12,7 +12,7 @@
 #include <iostream>
 #include <mutex>
 #include <thread>
-#include <stdio.h>
+#include <fstream>
 
 RV32::RV32(const bool randomizeRegs, const bool randomizeMemory) : rng(std::random_device{}()), pc(0),
                                                                    update_pc(true),
@@ -36,7 +36,7 @@ void RV32::print_inst(DecodedInstruction inst) const {
 void RV32::step() {
     const uint32_t data = fetch();
     const DecodedInstruction instruction = decode(data);
-    if (pc == 0)
+    if (pc == -1)
         std::cout << std::hex
             << "PC: " << pc << ": "
             << "Opcode: 0x" << static_cast<int>(instruction.opcode) << ", "
@@ -44,7 +44,7 @@ void RV32::step() {
             << "rs1: 0x" << static_cast<int>(instruction.rs1) << ", "
             << "rs2: 0x" << static_cast<int>(instruction.rs2) << ", "
             << "imm: 0x" << static_cast<int>(instruction.imm) << ", "
-            << "raw data: " << data
+            << "raw data: 0x" << data
         << std::endl;
     update_pc = true;
     execute(instruction);
@@ -58,30 +58,33 @@ void RV32::step() {
 }
 
 void RV32::load_section(const ELFSection &section) {
-    if (section.address + section.size > Config::RAM_SIZE) {
+    if (section.address < Config::RAM_ORIGIN ||
+        section.address + section.size > Config::RAM_ORIGIN + Config::RAM_SIZE) {
         std::cerr <<
             "Section: '" << section.name << "' doesn't fit in RAM" <<
         std::endl;
         return;
     }
-    if (section.name == ".text") {
-        text_start = Config::RAM_ORIGIN + section.address;
-        text_end = text_start + section.size;
+    if (section.flags & SHF_ALLOC) {
+        if (section.type == SHT_NOBITS) {
+            std::fill_n(
+                ram.begin() + (section.address - Config::RAM_ORIGIN),
+                section.size,
+                0
+                );
+            if (section.name == ".bss") {
+                heap_start = section.address + section.size;
+                heap_end = heap_start;
+            }
+        }
+        else if (section.type == SHT_PROGBITS) {
+            std::copy_n(
+                section.data.begin(),
+                section.size,
+                ram.begin() + (section.address - Config::RAM_ORIGIN)
+                );
+        }
     }
-    else if (section.type == SHT_NOBITS) {
-        heap_start = Config::RAM_ORIGIN + section.address + section.size;
-        heap_end = heap_start;
-        std::fill_n(ram.begin() + section.address, section.size, 0);
-        return;
-    }
-    else {
-        return;
-    }
-    std::copy_n(
-        section.data.begin(),
-        section.size,
-        ram.begin() + section.address + Config::RAM_ORIGIN
-        );
 }
 
 void RV32::set_entry(const uint32_t entry) {
@@ -616,112 +619,349 @@ void RV32::handle_semihosting() {
     const auto operation_number = static_cast<Syscall>(regs.read(Register::a0));
     const uint32_t parameter = regs.read(Register::a1);
 
+    std::cerr << "[DEBUG] SYSCALL: 0x" << std::hex << (int)operation_number << std::endl;
+
     switch (operation_number) {
-        case Syscall::SYS_EXIT: {
-            running = false;
+        case Syscall::SYS_EXIT:
+            handle_sys_exit(parameter);
             break;
-        }
-        case Syscall::SYS_FLEN: {
-            const uint32_t handle = read_u32(parameter);
-            if (handle >= file_table.size()) {
-                regs.write(Register::a0, -1);
-                break;
-            }
 
-            // stdin/stdout/stderr don't support flen
-            if (handle <= 2) {
-                regs.write(Register::a0, -1);
-                errno = EINVAL;
-                break;
-            }
-
-            FILE* file = file_table[handle];
-            long current = ftell(file);
-            if (current == -1) {
-                regs.write(Register::a0, -1);
-                break;
-            }
-
-            fseek(file, 0, SEEK_END);
-            long size = ftell(file);
-            fseek(file, current, SEEK_SET);
-
-            regs.write(Register::a0, size);
+        case Syscall::SYS_EXIT_EXTENDED:
+            handle_sys_exit_extended(parameter);
             break;
-        }
-        case Syscall::SYS_ISTTY: {
-            const uint32_t handle = read_u32(parameter);
-            if (handle >= file_table.size()) {
-                regs.write(Register::a0, -1);
-                break;
-            }
-            const bool is_tty = (handle <= 2);
-            regs.write(Register::a0, is_tty ? 1 : 0);
+
+        case Syscall::SYS_FLEN:
+            handle_sys_flen(parameter);
             break;
-        }
-        case Syscall::SYS_WRITE: {
-            struct WriteArgs {
-                uint32_t handle;
-                uint32_t buffer_ptr;
-                uint32_t length;
-            };
-            std::vector<uint8_t> raw = read_bytes(parameter, sizeof(WriteArgs));
-            const WriteArgs* args = reinterpret_cast<WriteArgs *>(raw.data());
-            std::vector<uint8_t> buffer = read_bytes(args->buffer_ptr, args->length);
-            const char* str = reinterpret_cast<char*>(buffer.data());
 
-            if (args->handle >= file_table.size()) {
-                regs.write(Register::a0, args->length); // number of bytes not written
-                break;
-            }
-
-            FILE* file = file_table[args->handle];
-            size_t written = fwrite(str, sizeof(char), args->length, file);
-
-            regs.write(Register::a0, (written == args->length) ? 0 : (args->length - written));
+        case Syscall::SYS_ISTTY:
+            handle_sys_istty(parameter);
             break;
-        }
-        case Syscall::SYS_OPEN: {
-            struct OpenArgs {
-                uint32_t string_ptr;
-                uint32_t mode;
-                uint32_t length;
-            };
-            std::vector<uint8_t> raw = read_bytes(parameter, sizeof(OpenArgs));
-            const OpenArgs* args = reinterpret_cast<OpenArgs *>(raw.data());
-            std::vector<uint8_t> buffer = read_bytes(args->string_ptr, args->length + 1);
-            const char* name = reinterpret_cast<char*>(buffer.data());
 
-            FILE* handle = nullptr;
-            switch (args->mode) {
-                case 0: handle = fopen(name, "r"); break;
-                case 1: handle = fopen(name, "rb"); break;
-                default:
-                    std::cerr << "[DEBUG] SYS_WRITE: Unknown mode: " << args->mode << std::endl;
-                    break;
-            }
-
-            if (!handle) {
-                regs.write(Register::a0, -1);
-                break;
-            }
-
-            file_table.push_back(handle);
-            regs.write(Register::a0, file_table.size() - 1);
+        case Syscall::SYS_WRITE:
+            handle_sys_write(parameter);
             break;
-        }
-        case Syscall::SYS_ERRNO: {
-            const errno_t err = errno;
-            regs.write(Register::a0, err);
+
+        case Syscall::SYS_OPEN:
+            handle_sys_open(parameter);
             break;
-        }
+
+        case Syscall::SYS_ERRNO:
+            regs.write(Register::a0, internal_errno);
+            break;
+
+        case Syscall::SYS_CLOSE:
+            handle_sys_close(parameter);
+            break;
+
         default:
-            std::cerr << "[DEBUG] Unknown Syscall: operation=0x"
-                      << std::hex << static_cast<int>(operation_number)
-                      << ", parameter=0x" << parameter << std::dec << std::endl;
+            std::cerr << "[ERROR] Unknown syscall: 0x" << std::hex
+                      << static_cast<int>(operation_number) << std::dec << std::endl;
+            regs.write(Register::a0, -1);
+            internal_errno = ENOSYS;
             break;
     }
 }
+
+// Helper: Validate file handle
+bool RV32::is_valid_file_handle(uint32_t handle) const {
+    return handle < file_table.size() && file_table[handle] != nullptr;
+}
+
+// Helper: Check if handle is a standard stream
+bool is_standard_stream(uint32_t handle) {
+    return handle <= 2;
+}
+
+void RV32::handle_sys_exit(uint32_t exit_code) const {
+    std::cout << "Process exiting with code: " << exit_code << std::endl;
+    running = false;
+}
+
+void RV32::handle_sys_exit_extended(const uint32_t parameter) const {
+    struct ExitArgs {
+        uint32_t reason_code;
+        uint32_t subcode;
+    };
+
+    try {
+        const std::vector<uint8_t> raw = read_bytes(parameter, sizeof(ExitArgs));
+
+        if (raw.size() < sizeof(ExitArgs)) {
+            std::cerr << "[ERROR] SYS_EXIT_EXTENDED: Invalid parameter block" << std::endl;
+            running = false;
+            return;
+        }
+
+        const auto* args = reinterpret_cast<const ExitArgs*>(raw.data());
+
+        if (args->reason_code == 0x20026) {
+            std::cout << "Process finished with exit code "
+                      << static_cast<int32_t>(args->subcode) << std::endl;
+        }
+
+        running = false;
+
+    } catch (const std::exception& e) {
+        std::cerr << "[ERROR] SYS_EXIT_EXTENDED: " << e.what() << std::endl;
+        running = false;
+    }
+}
+
+void RV32::handle_sys_flen(uint32_t parameter) {
+    try {
+        const uint32_t handle = read_u32(parameter);
+
+        // Validate handle
+        if (!is_valid_file_handle(handle)) {
+            regs.write(Register::a0, -1);
+            internal_errno = EBADF;
+            return;
+        }
+
+        // Standard streams don't support flen
+        if (is_standard_stream(handle)) {
+            regs.write(Register::a0, -1);
+            // internal_errno = EINVAL;
+            return;
+        }
+
+        // Get file reference (offset by standard streams)
+        const uint32_t file_index = handle - 3;
+        const auto& file = file_table[file_index];
+
+        // Save current position
+        const std::streampos current = file->tellg();
+        if (current == std::streampos(-1)) {
+            regs.write(Register::a0, -1);
+            internal_errno = EIO;
+            return;
+        }
+
+        // Get file size
+        file->seekg(0, std::ios::end);
+        const std::streampos size = file->tellg();
+        file->seekg(current, std::ios::beg);
+
+        if (size == std::streampos(-1)) {
+            regs.write(Register::a0, -1);
+            internal_errno = EIO;
+            return;
+        }
+
+        regs.write(Register::a0, static_cast<uint32_t>(size));
+
+    } catch (const std::exception& e) {
+        std::cerr << "[ERROR] SYS_FLEN: " << e.what() << std::endl;
+        regs.write(Register::a0, -1);
+        internal_errno = EIO;
+    }
+}
+
+void RV32::handle_sys_istty(uint32_t parameter) {
+    try {
+        const uint32_t handle = read_u32(parameter);
+
+        if (handle >= file_table.size()) {
+            regs.write(Register::a0, 0);
+            return;
+        }
+
+        const bool is_tty = is_standard_stream(handle);
+        regs.write(Register::a0, is_tty ? 1 : 0);
+
+    } catch (const std::exception& e) {
+        std::cerr << "[ERROR] SYS_ISTTY: " << e.what() << std::endl;
+        regs.write(Register::a0, 0);
+    }
+}
+
+void RV32::handle_sys_write(uint32_t parameter) {
+    struct WriteArgs {
+        uint32_t handle;
+        uint32_t buffer_ptr;
+        uint32_t length;
+    };
+
+    try {
+        const std::vector<uint8_t> raw = read_bytes(parameter, sizeof(WriteArgs));
+
+        if (raw.size() < sizeof(WriteArgs)) {
+            std::cerr << "[ERROR] SYS_WRITE: Invalid parameter block" << std::endl;
+            regs.write(Register::a0, -1);
+            internal_errno = EINVAL;
+            return;
+        }
+
+        const auto* args = reinterpret_cast<const WriteArgs*>(raw.data());
+        const std::vector<uint8_t> buffer = read_bytes(args->buffer_ptr, args->length);
+
+        // Handle standard streams
+        if (is_standard_stream(args->handle)) {
+            if (args->handle == 1) {
+                // stdin - write not supported
+                regs.write(Register::a0, -1);
+                internal_errno = EBADF;
+                return;
+            }
+
+            std::ostream& stream = (args->handle == 0) ? std::cout : std::cerr;
+            stream.write(reinterpret_cast<const char*>(buffer.data()), args->length);
+
+            if (stream.good()) {
+                regs.write(Register::a0, 0);  // Success
+            } else {
+                regs.write(Register::a0, args->length);  // Bytes not written
+                internal_errno = EIO;
+            }
+            return;
+        }
+
+        // Handle file writes
+        const uint32_t file_index = args->handle - 3;
+
+        if (!is_valid_file_handle(file_index)) {
+            regs.write(Register::a0, args->length);
+            internal_errno = EBADF;
+            return;
+        }
+
+        auto& file = file_table[file_index];
+        const std::streampos before = file->tellp();
+
+        file->write(reinterpret_cast<const char*>(buffer.data()), args->length);
+
+        const std::streampos after = file->tellp();
+        const size_t written = (file->good() || file->eof())
+            ? static_cast<size_t>(after - before)
+            : 0;
+
+        // Return number of bytes NOT written (0 = success)
+        const uint32_t not_written = args->length - written;
+        regs.write(Register::a0, not_written);
+
+        if (not_written > 0) {
+            internal_errno = EIO;
+        }
+
+    } catch (const std::exception& e) {
+        std::cerr << "[ERROR] SYS_WRITE: " << e.what() << std::endl;
+        regs.write(Register::a0, -1);
+        internal_errno = EIO;
+    }
+}
+
+void RV32::handle_sys_open(uint32_t parameter) {
+    struct OpenArgs {
+        uint32_t filename_ptr;
+        uint32_t mode;
+        uint32_t filename_length;
+    };
+
+    try {
+        const std::vector<uint8_t> raw = read_bytes(parameter, sizeof(OpenArgs));
+
+        if (raw.size() < sizeof(OpenArgs)) {
+            regs.write(Register::a0, -1);
+            internal_errno = EINVAL;
+            return;
+        }
+
+        const auto* args = reinterpret_cast<const OpenArgs*>(raw.data());
+        const std::vector<uint8_t> filename_buffer = read_bytes(args->filename_ptr, args->filename_length + 1);
+        const char* filename = reinterpret_cast<const char*>(filename_buffer.data());
+
+        // Map semihosting mode to C++ fstream flags
+        std::ios_base::openmode mode;
+        switch (args->mode) {
+            case 0:  // "r"
+                mode = std::ios::in;
+                break;
+            case 1:  // "rb"
+                mode = std::ios::in | std::ios::binary;
+                break;
+            case 2:  // "r+"
+                mode = std::ios::in | std::ios::out;
+                break;
+            case 3:  // "r+b"
+                mode = std::ios::in | std::ios::out | std::ios::binary;
+                break;
+            case 4:  // "w"
+                mode = std::ios::out | std::ios::trunc;
+                break;
+            case 5:  // "wb"
+                mode = std::ios::out | std::ios::trunc | std::ios::binary;
+                break;
+            case 6:  // "w+"
+                mode = std::ios::in | std::ios::out | std::ios::trunc;
+                break;
+            case 7:  // "w+b"
+                mode = std::ios::in | std::ios::out | std::ios::trunc | std::ios::binary;
+                break;
+            case 8:  // "a"
+                mode = std::ios::out | std::ios::app;
+                break;
+            case 9:  // "ab"
+                mode = std::ios::out | std::ios::app | std::ios::binary;
+                break;
+            case 10: // "a+"
+                mode = std::ios::in | std::ios::out | std::ios::app;
+                break;
+            case 11: // "a+b"
+                mode = std::ios::in | std::ios::out | std::ios::app | std::ios::binary;
+                break;
+            default:
+                regs.write(Register::a0, -1);
+                internal_errno = EINVAL;
+                return;
+        }
+
+        auto file_handle = std::make_unique<std::fstream>(filename, mode);
+
+        if (!file_handle->is_open()) {
+            regs.write(Register::a0, -1);
+            internal_errno = ENOENT;
+            return;
+        }
+
+        file_table.push_back(std::move(file_handle));
+        const uint32_t handle = static_cast<uint32_t>(file_table.size()) + 2;
+        regs.write(Register::a0, handle);
+
+    } catch (const std::exception& e) {
+        regs.write(Register::a0, -1);
+        internal_errno = EIO;
+    }
+}
+
+void RV32::handle_sys_close(uint32_t parameter) {
+    try {
+        const uint32_t handle = read_u32(parameter);
+
+        // Can't close standard streams
+        if (is_standard_stream(handle)) {
+            regs.write(Register::a0, 0);
+            return;
+        }
+
+        const uint32_t file_index = handle - 3;
+
+        if (file_index < file_table.size() && file_table[file_index]) {
+            file_table[file_index]->close();
+            file_table[file_index].reset();
+            regs.write(Register::a0, 0);
+        } else {
+            regs.write(Register::a0, -1);
+            internal_errno = EBADF;
+        }
+
+    } catch (const std::exception& e) {
+        std::cerr << "[ERROR] SYS_CLOSE: " << e.what() << std::endl;
+        regs.write(Register::a0, -1);
+        internal_errno = EIO;
+    }
+}
+
 
 inline int32_t RV32::sign_extend(const uint32_t value, const unsigned int fromBits) {
     return static_cast<int32_t>(value << (32 - fromBits)) >> (32 - fromBits);

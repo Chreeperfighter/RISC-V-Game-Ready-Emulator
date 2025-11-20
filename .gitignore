@@ -1,8 +1,24 @@
+# --- OS Junk ---
 .DS_Store
+._*
 
+# --- IDE & Build System ---
+.idea/
 cmake-build-*/
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+Makefile
 
+# --- Python ---
+__pycache__/
+*.py[cod]
+
+# --- Compiled Binaries & Objects ---
 *.o
+*.obj
 *.dis
 *.elf
 *.raw
+*.map
+*.hex

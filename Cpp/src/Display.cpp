@@ -64,3 +64,7 @@ void Display::cleanup_display() {
     SDL_DestroyWindow(context.window);
     SDL_Quit();
 }
+
+DisplayContext & Display::get_context() {
+    return context;
+}

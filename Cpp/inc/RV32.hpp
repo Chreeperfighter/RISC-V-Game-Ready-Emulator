@@ -9,6 +9,7 @@
 #include <random>
 #include <queue>
 #include <set>
+#include <fstream>
 
 #include "ISA.hpp"
 #include "Registers.hpp"
@@ -101,6 +102,13 @@ private:
 	static void decode_u_type(DecodedInstruction &inst, uint32_t data);
 	static void decode_j_type(DecodedInstruction &inst, uint32_t data);
 	static uint32_t get_bits(uint32_t data, unsigned int start, unsigned int end);
+    void handle_sys_exit(uint32_t exit_code) const;
+    void handle_sys_exit_extended(uint32_t parameter) const;
+    void handle_sys_flen(uint32_t parameter);
+    void handle_sys_istty(uint32_t parameter);
+    void handle_sys_write(uint32_t parameter);
+    void handle_sys_open(uint32_t parameter);
+    void handle_sys_close(uint32_t parameter);
 	static int32_t sign_extend(uint32_t value, unsigned int fromBits);
 	void print_inst(DecodedInstruction inst) const;
 	template<typename T>
@@ -108,7 +116,10 @@ private:
 	template<typename T>
 	void write_value(uint32_t address, T value);
 	void handle_semihosting();
-	bool is_queue_empty() const {
+
+    bool is_valid_file_handle(uint32_t handle) const;
+
+    bool is_queue_empty() const {
 		std::lock_guard<std::mutex> lock(queue_mtx);
 		return key_queue.empty();
 	}
@@ -143,7 +154,11 @@ private:
 	int32_t mouse_pos_y = 0;
 	int semihosting_step = 0;
 	bool semihosting_instruction = false;
-	std::vector<FILE*> file_table = { stdout, stderr, stdin };
+	// 0: stdout
+	// 1: stdin
+	// 2: stderr
+	std::vector<std::unique_ptr<std::fstream>> file_table{};
+	int internal_errno = 0;
 };
 
 

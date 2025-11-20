@@ -21,6 +21,7 @@ public:
     void init_display();
     void update_display();
     void cleanup_display();
+    DisplayContext &get_context();
 private:
     DisplayContext context{};
     RV32 &rv32;

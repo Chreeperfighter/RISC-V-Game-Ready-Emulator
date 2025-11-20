@@ -11,9 +11,10 @@
 
 typedef struct {
     std::vector<uint8_t> data;
-    uint32_t address;
-    uint32_t size;
-    uint32_t type;
+    Elf32_Addr address;
+    Elf32_Word size;
+    Elf32_Word type;
+    Elf32_Word flags;
     std::string name;
 } ELFSection;
 

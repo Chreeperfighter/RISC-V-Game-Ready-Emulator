@@ -57,7 +57,12 @@ enum class Syscall : uint32_t {
     /*
      * SEMIHOSTING
      */
-    SYS_EXIT = 0xFF,
+    SYS_EXIT = 0x18,
+    /*
+    An application calls this operation to report an exception to the debugger directly. The most common use is to report
+    that execution has completed, using ADP_Stopped_ApplicationExit.
+    */
+    SYS_EXIT_EXTENDED = 0x20,
 
     SYS_FLEN = 0x0C,
     /*
@@ -133,6 +138,18 @@ enum class Syscall : uint32_t {
         There are no parameters. The PARAMETER REGISTER must be 0.
     6.4.2 Return
         On exit, the RETURN REGISTER contains the value of the C library errno variable.
+    */
+    SYS_CLOSE = 0x02,
+    /*
+    Closes a file on the host system. The handle must reference a file that was opened with SYS_OPEN (0x01).
+    6.2.1 Entry
+    On entry, the PARAMETER REGISTER contains a pointer to a one-field argument block:
+    field 1
+        Contains a handle for an open file.
+    6.2.2 Return
+    On exit, the RETURN REGISTER contains:
+        • 0 if the call is successful
+        • –1 if the call is not successful.
     */
 };
 
