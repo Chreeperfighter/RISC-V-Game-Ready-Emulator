@@ -4,6 +4,7 @@
 
 # --- IDE & Build System ---
 .idea/
+build/
 cmake-build-*/
 CMakeFiles/
 CMakeCache.txt
