@@ -36,7 +36,7 @@ int main() {
     Input input(cpu, display);
 
     ELFLoader elf;
-    elf.parse("/Users/mark.verbeek/Data/Projects/RISC-V-Game-Ready-Emulator/Programs/test/cmake-build-rv32i-release/test");
+    elf.parse("/Users/mark.verbeek/Data/Projects/RISC-V-Game-Ready-Emulator/Programs/FrambufferTest/cmake-build-rv32i-release/FrambufferTest");
     std::vector<ELFSection> sections = elf.get_sections();
     for (const auto& section : sections) {
         cpu.load_section(section);
