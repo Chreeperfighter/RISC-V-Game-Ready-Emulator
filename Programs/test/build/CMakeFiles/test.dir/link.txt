@@ -1,1 +1,0 @@
-/usr/bin/cc  -arch x86_64 -Wl,-search_paths_first -Wl,-headerpad_max_install_names "CMakeFiles/test.dir/Users/mark.verbeek/CLionProjects/RISC-V-Game-Ready-Emulator/Programs/start.S.o" CMakeFiles/test.dir/main.c.o CMakeFiles/test.dir/printf.c.o CMakeFiles/test.dir/util.c.o -o test.elf
