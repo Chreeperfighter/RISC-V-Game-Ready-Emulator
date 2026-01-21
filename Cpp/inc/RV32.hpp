@@ -10,6 +10,7 @@
 #include <queue>
 #include <set>
 #include <fstream>
+#include <map>
 
 #include "ISA.hpp"
 #include "Registers.hpp"
@@ -79,6 +80,7 @@ public:
 		mouse_pos_y = y;
 	}
 	mutable bool running = true;
+	bool breakpoint_hit = false;
 
 private:
 	uint32_t fetch() const;
@@ -104,6 +106,9 @@ private:
 	static uint32_t get_bits(uint32_t data, unsigned int start, unsigned int end);
     void handle_sys_exit(uint32_t exit_code) const;
     void handle_sys_exit_extended(uint32_t parameter) const;
+	void handle_sys_get_framebuffer_info(uint32_t parameter);
+	void handle_sys_show_framebuffer(uint32_t parameter);
+	void handle_sys_get_mouse_pos(uint32_t parameter);
     void handle_sys_flen(uint32_t parameter);
     void handle_sys_istty(uint32_t parameter);
     void handle_sys_write(uint32_t parameter);
@@ -157,8 +162,10 @@ private:
 	// 0: stdout
 	// 1: stdin
 	// 2: stderr
-	std::vector<std::unique_ptr<std::fstream>> file_table{};
+	std::map<uint32_t, std::unique_ptr<std::fstream>> file_table{};
 	int internal_errno = 0;
+	// start after stdout, stdin, stderr
+	int next_handle = 3;
 };
 
 

@@ -47,6 +47,7 @@ void RV32::step() {
             << "raw data: 0x" << data
         << std::endl;
     update_pc = true;
+    breakpoint_hit = false;
     execute(instruction);
     if (!semihosting_instruction && semihosting_step != 0) {
         semihosting_step = 0;
@@ -506,7 +507,8 @@ void RV32::execute(const DecodedInstruction inst) {
                     semihosting_instruction = true;
                 }
                 else {
-
+                    // TODO: Fix Breakpoints
+                    breakpoint_hit = true;
                 }
             }
             break;
@@ -619,6 +621,8 @@ void RV32::handle_semihosting() {
     const auto operation_number = static_cast<Syscall>(regs.read(Register::a0));
     const uint32_t parameter = regs.read(Register::a1);
 
+    // std::cerr << "[DEBUG]: handle_semihosting() Operation Number: 0x" << std::hex << static_cast<int>(operation_number) << std::endl;
+
     switch (operation_number) {
         case Syscall::SYS_EXIT:
             handle_sys_exit(parameter);
@@ -626,6 +630,18 @@ void RV32::handle_semihosting() {
 
         case Syscall::SYS_EXIT_EXTENDED:
             handle_sys_exit_extended(parameter);
+            break;
+
+        case Syscall::SYS_GET_FRAMEBUFFER_INFO:
+            handle_sys_get_framebuffer_info(parameter);
+            break;
+
+        case Syscall::SYS_SHOW_FRAMEBUFFER:
+            handle_sys_show_framebuffer(parameter);
+            break;
+
+        case Syscall::SYS_GET_MOUSE_POS:
+            handle_sys_get_mouse_pos(parameter);
             break;
 
         case Syscall::SYS_FLEN:
@@ -663,7 +679,7 @@ void RV32::handle_semihosting() {
 
 // Helper: Validate file handle
 bool RV32::is_valid_file_handle(uint32_t handle) const {
-    return handle < file_table.size() && file_table[handle] != nullptr;
+    return handle < file_table.size() && file_table.at(handle) != nullptr;
 }
 
 // Helper: Check if handle is a standard stream
@@ -674,6 +690,29 @@ bool is_standard_stream(uint32_t handle) {
 void RV32::handle_sys_exit(uint32_t exit_code) const {
     std::cout << "Process exiting with code: " << exit_code << std::endl;
     running = false;
+}
+
+void RV32::handle_sys_get_framebuffer_info(uint32_t parameter) {
+    uint32_t address = parameter;
+    if (address < Config::RAM_ORIGIN || address > Config::RAM_END) {
+        regs.write(Register::a0, -1); // Failure
+        return;
+    }
+    write_u32(address, Config::FB_WIDTH);
+    write_u32(address + 4, Config::FB_HEIGHT);
+    write_u32(address + 8, Config::FB_BPP);
+    regs.write(Register::a0, 0); // Success
+}
+
+void RV32::handle_sys_show_framebuffer(uint32_t parameter) {
+    transfer_buffer_address = parameter;
+    std::lock_guard<std::mutex> lock(transfer_buffer_mtx);
+    transfer_buffer = read_bytes(transfer_buffer_address, Config::FB_SIZE);
+}
+
+void RV32::handle_sys_get_mouse_pos(uint32_t parameter) {
+    write_u32(parameter, mouse_pos_x);
+    write_u32(parameter + 4, mouse_pos_y);
 }
 
 void RV32::handle_sys_exit_extended(const uint32_t parameter) const {
@@ -921,11 +960,16 @@ void RV32::handle_sys_open(uint32_t parameter) {
             internal_errno = ENOENT;
             return;
         }
-
-        file_table.push_back(std::move(file_handle));
-        const uint32_t handle = static_cast<uint32_t>(file_table.size()) + 2;
+        const uint32_t handle = next_handle;
+        file_table[handle] = std::move(file_handle);
         regs.write(Register::a0, handle);
 
+        int next = 3;
+        for (const auto& [k, v] : file_table) {
+            if (k > next) break;          // found a gap
+            if (k == next) ++next;    // next expected key
+        }
+        next_handle = next;
     } catch (const std::exception& e) {
         regs.write(Register::a0, -1);
         internal_errno = EIO;
@@ -942,11 +986,11 @@ void RV32::handle_sys_close(uint32_t parameter) {
             return;
         }
 
-        const uint32_t file_index = handle - 3;
+        auto file = std::move(file_table.at(handle));
 
-        if (file_index < file_table.size() && file_table[file_index]) {
-            file_table[file_index]->close();
-            file_table[file_index].reset();
+        if (file != nullptr) {
+            file->close();
+            next_handle = static_cast<uint32_t>(handle);
             regs.write(Register::a0, 0);
         } else {
             regs.write(Register::a0, -1);

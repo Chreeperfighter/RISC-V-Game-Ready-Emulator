@@ -22,13 +22,18 @@ class ELFLoader {
 public:
     void parse(const char *path);
     uint32_t get_entry() const;
-    std::vector<ELFSection> get_sections() const;
+    std::vector<ELFSection> get_sections() const {
+        return sections;
+    }
 private:
+    void parse_sections();
+
     std::vector<uint8_t> elf{};
     Elf32_Ehdr ehdr{};
     std::vector<Elf32_Phdr> phdrs{};
     std::vector<Elf32_Shdr> shdrs{};
     std::vector<char> shstrtab{};
+    std::vector<ELFSection> sections{};
 };
 
 

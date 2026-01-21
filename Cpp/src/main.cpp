@@ -6,10 +6,12 @@
 #include "ELFLoader.hpp"
 #include "RV32.hpp"
 #include "Input.hpp"
+#include "RV32Debugger.hpp"
 
 #include <atomic>
 #include <thread>
 #include <chrono>
+#include <iostream>
 
 #define FPS 60
 #define FRAME_TIME_US (1000000 / FPS)
@@ -21,9 +23,13 @@ std::atomic<bool> running(true);
 // ==============================
 //           CPU Thread
 // ==============================
-void step_cpu(RV32 &cpu) {
+void step_cpu(RV32 &cpu, RV32Debugger &dbg) {
     while (cpu.running && running.load()) {
         cpu.step();
+        // std::cout << cpu.get_pc() << std::endl;
+        if (cpu.breakpoint_hit) {
+            dbg.on_breakpoint();
+        }
     }
     running.store(false);
 }
@@ -35,14 +41,23 @@ int main() {
 
     Input input(cpu, display);
 
-    ELFLoader elf;
-    elf.parse("/Users/mark.verbeek/Data/Projects/RISC-V-Game-Ready-Emulator/Programs/FrambufferTest/cmake-build-rv32i-release/FrambufferTest");
-    std::vector<ELFSection> sections = elf.get_sections();
+    ELFLoader elf_loader;
+    elf_loader.parse("/Users/mark.verbeek/Data/Projects/RISC-V-Game-Ready-Emulator/Programs/WireWorld/cmake-build-release-rv32i/WireWorld");
+    RV32Debugger debugger(cpu, elf_loader);
+    std::vector<ELFSection> sections = elf_loader.get_sections();
     for (const auto& section : sections) {
+        /*
+        std::cout <<
+            "Name: " << section.name <<
+                ", Adress: " << section.address <<
+                    ", Type: " << section.type <<
+                        ", Size: " << section.size <<
+                            std::endl;
+        */
         cpu.load_section(section);
     }
-    cpu.set_entry(elf.get_entry());
-    std::thread cpu_thread(step_cpu, std::ref(cpu));
+    cpu.set_entry(elf_loader.get_entry());
+    std::thread cpu_thread(step_cpu, std::ref(cpu), std::ref(debugger));
 
     auto last_frame = steady_clock::now();
 

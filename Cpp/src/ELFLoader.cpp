@@ -45,15 +45,16 @@ void ELFLoader::parse(const char *path) {
         shstrtab_section.sh_size,
         shstrtab.begin()
         );
+
+    parse_sections();
 }
 
 uint32_t ELFLoader::get_entry() const {
     return ehdr.e_entry;
 }
 
-std::vector<ELFSection> ELFLoader::get_sections() const {
-    std::vector<ELFSection> sections;
-
+void ELFLoader::parse_sections() {
+    sections.clear();
     for (int i = 0; i < ehdr.e_shnum; i++) {
         const Elf32_Shdr shdr = shdrs[i];
         if (shdr.sh_type != SHT_PROGBITS && shdr.sh_type != SHT_NOBITS) {
@@ -78,6 +79,5 @@ std::vector<ELFSection> ELFLoader::get_sections() const {
         }
         sections.push_back(section);
     }
-    return sections;
 }
 

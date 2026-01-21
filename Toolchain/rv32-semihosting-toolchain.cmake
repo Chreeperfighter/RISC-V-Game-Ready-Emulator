@@ -12,11 +12,25 @@ set(TOOLCHAIN_DIR "${CMAKE_CURRENT_LIST_DIR}")
 
 # Common flags for RV32I with semihosting
 set(ARCH_FLAGS "-march=rv32i -misa-spec=2.2 -mno-fence-tso -mabi=ilp32 -mno-csr-check")
-set(COMMON_FLAGS "${ARCH_FLAGS} -Wall -g")
+set(COMMON_FLAGS "${ARCH_FLAGS} -Wall")
 
-# Set flags
-set(CMAKE_C_FLAGS_INIT "${COMMON_FLAGS}")
-set(CMAKE_CXX_FLAGS_INIT "${COMMON_FLAGS}")
+# Debug flags
+set(CMAKE_C_FLAGS_DEBUG_INIT "${COMMON_FLAGS} -gdwarf-5 -g -O0")
+set(CMAKE_CXX_FLAGS_DEBUG_INIT "${COMMON_FLAGS} -gdwarf-5 -g -O0")
+
+# Release flags
+set(CMAKE_C_FLAGS_RELEASE_INIT "${COMMON_FLAGS} -O2 -DNDEBUG")
+set(CMAKE_CXX_FLAGS_RELEASE_INIT "${COMMON_FLAGS} -O2 -DNDEBUG")
+
+# RelWithDebInfo flags (optimized with debug symbols)
+set(CMAKE_C_FLAGS_RELWITHDEBINFO_INIT "${COMMON_FLAGS} -gdwarf-5 -g -O2 -DNDEBUG")
+set(CMAKE_CXX_FLAGS_RELWITHDEBINFO_INIT "${COMMON_FLAGS} -gdwarf-5 -g -O2 -DNDEBUG")
+
+# MinSizeRel flags
+set(CMAKE_C_FLAGS_MINSIZEREL_INIT "${COMMON_FLAGS} -Os -DNDEBUG")
+set(CMAKE_CXX_FLAGS_MINSIZEREL_INIT "${COMMON_FLAGS} -Os -DNDEBUG")
+
+# Assembly flags (same for all builds)
 set(CMAKE_ASM_FLAGS_INIT "${ARCH_FLAGS}")
 
 # Linker flags

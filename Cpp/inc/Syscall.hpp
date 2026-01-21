@@ -64,6 +64,42 @@ enum class Syscall : uint32_t {
     */
     SYS_EXIT_EXTENDED = 0x20,
 
+    SYS_GET_FRAMEBUFFER_INFO = 0x12,
+    /*
+    Returns framebuffer configuration information.
+    Entry
+    On entry, the PARAMETER REGISTER contains a pointer to a data block:
+        A writeable memory address where framebuffer information will be written.
+    Return
+    On exit, the RETURN REGISTER contains:
+        • 0 if the call is successful.
+        • –1 if an error occurs (invalid address).
+    The data block is populated with:
+        • field 1: Framebuffer width (uint32_t)
+        • field 2: Framebuffer height (uint32_t)
+        • field 3: Framebuffer bits per pixel (uint32_t)
+    */
+
+    SYS_SHOW_FRAMEBUFFER = 0x11,
+    /*
+    Returns framebuffer configuration information.
+    Entry
+    On entry, the PARAMETER REGISTER contains the address of the framebuffer
+    Return
+    */
+
+    SYS_GET_MOUSE_POS = 0x14,
+    /*
+    Returns the position of the mouse cursor
+    Entry
+    On entry, the PARAMETER REGISTER contains the address of a pointer to a two field data block.
+    The data block is updated as follows:
+    field 1
+        x position
+    field 2
+        y position
+    */
+
     SYS_FLEN = 0x0C,
     /*
     Returns the length of a specified file.
