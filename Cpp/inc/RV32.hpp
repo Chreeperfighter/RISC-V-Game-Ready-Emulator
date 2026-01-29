@@ -109,6 +109,9 @@ private:
 	void handle_sys_get_framebuffer_info(uint32_t parameter);
 	void handle_sys_show_framebuffer(uint32_t parameter);
 	void handle_sys_get_mouse_pos(uint32_t parameter);
+	void handle_sys_is_mouse_button_down(uint32_t parameter);
+	void handle_sys_get_us(uint32_t parameter);
+	void handle_sys_sleep_us(uint32_t parameter);
     void handle_sys_flen(uint32_t parameter);
     void handle_sys_istty(uint32_t parameter);
     void handle_sys_write(uint32_t parameter);

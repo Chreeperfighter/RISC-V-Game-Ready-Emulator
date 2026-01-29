@@ -8,6 +8,9 @@
 #define SYS_GET_FRAMEBUFFER_INFO 0x12
 #define SYS_SHOW_FRAMEBUFFER  0x11
 #define SYS_GET_MOUSE_POS 0x14
+#define SYS_IS_MOUSE_BUTTON_DOWN 0x03
+#define SYS_GET_US 0x04
+#define SYS_SLEEP_US 0x06
 
 static inline void trigger_syscall(int syscall_number) {
     asm volatile(
@@ -21,7 +24,7 @@ static inline void trigger_syscall(int syscall_number) {
         );
 }
 
-static inline int sys_get_framebuffer_info(int address) {
+static inline int sys_get_framebuffer_info(void *address) {
     asm volatile(
         "mv a1, %0"
         :
@@ -39,17 +42,86 @@ static inline int sys_get_framebuffer_info(int address) {
     return ret;
 }
 
-static inline void sys_get_mouse_pos(int address) {
+static inline void sys_get_mouse_pos(void *address) {
     asm volatile(
-    "mv a1, %0"
-    :
-    : "r"(address)
-    : "a1"
-    );
+        "mv a1, %0"
+        :
+        : "r"(address)
+        : "a1"
+        );
     trigger_syscall(SYS_GET_MOUSE_POS);
 }
 
-static inline int sys_show_framebuffer(int address) {
+static inline uint32_t sys_is_mouse_button_down(void *address) {
+    register uint32_t a0 asm("a0");
+    register uint32_t a1 asm("a1") = (uintptr_t)address;
+
+    asm volatile(
+        ""
+        : "=r"(a0)
+        : "r"(a1)
+        : "memory"
+    );
+
+    trigger_syscall(SYS_IS_MOUSE_BUTTON_DOWN);
+
+    asm volatile(
+        ""
+        : "=r"(a0)
+        :
+        : "memory"
+    );
+
+    return a0;
+}
+
+static inline uint32_t sys_get_us(void *address) {
+    register uint32_t a0 asm("a0");
+    register uint32_t a1 asm("a1") = (uintptr_t)address;
+
+    asm volatile(
+        ""
+        : "=r"(a0)
+        : "r"(a1)
+        : "memory"
+    );
+
+    trigger_syscall(SYS_GET_US);
+
+    asm volatile(
+        ""
+        : "=r"(a0)
+        :
+        : "memory"
+    );
+
+    return a0;
+}
+
+static inline uint32_t sys_sleep_us(uint32_t us) {
+    register uint32_t a0 asm("a0");
+    register uint32_t a1 asm("a1") = (uintptr_t)&us;
+
+    asm volatile(
+        ""
+        : "=r"(a0)
+        : "r"(a1)
+        : "memory"
+    );
+
+    trigger_syscall(SYS_SLEEP_US);
+
+    asm volatile(
+        ""
+        : "=r"(a0)
+        :
+        : "memory"
+    );
+
+    return a0;
+}
+
+static inline int sys_show_framebuffer(void *address) {
     asm volatile(
     "mv a1, %0"
     :

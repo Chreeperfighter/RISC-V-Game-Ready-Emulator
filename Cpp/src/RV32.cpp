@@ -644,6 +644,18 @@ void RV32::handle_semihosting() {
             handle_sys_get_mouse_pos(parameter);
             break;
 
+        case Syscall::SYS_IS_MOUSE_BUTTON_DOWN:
+            handle_sys_is_mouse_button_down(parameter);
+            break;
+
+        case Syscall::SYS_GET_US:
+            handle_sys_get_us(parameter);
+            break;
+
+        case Syscall::SYS_SLEEP_US:
+            handle_sys_sleep_us(parameter);
+            break;
+
         case Syscall::SYS_FLEN:
             handle_sys_flen(parameter);
             break;
@@ -713,6 +725,40 @@ void RV32::handle_sys_show_framebuffer(uint32_t parameter) {
 void RV32::handle_sys_get_mouse_pos(uint32_t parameter) {
     write_u32(parameter, mouse_pos_x);
     write_u32(parameter + 4, mouse_pos_y);
+}
+
+void RV32::handle_sys_is_mouse_button_down(uint32_t parameter) {
+    uint32_t button = read_u32(parameter);
+    if (button > 2) {
+        std::cerr << "[WARN] mouse_button: "<< button << " out of range!" << std::endl;
+        regs.write(Register::a0, -1);
+        return;
+    }
+    regs.write(Register::a0, mouse_button_state[button] ? 1 : 0);
+}
+
+void RV32::handle_sys_get_us(uint32_t parameter) {
+    uint32_t address = parameter;
+    if (address < Config::RAM_ORIGIN || address > Config::RAM_END) {
+        regs.write(Register::a0, -1); // Failure
+        return;
+    }
+    const uint32_t time_us = std::chrono::duration_cast<std::chrono::microseconds>(
+        std::chrono::steady_clock::now().time_since_epoch()
+    ).count();
+    write_u32(address, time_us);
+    regs.write(Register::a0, 0);
+}
+
+void RV32::handle_sys_sleep_us(uint32_t parameter) {
+    uint32_t address = parameter;
+    if (address < Config::RAM_ORIGIN || address > Config::RAM_END) {
+        regs.write(Register::a0, -1); // Failure
+        return;
+    }
+    const uint32_t time_us = read_u32(parameter);
+    std::this_thread::sleep_for(std::chrono::microseconds(time_us));
+    regs.write(Register::a0, 0);
 }
 
 void RV32::handle_sys_exit_extended(const uint32_t parameter) const {

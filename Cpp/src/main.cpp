@@ -26,7 +26,7 @@ std::atomic<bool> running(true);
 void step_cpu(RV32 &cpu, RV32Debugger &dbg) {
     while (cpu.running && running.load()) {
         cpu.step();
-        // std::cout << cpu.get_pc() << std::endl;
+        // std::cout << "0x" << std::hex << cpu.get_pc() << std::endl;
         if (cpu.breakpoint_hit) {
             dbg.on_breakpoint();
         }

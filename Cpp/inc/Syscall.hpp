@@ -88,6 +88,29 @@ enum class Syscall : uint32_t {
     Return
     */
 
+    SYS_GET_US = 0x04,
+    /*
+    Return the time in us
+    Entry:
+    On entry, the PARAMETER REGISTER contains a pointer to a data block:
+        A writeable memory address where the time will be written.
+    Return:
+    On exit, the RETURN REGISTER contains:
+        • 0 if the call is successful.
+        • –1 if an error occurs (invalid address).
+    The data block is populated with:
+        • field 1: Time in us (uint32_t)
+    */
+
+    SYS_SLEEP_US = 0x06,
+    /*
+    On entry, the PARAMETER REGISTER contains a pointer to a data block:
+        Time to sleep in us.
+    On exit, the RETURN REGISTER contains:
+        • 0 if the call is successful.
+        • –1 if an error occurs (invalid address).
+    */
+
     SYS_GET_MOUSE_POS = 0x14,
     /*
     Returns the position of the mouse cursor
@@ -98,6 +121,18 @@ enum class Syscall : uint32_t {
         x position
     field 2
         y position
+    */
+
+    SYS_IS_MOUSE_BUTTON_DOWN = 0x03,
+    /*
+    Entry
+    On entry, the PARAMETER REGISTER contains a pointer to a data block:
+        Mouse button to check.
+    Return
+    On exit, the RETURN REGISTER contains:
+        • 1 if the button is pressed.
+        • 0 if the button is not pressed.
+        • -1 if an error occurred.
     */
 
     SYS_FLEN = 0x0C,
