@@ -68,11 +68,13 @@ void RV32::load_section(const ELFSection &section) {
     }
     if (section.flags & SHF_ALLOC) {
         if (section.type == SHT_NOBITS) {
+
             std::fill_n(
                 ram.begin() + (section.address - Config::RAM_ORIGIN),
                 section.size,
                 0
                 );
+
             if (section.name == ".bss") {
                 heap_start = section.address + section.size;
                 heap_end = heap_start;
@@ -125,7 +127,7 @@ DecodedInstruction RV32::decode(const uint32_t data) const {
             decode_j_type(instruction, data);
             break;
         default:
-            std::cerr << "Unknown opcode: " << static_cast<int>(opcode) << "\n";
+            std::cerr << "Unknown opcode: " << std::dec << static_cast<int>(opcode) << "\n";
             running = false;
             break;
     }
@@ -656,6 +658,18 @@ void RV32::handle_semihosting() {
             handle_sys_sleep_us(parameter);
             break;
 
+        case Syscall::SYS_KEY_AVAILABLE:
+            handle_sys_key_available(parameter);
+            break;
+
+        case Syscall::SYS_GET_KEY:
+            handle_sys_get_key(parameter);
+            break;
+
+        case Syscall::SYS_IS_KEY_DOWN:
+            handle_sys_is_key_down(parameter);
+            break;
+
         case Syscall::SYS_FLEN:
             handle_sys_flen(parameter);
             break;
@@ -718,6 +732,17 @@ void RV32::handle_sys_get_framebuffer_info(uint32_t parameter) {
 
 void RV32::handle_sys_show_framebuffer(uint32_t parameter) {
     transfer_buffer_address = parameter;
+
+    // Check if the address is valid
+    if (parameter < Config::RAM_ORIGIN ||
+        parameter + Config::FB_SIZE > Config::RAM_END) {
+        std::cerr << "ERROR: Invalid framebuffer address: 0x"
+                  << std::hex << parameter
+                  << " (would read until 0x" << (parameter + Config::FB_SIZE) << ")"
+                  << std::endl;
+        return;
+        }
+
     std::lock_guard<std::mutex> lock(transfer_buffer_mtx);
     transfer_buffer = read_bytes(transfer_buffer_address, Config::FB_SIZE);
 }
@@ -743,9 +768,10 @@ void RV32::handle_sys_get_us(uint32_t parameter) {
         regs.write(Register::a0, -1); // Failure
         return;
     }
-    const uint32_t time_us = std::chrono::duration_cast<std::chrono::microseconds>(
-        std::chrono::steady_clock::now().time_since_epoch()
-    ).count();
+    static auto start_time = std::chrono::steady_clock::now();
+
+    auto elapsed = std::chrono::steady_clock::now() - start_time;
+    uint32_t time_us = std::chrono::duration_cast<std::chrono::microseconds>(elapsed).count();
     write_u32(address, time_us);
     regs.write(Register::a0, 0);
 }
@@ -759,6 +785,24 @@ void RV32::handle_sys_sleep_us(uint32_t parameter) {
     const uint32_t time_us = read_u32(parameter);
     std::this_thread::sleep_for(std::chrono::microseconds(time_us));
     regs.write(Register::a0, 0);
+}
+
+void RV32::handle_sys_key_available(uint32_t parameter) {
+    if (is_queue_empty()) {
+        regs.write(Register::a0, 0);
+    }
+    else {
+        regs.write(Register::a0, 1);
+    }
+}
+void RV32::handle_sys_get_key(uint32_t parameter) {
+    const uint32_t key = pop_from_queue();
+    regs.write(Register::a0, key);
+}
+
+void RV32::handle_sys_is_key_down(uint32_t parameter) {
+    uint32_t key = parameter;
+    regs.write(Register::a0, key_state[key] ? 1 : 0);
 }
 
 void RV32::handle_sys_exit_extended(const uint32_t parameter) const {

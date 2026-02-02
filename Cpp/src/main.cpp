@@ -42,7 +42,7 @@ int main() {
     Input input(cpu, display);
 
     ELFLoader elf_loader;
-    elf_loader.parse("/Users/mark.verbeek/Data/Projects/RISC-V-Game-Ready-Emulator/Programs/WireWorld/cmake-build-release-rv32i/WireWorld");
+    elf_loader.parse("/Users/mark.verbeek/Data/Projects/RISC-V-Game-Ready-Emulator/Programs/RV32DOOM/cmake-build-release-rv32i/RV32DOOM");
     RV32Debugger debugger(cpu, elf_loader);
     std::vector<ELFSection> sections = elf_loader.get_sections();
     for (const auto& section : sections) {

@@ -112,6 +112,9 @@ private:
 	void handle_sys_is_mouse_button_down(uint32_t parameter);
 	void handle_sys_get_us(uint32_t parameter);
 	void handle_sys_sleep_us(uint32_t parameter);
+	void handle_sys_key_available(uint32_t parameter);
+	void handle_sys_get_key(uint32_t parameter);
+	void handle_sys_is_key_down(uint32_t parameter);
     void handle_sys_flen(uint32_t parameter);
     void handle_sys_istty(uint32_t parameter);
     void handle_sys_write(uint32_t parameter);

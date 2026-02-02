@@ -29,6 +29,17 @@ void Display::init_display() {
 void Display::update_display() {
     std::vector<uint8_t> framebuffer(Config::FB_SIZE);
     rv32.get_transfer_buffer(framebuffer);
+    for (int i = 0; i < Config::FB_WIDTH * Config::FB_HEIGHT; i++) {
+        int index = i * 4;
+        int r = framebuffer[index];
+        int g = framebuffer[index + 1];
+        int b = framebuffer[index + 2];
+        int a = framebuffer[index + 3];
+        framebuffer[index] = b;
+        framebuffer[index + 1] = g;
+        framebuffer[index + 2] = r;
+        framebuffer[index + 3] = a;
+    }
     const uint8_t* framebuffer_addr = framebuffer.data();
     void* pixels;
     int pitch;

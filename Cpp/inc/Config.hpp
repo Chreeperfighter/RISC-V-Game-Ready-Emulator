@@ -11,10 +11,10 @@ namespace Config {
     constexpr uint32_t RAM_SIZE = 32 * 1024 * 1024;
     constexpr uint32_t RAM_END = RAM_ORIGIN + RAM_SIZE;
 
-    constexpr uint32_t STACK_MARGIN = 16 * 1024;
+    constexpr uint32_t STACK_MARGIN = 2 * 1024 * 1024;
 
-    constexpr uint32_t FB_WIDTH = 1080;
-    constexpr uint32_t FB_HEIGHT = 1080;
+    constexpr uint32_t FB_WIDTH = 320;
+    constexpr uint32_t FB_HEIGHT = 200;
     constexpr uint32_t FB_BPP = 4; // Bytes per pixel
     constexpr uint32_t FB_SIZE = FB_WIDTH * FB_HEIGHT * FB_BPP;
 }

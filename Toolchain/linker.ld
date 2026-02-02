@@ -1,7 +1,7 @@
 ENTRY(_start)
 
 MEMORY {
-    RAM (rwx) : ORIGIN = 0x00000000, LENGTH = 8M
+    RAM (rwx) : ORIGIN = 0x00000000, LENGTH = 32M
 }
 
 SECTIONS {
@@ -69,8 +69,8 @@ SECTIONS {
     /* ---- HEAP AND STACK ---- */
     . = ALIGN(16);
     PROVIDE(_end = .);
-    PROVIDE(_heap_start = .);
-    PROVIDE(_heap_end = ORIGIN(RAM) + LENGTH(RAM) - 0x1000); /* optional heap limit */
+    PROVIDE(_heap_end = ORIGIN(RAM) + LENGTH(RAM) - 0x200000);
+    PROVIDE(_stack_top = ORIGIN(RAM) + LENGTH(RAM));
 
     PROVIDE(_stack_top = ORIGIN(RAM) + LENGTH(RAM));
     PROVIDE(__stack_top = _stack_top);

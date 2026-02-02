@@ -23,5 +23,5 @@ add_custom_command(
 # Attach the custom command to a custom target
 add_custom_target(disassemble
         DEPENDS File.dis
-        COMMENT "Generating disassembly for File"
-)
+        COMMENT "Generating disassembly for File")
+

@@ -19,7 +19,7 @@ void clear_framebuffer(uint32_t* fb, struct FB_INFO* fb_info) {
 
 void draw_rectangle(uint32_t* fb, struct FB_INFO* fb_info,
                    uint32_t x1, uint32_t y1, uint32_t x2, uint32_t y2,
-                   uint32_t color, bool filled) {
+                   uint32_t color) {
     // Bounds check - clamp coordinates to screen
     if (x1 >= fb_info->width || y1 >= fb_info->height) return;
     if (x2 >= fb_info->width) x2 = fb_info->width - 1;
@@ -28,11 +28,17 @@ void draw_rectangle(uint32_t* fb, struct FB_INFO* fb_info,
     // Ensure x1 < x2 and y1 < y2
     if (x1 > x2 || y1 > y2) return;
 
-    // Your existing drawing code here...
-    for (uint32_t y = y1; y <= y2; y++) {
-        for (uint32_t x = x1; x <= x2; x++) {
-            fb[y * fb_info->width + x] = color;
-        }
+    uint32_t width = x2 - x1 + 1;
+
+    // Fill first scanline
+    uint32_t* start = &fb[y1 * fb_info->width + x1];
+    for (uint32_t i = 0; i < width; i++) {
+        start[i] = color;
+    }
+
+    // Copy first scanline to remaining scanlines
+    for (uint32_t y = y1 + 1; y <= y2; y++) {
+        memcpy(&fb[y * fb_info->width + x1], start, width * sizeof(uint32_t));
     }
 }
 

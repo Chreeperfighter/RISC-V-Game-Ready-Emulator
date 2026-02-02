@@ -111,6 +111,31 @@ enum class Syscall : uint32_t {
         • –1 if an error occurs (invalid address).
     */
 
+    SYS_KEY_AVAILABLE = 0x07,
+    /*
+    On exit, the RETURN REGISTER contains:
+        0 if queue is empty
+        != 0 if queue isn't empty
+    */
+
+    SYS_GET_KEY = 0x08,
+    /*
+    On exit, the RETURN REGISTER contains:
+        Key Code
+    */
+
+    SYS_IS_KEY_DOWN = 0x0A,
+    /*
+    Returns if the given key is down
+    Entry
+    On entry, the PARAMETER REGISTER contains the key to check
+    Return
+    On exit, the RETURN REGISTER contains:
+        • 1 if the button is down.
+        • 0 if the button is up.
+        • -1 if an error occurred.
+    */
+
     SYS_GET_MOUSE_POS = 0x14,
     /*
     Returns the position of the mouse cursor
