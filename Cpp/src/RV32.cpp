@@ -24,6 +24,10 @@ RV32::RV32(const bool randomizeRegs, const bool randomizeMemory) : rng(std::rand
             byte = static_cast<uint8_t>(rng());
         }
     }
+    file_table[0] = nullptr;  // stdout - not implemented yet
+    file_table[1] = nullptr;  // stdin - not implemented yet
+    file_table[2] = nullptr;  // stderr - not implemented yet
+    next_handle = 3;
 }
 
 void RV32::print_inst(DecodedInstruction inst) const {
@@ -36,19 +40,11 @@ void RV32::print_inst(DecodedInstruction inst) const {
 void RV32::step() {
     const uint32_t data = fetch();
     const DecodedInstruction instruction = decode(data);
-    if (pc == -1)
-        std::cout << std::hex
-            << "PC: " << pc << ": "
-            << "Opcode: 0x" << static_cast<int>(instruction.opcode) << ", "
-            << "rd: 0x" << static_cast<int>(instruction.rd) << ", "
-            << "rs1: 0x" << static_cast<int>(instruction.rs1) << ", "
-            << "rs2: 0x" << static_cast<int>(instruction.rs2) << ", "
-            << "imm: 0x" << static_cast<int>(instruction.imm) << ", "
-            << "raw data: 0x" << data
-        << std::endl;
+
     update_pc = true;
     breakpoint_hit = false;
     execute(instruction);
+
     if (!semihosting_instruction && semihosting_step != 0) {
         semihosting_step = 0;
     }
@@ -65,27 +61,30 @@ void RV32::load_section(const ELFSection &section) {
             "Section: '" << section.name << "' doesn't fit in RAM" <<
         std::endl;
         return;
-    }
+        }
+
     if (section.flags & SHF_ALLOC) {
         if (section.type == SHT_NOBITS) {
-
+            // Zero-fill sections with no data in file (.bss)
             std::fill_n(
                 ram.begin() + (section.address - Config::RAM_ORIGIN),
                 section.size,
                 0
-                );
+            );
 
             if (section.name == ".bss") {
                 heap_start = section.address + section.size;
                 heap_end = heap_start;
             }
         }
-        else if (section.type == SHT_PROGBITS) {
+        else if (!section.data.empty()) {
+            // Copy any section with data into RAM
+            // (handles .text, .rodata, .data, .init_array, etc.)
             std::copy_n(
                 section.data.begin(),
                 section.size,
                 ram.begin() + (section.address - Config::RAM_ORIGIN)
-                );
+            );
         }
     }
 }
@@ -623,7 +622,9 @@ void RV32::handle_semihosting() {
     const auto operation_number = static_cast<Syscall>(regs.read(Register::a0));
     const uint32_t parameter = regs.read(Register::a1);
 
-    // std::cerr << "[DEBUG]: handle_semihosting() Operation Number: 0x" << std::hex << static_cast<int>(operation_number) << std::endl;
+    if (Config::SYSCALL_DEBUG) {
+        std::cout << std::hex << "[SYSCALL] Nummer: 0x" << static_cast<int>(operation_number) << std::endl;
+    }
 
     switch (operation_number) {
         case Syscall::SYS_EXIT:
@@ -705,7 +706,7 @@ void RV32::handle_semihosting() {
 
 // Helper: Validate file handle
 bool RV32::is_valid_file_handle(uint32_t handle) const {
-    return handle < file_table.size() && file_table.at(handle) != nullptr;
+    return file_table.find(handle) != file_table.end();
 }
 
 // Helper: Check if handle is a standard stream
@@ -839,48 +840,49 @@ void RV32::handle_sys_flen(uint32_t parameter) {
     try {
         const uint32_t handle = read_u32(parameter);
 
-        // Validate handle
-        if (!is_valid_file_handle(handle)) {
-            regs.write(Register::a0, -1);
+        if (Config::SYSCALL_DEBUG) {
+            std::cout << std::dec
+                      << "[DEBUG] handle_sys_flen(): handle given: " << handle
+                      << ", errno: " << internal_errno << std::endl;
+        }
+
+        // Standard streams don't have a length
+        if (is_standard_stream(handle)) {
+            regs.write(Register::a0, static_cast<uint32_t>(-1));
+            // DON'T set errno for standard streams!
+            // The library is just checking if they're seekable
+            // internal_errno = ESPIPE;  // ← REMOVE THIS
+            return;
+        }
+
+        auto it = file_table.find(handle);
+        if (it == file_table.end() || it->second == nullptr) {
+            regs.write(Register::a0, static_cast<uint32_t>(-1));
             internal_errno = EBADF;
             return;
         }
 
-        // Standard streams don't support flen
-        if (is_standard_stream(handle)) {
-            regs.write(Register::a0, -1);
-            // internal_errno = EINVAL;
-            return;
-        }
-
-        // Get file reference (offset by standard streams)
-        const uint32_t file_index = handle - 3;
-        const auto& file = file_table[file_index];
-
         // Save current position
-        const std::streampos current = file->tellg();
-        if (current == std::streampos(-1)) {
-            regs.write(Register::a0, -1);
+        const std::streampos current_pos = it->second->tellg();
+
+        // Seek to end to get file size
+        it->second->seekg(0, std::ios::end);
+        const std::streampos file_size = it->second->tellg();
+
+        // Restore position
+        it->second->seekg(current_pos);
+
+        if (it->second->fail()) {
+            regs.write(Register::a0, static_cast<uint32_t>(-1));
             internal_errno = EIO;
             return;
         }
 
-        // Get file size
-        file->seekg(0, std::ios::end);
-        const std::streampos size = file->tellg();
-        file->seekg(current, std::ios::beg);
-
-        if (size == std::streampos(-1)) {
-            regs.write(Register::a0, -1);
-            internal_errno = EIO;
-            return;
-        }
-
-        regs.write(Register::a0, static_cast<uint32_t>(size));
+        regs.write(Register::a0, static_cast<uint32_t>(file_size));
 
     } catch (const std::exception& e) {
         std::cerr << "[ERROR] SYS_FLEN: " << e.what() << std::endl;
-        regs.write(Register::a0, -1);
+        regs.write(Register::a0, static_cast<uint32_t>(-1));
         internal_errno = EIO;
     }
 }
@@ -925,14 +927,14 @@ void RV32::handle_sys_write(uint32_t parameter) {
 
         // Handle standard streams
         if (is_standard_stream(args->handle)) {
-            if (args->handle == 1) {
+            if (args->handle == 0) {
                 // stdin - write not supported
                 regs.write(Register::a0, -1);
                 internal_errno = EBADF;
                 return;
             }
 
-            std::ostream& stream = (args->handle == 0) ? std::cout : std::cerr;
+            std::ostream& stream = (args->handle == 1) ? std::cout : std::cerr;
             stream.write(reinterpret_cast<const char*>(buffer.data()), args->length);
 
             if (stream.good()) {
@@ -989,7 +991,7 @@ void RV32::handle_sys_open(uint32_t parameter) {
         const std::vector<uint8_t> raw = read_bytes(parameter, sizeof(OpenArgs));
 
         if (raw.size() < sizeof(OpenArgs)) {
-            regs.write(Register::a0, -1);
+            regs.write(Register::a0, static_cast<uint32_t>(-1));
             internal_errno = EINVAL;
             return;
         }
@@ -997,6 +999,33 @@ void RV32::handle_sys_open(uint32_t parameter) {
         const auto* args = reinterpret_cast<const OpenArgs*>(raw.data());
         const std::vector<uint8_t> filename_buffer = read_bytes(args->filename_ptr, args->filename_length + 1);
         const char* filename = reinterpret_cast<const char*>(filename_buffer.data());
+
+        if (Config::SYSCALL_DEBUG) {
+            std::cout << std::dec
+            << "[DEBUG] handle_sys_open(): Trying to open file: " << filename
+            << ", mode: " << args->mode
+            << ", current errno: " << internal_errno << std::endl;
+        }
+
+        if (strcmp(filename, ":tt") == 0) {
+            uint32_t handle;
+
+            // According to spec:
+            // - Read modes (0-3: r, rb, r+, r+b) -> stdin (handle 0)
+            // - Write modes (4-7: w, wb, w+, w+b) -> stdout (handle 1)
+            // - Append modes (8-11: a, ab, a+, a+b) -> stderr (handle 2)
+
+            if (args->mode <= 3) {
+                handle = 0;  // stdin
+            } else if (args->mode <= 7) {
+                handle = 1;  // stdout
+            } else {
+                handle = 2;  // stderr
+            }
+
+            regs.write(Register::a0, handle);
+            return;
+        }
 
         // Map semihosting mode to C++ fstream flags
         std::ios_base::openmode mode;
@@ -1038,7 +1067,7 @@ void RV32::handle_sys_open(uint32_t parameter) {
                 mode = std::ios::in | std::ios::out | std::ios::app | std::ios::binary;
                 break;
             default:
-                regs.write(Register::a0, -1);
+                regs.write(Register::a0, static_cast<uint32_t>(-1));
                 internal_errno = EINVAL;
                 return;
         }
@@ -1046,22 +1075,29 @@ void RV32::handle_sys_open(uint32_t parameter) {
         auto file_handle = std::make_unique<std::fstream>(filename, mode);
 
         if (!file_handle->is_open()) {
-            regs.write(Register::a0, -1);
+            regs.write(Register::a0, static_cast<uint32_t>(-1));
             internal_errno = ENOENT;
             return;
         }
+
         const uint32_t handle = next_handle;
         file_table[handle] = std::move(file_handle);
-        regs.write(Register::a0, handle);
 
-        int next = 3;
+        // Find next available handle
+        uint32_t next = 3;
         for (const auto& [k, v] : file_table) {
-            if (k > next) break;          // found a gap
-            if (k == next) ++next;    // next expected key
+            if (k < 3) continue;  // Skip standard streams
+            if (k >= next) {
+                next = k + 1;
+            }
         }
         next_handle = next;
+
+        regs.write(Register::a0, handle);
+
     } catch (const std::exception& e) {
-        regs.write(Register::a0, -1);
+        std::cerr << "[ERROR] SYS_OPEN: " << e.what() << std::endl;
+        regs.write(Register::a0, static_cast<uint32_t>(-1));
         internal_errno = EIO;
     }
 }
@@ -1069,6 +1105,12 @@ void RV32::handle_sys_open(uint32_t parameter) {
 void RV32::handle_sys_close(uint32_t parameter) {
     try {
         const uint32_t handle = read_u32(parameter);
+
+        if (Config::SYSCALL_DEBUG) {
+            std::cout << std::dec
+            << "[DEBUG] handle_sys_close(): Trying to close handle: " << handle
+            << ", current errno: " << internal_errno << std::endl;
+        }
 
         // Can't close standard streams
         if (is_standard_stream(handle)) {

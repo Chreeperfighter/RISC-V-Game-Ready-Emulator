@@ -1482,8 +1482,11 @@ typedef struct
 // plus a checksum for internal state consistency.
 typedef struct
 {
-    char forwardmove;   // *2048 for move
-    char sidemove;      // *2048 for move
+    // TODO: Original Back / Left movement bugged due to unsigned values
+    // char forwardmove;   // *2048 for move
+    signed char forwardmove;   // *2048 for move
+    // char sidemove;      // *2048 for move
+    signed char sidemove;      // *2048 for move
     short angleturn;    // <<16 for angle delta
     short consistancy;  // checks for net game
     byte chatchar;

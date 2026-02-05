@@ -57,26 +57,32 @@ void ELFLoader::parse_sections() {
     sections.clear();
     for (int i = 0; i < ehdr.e_shnum; i++) {
         const Elf32_Shdr shdr = shdrs[i];
-        if (shdr.sh_type != SHT_PROGBITS && shdr.sh_type != SHT_NOBITS) {
+
+        // Load any section that needs to be allocated in memory
+        if (!(shdr.sh_flags & SHF_ALLOC)) {
             continue;
         }
+
         ELFSection section;
         section.name = &shstrtab[shdr.sh_name];
         section.address = shdr.sh_addr;
         section.size = shdr.sh_size;
         section.type = shdr.sh_type;
         section.flags = shdr.sh_flags;
-        if (shdr.sh_type == SHT_PROGBITS) {
+
+        // Load data for sections with data in the file (not SHT_NOBITS)
+        if (shdr.sh_type != SHT_NOBITS && shdr.sh_size > 0) {
             section.data.resize(shdr.sh_size);
             std::copy_n(
                 elf.data() + shdr.sh_offset,
                 shdr.sh_size,
                 section.data.begin()
-                );
+            );
         }
         else {
             section.data.clear();
         }
+
         sections.push_back(section);
     }
 }

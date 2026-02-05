@@ -3,6 +3,9 @@
 //
 
 #include "Input.hpp"
+
+#include <iostream>
+
 #include "Config.hpp"
 
 bool Input::process_event(const SDL_Event &event) {

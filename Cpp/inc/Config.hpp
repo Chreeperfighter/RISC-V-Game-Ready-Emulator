@@ -17,6 +17,8 @@ namespace Config {
     constexpr uint32_t FB_HEIGHT = 200;
     constexpr uint32_t FB_BPP = 4; // Bytes per pixel
     constexpr uint32_t FB_SIZE = FB_WIDTH * FB_HEIGHT * FB_BPP;
+
+    constexpr bool SYSCALL_DEBUG = false;
 }
 
 #endif //CONFIG_HPP

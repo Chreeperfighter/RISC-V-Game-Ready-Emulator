@@ -1,28 +1,16 @@
 #include <stdio.h>
 
-// Much larger BSS to match Doom's size
-int huge_array[100000];  // 400KB
-static char buffer[50000];
-
 int main() {
-    printf("Testing large BSS...\n");
+    printf("About to call fopen...\n");
+    FILE* f = fopen("/Users/mark.verbeek/Data/Projects/RISC-V-Game-Ready-Emulator/Programs/File/example.txt", "r");
+    printf("fopen returned: %p\n", (void*)f);
 
-    // Check every 1000th element
-    for (int i = 0; i < 100000; i += 1000) {
-        if (huge_array[i] != 0) {
-            printf("FAIL at index %d: value = %d\n", i, huge_array[i]);
-            return 1;
-        }
+    if (f) {
+        printf("File descriptor: %d\n", fileno(f));
     }
 
-    // Check buffer
-    for (int i = 0; i < 50000; i += 1000) {
-        if (buffer[i] != 0) {
-            printf("FAIL at buffer[%d]: value = %d\n", i, buffer[i]);
-            return 1;
-        }
-    }
+    printf("Hello, World!\n");  // Works!
+    fprintf(stderr, "Error!\n"); // Works!
 
-    printf("✓ Large BSS properly zeroed!\n");
     return 0;
 }

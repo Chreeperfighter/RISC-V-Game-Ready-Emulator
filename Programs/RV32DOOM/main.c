@@ -7,66 +7,168 @@
 #include <string.h>
 #include <stdbool.h>
 
-// Resolution DOOM renders at
-#define WIDTH 320
-#define HEIGHT 200
+// ============================================================================
+// CONFIGURATION
+// ============================================================================
 
-// Define Scancodes
-#define KEYBOARD_W 26
-#define KEYBOARD_A 4
-#define KEYBOARD_S 22
-#define KEYBOARD_D 7
-#define KEYBOARD_COMMA 54
-#define KEYBOARD_PERIOD 55
-#define KEYBOARD_ALT 226
-#define KEYBOARD_SHIFT 225
-#define KEYBOARD_CTRL 224
-#define KEYBOARD_SPACE 44
-#define KEYBOARD_ESCAPE 41
+#define DOOM_WIDTH 320
+#define DOOM_HEIGHT 200
+#define TARGET_FPS 35
+#define TARGET_FRAME_US (1000000 / TARGET_FPS)
+#define STUTTER_THRESHOLD_US (2 * TARGET_FRAME_US)
+#define STATS_INTERVAL_US 1000000  // 1 second
 
-// File handle structure for embedded WAD
+// ============================================================================
+// INPUT MAPPING
+// ============================================================================
+
+typedef struct {
+    uint8_t scancode;
+    int doom_key;
+    bool was_down;  // Track previous state for edge detection
+} KeyMapping;
+
+// 1:1 SDL scancode value -> Doom key value
+static KeyMapping key_mappings[] = {
+    // Letters A-Z (SDL 4–29)
+    { 4,  DOOM_KEY_A, false },
+    { 5,  DOOM_KEY_B, false },
+    { 6,  DOOM_KEY_C, false },
+    { 7,  DOOM_KEY_D, false },
+    { 8,  DOOM_KEY_E, false },
+    { 9,  DOOM_KEY_F, false },
+    { 10, DOOM_KEY_G, false },
+    { 11, DOOM_KEY_H, false },
+    { 12, DOOM_KEY_I, false },
+    { 13, DOOM_KEY_J, false },
+    { 14, DOOM_KEY_K, false },
+    { 15, DOOM_KEY_L, false },
+    { 16, DOOM_KEY_M, false },
+    { 17, DOOM_KEY_N, false },
+    { 18, DOOM_KEY_O, false },
+    { 19, DOOM_KEY_P, false },
+    { 20, DOOM_KEY_Q, false },
+    { 21, DOOM_KEY_R, false },
+    { 22, DOOM_KEY_S, false },
+    { 23, DOOM_KEY_T, false },
+    { 24, DOOM_KEY_U, false },
+    { 25, DOOM_KEY_V, false },
+    { 26, DOOM_KEY_W, false },
+    { 27, DOOM_KEY_X, false },
+    // NOTE: switched y and z for german Layout
+    { 28, DOOM_KEY_Z, false },
+    { 29, DOOM_KEY_Y, false },
+
+    // Numbers 0–9 (SDL 30–39)
+    { 30, DOOM_KEY_1, false },
+    { 31, DOOM_KEY_2, false },
+    { 32, DOOM_KEY_3, false },
+    { 33, DOOM_KEY_4, false },
+    { 34, DOOM_KEY_5, false },
+    { 35, DOOM_KEY_6, false },
+    { 36, DOOM_KEY_7, false },
+    { 37, DOOM_KEY_8, false },
+    { 38, DOOM_KEY_9, false },
+    { 39, DOOM_KEY_0, false },
+
+    // Control keys
+    { 40, DOOM_KEY_ENTER, false },
+    { 41, DOOM_KEY_ESCAPE, false },
+    { 42, DOOM_KEY_BACKSPACE, false },
+    { 43, DOOM_KEY_TAB, false },
+    { 44, DOOM_KEY_SPACE, false },
+
+    // Symbols
+    { 45, DOOM_KEY_MINUS, false },
+    { 46, DOOM_KEY_EQUALS, false },
+    { 47, DOOM_KEY_LEFT_BRACKET, false },
+    { 48, DOOM_KEY_RIGHT_BRACKET, false },
+    // backslash has no Doom equivalent → skip
+    { 51, DOOM_KEY_SEMICOLON, false },
+    { 52, DOOM_KEY_APOSTROPHE, false },
+    // grave has no Doom equivalent → skip
+    { 54, DOOM_KEY_COMMA, false },
+    { 55, DOOM_KEY_PERIOD, false },
+    { 56, DOOM_KEY_SLASH, false },
+
+    // Function keys
+    { 58, DOOM_KEY_F1, false },
+    { 59, DOOM_KEY_F2, false },
+    { 60, DOOM_KEY_F3, false },
+    { 61, DOOM_KEY_F4, false },
+    { 62, DOOM_KEY_F5, false },
+    { 63, DOOM_KEY_F6, false },
+    { 64, DOOM_KEY_F7, false },
+    { 65, DOOM_KEY_F8, false },
+    { 66, DOOM_KEY_F9, false },
+    { 67, DOOM_KEY_F10, false },
+    { 68, DOOM_KEY_F11, false },
+    { 69, DOOM_KEY_F12, false },
+
+    // Arrows
+    { 82, DOOM_KEY_UP_ARROW, false },
+    { 81, DOOM_KEY_DOWN_ARROW, false },
+    { 80, DOOM_KEY_LEFT_ARROW, false },
+    { 79, DOOM_KEY_RIGHT_ARROW, false },
+
+    // Modifiers (map both sides to same Doom key)
+    { 224, DOOM_KEY_CTRL, false },
+    { 228, DOOM_KEY_CTRL, false },
+    { 225, DOOM_KEY_SHIFT, false },
+    { 229, DOOM_KEY_SHIFT, false },
+    { 226, DOOM_KEY_ALT, false },
+    { 230, DOOM_KEY_ALT, false },
+
+    // Pause
+    { 72, DOOM_KEY_PAUSE, false },
+};
+
+
+#define NUM_KEY_MAPPINGS (sizeof(key_mappings) / sizeof(key_mappings[0]))
+
+// ============================================================================
+// FILE I/O - Embedded WAD Support
+// ============================================================================
+
 typedef struct {
     const unsigned char* data;
     unsigned int size;
     unsigned int position;
-} embedded_file_t;
+} EmbeddedFile;
 
-static embedded_file_t wad_file = {0};
+static EmbeddedFile g_wad_file = {0};
 
-// Open file - only supports opening the embedded WAD
-static void* open_file(const char* filename, const char* mode) {
-    printf("Trying to open: %s\n", filename);
+static void* embedded_open(const char* filename, const char* mode) {
+    // Only support WAD files
     if (strcmp(filename, "./doom1.wad") != 0) {
         return NULL;
     }
-
-    // Accept any WAD file request and return our embedded one
-    if (strstr(filename, ".wad") != NULL || strstr(filename, ".WAD") != NULL) {
-        printf("Returning doom1.wad (size: %u bytes)\n", DOOM1_WAD_len);
-        wad_file.data = DOOM1_WAD;
-        wad_file.size = DOOM1_WAD_len;
-        wad_file.position = 0;
-        return &wad_file;
+    if (!strstr(filename, ".wad") && !strstr(filename, ".WAD")) {
+        return NULL;
     }
 
-    return NULL;
+    printf("Opening embedded WAD: %s (%u bytes)\n", filename, DOOM1_WAD_len);
+
+    g_wad_file.data = DOOM1_WAD;
+    g_wad_file.size = DOOM1_WAD_len;
+    g_wad_file.position = 0;
+
+    return &g_wad_file;
 }
 
-static void close_file(void* handle) {
+static void embedded_close(void* handle) {
     (void)handle;
 }
 
-static int read_fn(void* handle, void* buf, int count) {
-    embedded_file_t* file = (embedded_file_t*)handle;
+static int embedded_read(void* handle, void* buf, int count) {
+    EmbeddedFile* file = (EmbeddedFile*)handle;
 
-    if (file->position >= file->size) {
+    if (!file || file->position >= file->size) {
         return 0;
     }
 
-    int bytes_to_read = count;
-    if (file->position + bytes_to_read > file->size) {
-        bytes_to_read = file->size - file->position;
-    }
+    int bytes_available = file->size - file->position;
+    int bytes_to_read = (count < bytes_available) ? count : bytes_available;
 
     memcpy(buf, file->data + file->position, bytes_to_read);
     file->position += bytes_to_read;
@@ -74,15 +176,15 @@ static int read_fn(void* handle, void* buf, int count) {
     return bytes_to_read;
 }
 
-static int write_fn(void* handle, const void* buf, int count) {
+static int embedded_write(void* handle, const void* buf, int count) {
     (void)handle;
     (void)buf;
     (void)count;
     return 0;
 }
 
-static int seek_fn(void* handle, int offset, doom_seek_t origin) {
-    embedded_file_t* file = (embedded_file_t*)handle;
+static int embedded_seek(void* handle, int offset, doom_seek_t origin) {
+    EmbeddedFile* file = (EmbeddedFile*)handle;
     int new_position;
 
     switch (origin) {
@@ -107,145 +209,247 @@ static int seek_fn(void* handle, int offset, doom_seek_t origin) {
     return 0;
 }
 
-static int tell_fn(void* handle) {
-    embedded_file_t* file = (embedded_file_t*)handle;
-    return file->position;
+static int embedded_tell(void* handle) {
+    EmbeddedFile* file = (EmbeddedFile*)handle;
+    return file ? file->position : -1;
 }
 
-static int eof_fn(void* handle) {
-    embedded_file_t* file = (embedded_file_t*)handle;
-    return (file->position >= file->size) ? 1 : 0;
+static int embedded_eof(void* handle) {
+    EmbeddedFile* file = (EmbeddedFile*)handle;
+    return (file && file->position >= file->size) ? 1 : 0;
 }
 
-void get_time(int* sec, int* usec) {
-    static int32_t start_us = 0;
-    static int last_tics = 0;
+// ============================================================================
+// TIMING
+// ============================================================================
 
+typedef struct {
+    int32_t start_us;
+    int last_tics;
+} TimeState;
+
+static TimeState g_time_state = {0};
+
+static void doom_get_time(int* sec, int* usec) {
     int32_t now;
     sys_get_us(&now);
 
-    if (start_us == 0)
-        start_us = now;
+    if (g_time_state.start_us == 0) {
+        g_time_state.start_us = now;
+    }
 
-    int32_t elapsed_us = now - start_us;
+    int32_t elapsed_us = now - g_time_state.start_us;
 
-    // Convert to Doom tics (35 Hz)
-    int tics = (int)(elapsed_us / 28571); // 1e6 / 35 ≈ 28571 us
+    // Convert to DOOM tics (35 Hz = 28571 us per tic)
+    int tics = elapsed_us / TARGET_FRAME_US;
 
-    // Clamp catch-up to avoid multi-hundred-ms stalls
-    if (tics > last_tics + 2)
-        tics = last_tics + 2;
+    // Prevent excessive catch-up (max 2 tics per frame)
+    if (tics > g_time_state.last_tics + 2) {
+        tics = g_time_state.last_tics + 2;
+    }
 
-    last_tics = tics;
+    g_time_state.last_tics = tics;
 
-    int32_t time_us = (int32_t)tics * 28571;
-
-    *sec  = (int)(time_us / 1000000);
-    *usec = (int)(time_us % 1000000);
+    int32_t time_us = tics * TARGET_FRAME_US;
+    *sec = time_us / 1000000;
+    *usec = time_us % 1000000;
 }
 
-
-static inline int32_t now_us(void) {
+static inline int32_t get_time_us(void) {
     int32_t t;
     sys_get_us(&t);
     return t;
 }
 
-int main(int argc, char** argv)
-{
-    char* dummy_argv[] = {
+// ============================================================================
+// INPUT HANDLING - EVENT-BASED
+// ============================================================================
+
+static void process_input(void) {
+    for (size_t i = 0; i < NUM_KEY_MAPPINGS; i++) {
+        bool is_down = is_key_down(key_mappings[i].scancode);
+        bool was_down = key_mappings[i].was_down;
+
+        // Detect key press (transition from up to down)
+        if (is_down && !was_down) {
+            doom_key_down(key_mappings[i].doom_key);
+        }
+        // Detect key release (transition from down to up)
+        else if (!is_down && was_down) {
+            doom_key_up(key_mappings[i].doom_key);
+        }
+
+        // Update state for next frame
+        key_mappings[i].was_down = is_down;
+    }
+}
+
+// ============================================================================
+// PERFORMANCE MONITORING
+// ============================================================================
+
+typedef struct {
+    int32_t update_us;
+    int32_t blit_us;
+    int32_t total_us;
+} FrameTiming;
+
+typedef struct {
+    int frame_count;
+    int32_t timer_start;
+    int32_t worst_frame_us;
+} PerformanceStats;
+
+static PerformanceStats g_perf_stats = {0};
+
+static void check_for_stutter(const FrameTiming* timing) {
+    if (timing->total_us > STUTTER_THRESHOLD_US) {
+        printf("[STUTTER] frame=%.2f ms  update=%.2f ms  blit=%.2f ms\n",
+               timing->total_us / 1000.0,
+               timing->update_us / 1000.0,
+               timing->blit_us / 1000.0);
+    }
+}
+
+static void update_performance_stats(const FrameTiming* timing) {
+    g_perf_stats.frame_count++;
+
+    if (timing->total_us > g_perf_stats.worst_frame_us) {
+        g_perf_stats.worst_frame_us = timing->total_us;
+    }
+
+    int32_t now = get_time_us();
+    int32_t elapsed = now - g_perf_stats.timer_start;
+
+    if (elapsed >= STATS_INTERVAL_US) {
+        double fps = (double)g_perf_stats.frame_count * 1000000.0 / elapsed;
+        double avg_frame_ms = (double)elapsed / g_perf_stats.frame_count / 1000.0;
+        double worst_frame_ms = (double)g_perf_stats.worst_frame_us / 1000.0;
+
+        printf("[STATS] FPS=%.2f  avg_frame=%.2f ms  worst_frame=%.2f ms\n",
+               fps, avg_frame_ms, worst_frame_ms);
+
+        // Reset stats
+        g_perf_stats.timer_start = now;
+        g_perf_stats.frame_count = 0;
+        g_perf_stats.worst_frame_us = 0;
+    }
+}
+
+// ============================================================================
+// FRAME RATE LIMITING
+// ============================================================================
+
+typedef struct {
+    int64_t next_frame_time;
+} FrameRateLimiter;
+
+static FrameRateLimiter g_limiter = {0};
+
+static void limit_frame_rate(void) {
+    int32_t now = get_time_us();
+    int32_t sleep_us = g_limiter.next_frame_time - now;
+
+    if (sleep_us > 0) {
+        sys_sleep_us(sleep_us);
+        g_limiter.next_frame_time += TARGET_FRAME_US;
+    } else {
+        // Running behind - resync to current time
+        g_limiter.next_frame_time = now + TARGET_FRAME_US;
+    }
+}
+
+// ============================================================================
+// INITIALIZATION
+// ============================================================================
+
+static void initialize_doom(void) {
+    // Default command line: start at E1M1
+    char* argv[] = {
         "doom",
-        "-warp", "1", "1",
-        "-playdemo",
         NULL
     };
-    int dummy_argc = 5;
+    int argc = 1;
 
-    doom_set_resolution(WIDTH, HEIGHT);
-    doom_set_file_io(open_file, close_file, read_fn, write_fn, seek_fn, tell_fn, eof_fn);
-    doom_set_gettime(get_time);
-    doom_init(dummy_argc, dummy_argv, 0);
+    doom_set_resolution(DOOM_WIDTH, DOOM_HEIGHT);
+    doom_set_file_io(
+        embedded_open,
+        embedded_close,
+        embedded_read,
+        embedded_write,
+        embedded_seek,
+        embedded_tell,
+        embedded_eof
+    );
+    doom_set_gettime(doom_get_time);
+    doom_init(argc, argv, 0);
 
-    const int32_t TARGET_FRAME_US = 1000000 / 35;   // ~28571 us
-    const int32_t STUTTER_THRESHOLD_US = 2 * TARGET_FRAME_US; // mark big spikes
+    printf("DOOM initialized: %dx%d @ %d FPS\n", DOOM_WIDTH, DOOM_HEIGHT, TARGET_FPS);
+}
 
-    int frame_count = 0;
-    int32_t fps_timer = now_us();
-    int64_t next_frame_time = now_us();
-    int32_t worst_frame = 0;
+static void initialize_performance_tracking(void) {
+    g_perf_stats.timer_start = get_time_us();
+    g_limiter.next_frame_time = get_time_us();
+}
 
+// ============================================================================
+// MAIN GAME LOOP
+// ============================================================================
+
+static void run_game_loop(void) {
     while (1) {
-        int32_t t_frame_start = now_us();
+        int32_t frame_start = get_time_us();
+        FrameTiming timing = {0};
 
-        // ---- input ----
-        is_key_down(KEYBOARD_W) ? doom_key_down(DOOM_KEY_UP_ARROW) : doom_key_up(DOOM_KEY_UP_ARROW);
-        is_key_down(KEYBOARD_S) ? doom_key_down(DOOM_KEY_DOWN_ARROW) : doom_key_up(DOOM_KEY_DOWN_ARROW);
-        is_key_down(KEYBOARD_A) ? doom_key_down(DOOM_KEY_LEFT_ARROW) : doom_key_up(DOOM_KEY_LEFT_ARROW);
-        is_key_down(KEYBOARD_D) ? doom_key_down(DOOM_KEY_RIGHT_ARROW) : doom_key_up(DOOM_KEY_RIGHT_ARROW);
-        is_key_down(KEYBOARD_COMMA) ? doom_key_down(DOOM_KEY_COMMA) : doom_key_up(DOOM_KEY_COMMA);
-        is_key_down(KEYBOARD_PERIOD) ? doom_key_down(DOOM_KEY_PERIOD) : doom_key_up(DOOM_KEY_PERIOD);
-        is_key_down(KEYBOARD_ALT) ? doom_key_down(DOOM_KEY_ALT) : doom_key_up(DOOM_KEY_ALT);
-        is_key_down(KEYBOARD_SHIFT) ? doom_key_down(DOOM_KEY_SHIFT) : doom_key_up(DOOM_KEY_SHIFT);
-        is_key_down(KEYBOARD_CTRL) ? doom_key_down(DOOM_KEY_CTRL) : doom_key_up(DOOM_KEY_CTRL);
-        is_key_down(KEYBOARD_SPACE) ? doom_key_down(DOOM_KEY_SPACE) : doom_key_up(DOOM_KEY_SPACE);
-        is_key_down(KEYBOARD_ESCAPE) ? doom_key_down(DOOM_KEY_ESCAPE) : doom_key_up(DOOM_KEY_ESCAPE);
+        // Process input
+        process_input();
 
-        // ---- doom update ----
-        int32_t t_update_start = now_us();
+        // Update game logic
+        int32_t update_start = get_time_us();
         doom_update();
-        int32_t t_update_end = now_us();
+        timing.update_us = get_time_us() - update_start;
 
-        // ---- blit ----
+        // Render to screen
         uint8_t* framebuffer = doom_get_framebuffer(4);
-        int32_t t_blit_start = now_us();
+        int32_t blit_start = get_time_us();
         sys_show_framebuffer(framebuffer);
-        int32_t t_blit_end = now_us();
+        timing.blit_us = get_time_us() - blit_start;
 
-        // ---- timing ----
-        int32_t t_frame_end = now_us();
+        // Calculate frame timing
+        timing.total_us = get_time_us() - frame_start;
 
-        int32_t update_us = t_update_end - t_update_start;
-        int32_t blit_us   = t_blit_end   - t_blit_start;
-        int32_t frame_us  = t_frame_end  - t_frame_start;
+        // Performance monitoring
+        check_for_stutter(&timing);
+        update_performance_stats(&timing);
 
-        if (frame_us > worst_frame)
-            worst_frame = frame_us;
-
-        frame_count++;
-
-        // ---- periodic stats (once per second) ----
-        if (t_frame_end - fps_timer >= 1000000) {
-            double fps = (double)frame_count * 1000000.0 / (double)(t_frame_end - fps_timer);
-
-            printf("[STATS] FPS=%.2f  avg_frame=%.2f ms  worst_frame=%.2f ms\n",
-                   fps,
-                   (double)(t_frame_end - fps_timer) / frame_count / 1000.0,
-                   (double)worst_frame / 1000.0);
-
-            fps_timer = t_frame_end;
-            frame_count = 0;
-            worst_frame = 0;
-        }
-
-        // ---- stutter detection ----
-        if (frame_us > STUTTER_THRESHOLD_US) {
-            printf("[STUTTER] frame=%.2f ms  update=%.2f ms  blit=%.2f ms\n",
-                   (double)frame_us / 1000.0,
-                   (double)update_us / 1000.0,
-                   (double)blit_us / 1000.0);
-        }
-
-        next_frame_time += TARGET_FRAME_US;
-
-        int32_t now = now_us();
-        int32_t sleep_us = next_frame_time - now;
-
-        if (sleep_us > 0) {
-            sys_sleep_us(sleep_us);
-        } else {
-            // We’re late; resync to avoid accumulating lag
-            next_frame_time = now;
-        }
-
+        // Maintain target frame rate
+        limit_frame_rate();
     }
+}
+
+static void init_layout() {
+    doom_set_default_int("key_up", DOOM_KEY_W);
+    doom_set_default_int("key_down", DOOM_KEY_S);
+    doom_set_default_int("key_left", DOOM_KEY_LEFT_ARROW);
+    doom_set_default_int("Key_right", DOOM_KEY_RIGHT_ARROW);
+    doom_set_default_int("key_strafeleft", DOOM_KEY_A);
+    doom_set_default_int("key_straferight", DOOM_KEY_D);
+    doom_set_default_int("key_fire", DOOM_KEY_F);
+    doom_set_default_int("key_use", DOOM_KEY_E);
+}
+
+// ============================================================================
+// ENTRY POINT
+// ============================================================================
+
+int main(int argc, char** argv) {
+    (void)argc;
+    (void)argv;
+
+    init_layout();
+    initialize_doom();
+    initialize_performance_tracking();
+    run_game_loop();
+
+    return 0;
 }
