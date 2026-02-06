@@ -15,6 +15,7 @@
 #include "ISA.hpp"
 #include "Registers.hpp"
 #include "ELFLoader.hpp"
+#include "FileHandle.hpp"
 
 struct DecodedInstruction {
   	Opcode opcode;
@@ -37,7 +38,7 @@ struct DecodedInstruction {
 
 class RV32 {
 public:
-    RV32(bool randomizeRegs, bool randomizeMemory);
+    RV32(bool randomizeRegs, bool randomizeMemory, std::string base_dir);
     void step();
 	void load_section(const ELFSection &section);
 	void set_entry(uint32_t entry);
@@ -120,6 +121,9 @@ private:
     void handle_sys_write(uint32_t parameter);
     void handle_sys_open(uint32_t parameter);
     void handle_sys_close(uint32_t parameter);
+	void handle_sys_seek(uint32_t parameter);
+	void handle_sys_read(uint32_t parameter);
+	void handle_sys_write0(uint32_t parameter);
 	static int32_t sign_extend(uint32_t value, unsigned int fromBits);
 	void print_inst(DecodedInstruction inst) const;
 	template<typename T>
@@ -127,8 +131,6 @@ private:
 	template<typename T>
 	void write_value(uint32_t address, T value);
 	void handle_semihosting();
-
-    bool is_valid_file_handle(uint32_t handle) const;
 
     bool is_queue_empty() const {
 		std::lock_guard<std::mutex> lock(queue_mtx);
@@ -165,13 +167,8 @@ private:
 	int32_t mouse_pos_y = 0;
 	int semihosting_step = 0;
 	bool semihosting_instruction = false;
-	// 0: stdout
-	// 1: stdin
-	// 2: stderr
-	std::map<uint32_t, std::unique_ptr<std::fstream>> file_table{};
-	int internal_errno = 0;
-	// start after stdout, stdin, stderr
-	int next_handle = 3;
+
+	FileHandleTable* fht;
 };
 
 

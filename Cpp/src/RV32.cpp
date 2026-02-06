@@ -14,20 +14,17 @@
 #include <thread>
 #include <fstream>
 
-RV32::RV32(const bool randomizeRegs, const bool randomizeMemory) : rng(std::random_device{}()), pc(0),
+RV32::RV32(bool randomizeRegs, bool randomizeMemory, std::string base_dir) : rng(std::random_device{}()), pc(0),
                                                                    update_pc(true),
                                                                    ram(Config::RAM_SIZE, 0),
                                                                    transfer_buffer(Config::FB_SIZE) {
+    fht = new FileHandleTable(base_dir);
     init_regs(randomizeRegs);
     if (randomizeMemory) {
         for (auto &byte: ram) {
             byte = static_cast<uint8_t>(rng());
         }
     }
-    file_table[0] = nullptr;  // stdout - not implemented yet
-    file_table[1] = nullptr;  // stdin - not implemented yet
-    file_table[2] = nullptr;  // stderr - not implemented yet
-    next_handle = 3;
 }
 
 void RV32::print_inst(DecodedInstruction inst) const {
@@ -688,30 +685,32 @@ void RV32::handle_semihosting() {
             break;
 
         case Syscall::SYS_ERRNO:
-            regs.write(Register::a0, internal_errno);
+            regs.write(Register::a0, errno);
             break;
 
         case Syscall::SYS_CLOSE:
             handle_sys_close(parameter);
             break;
 
+        case Syscall::SYS_SEEK:
+            handle_sys_seek(parameter);
+            break;
+
+        case Syscall::SYS_READ:
+            handle_sys_read(parameter);
+            break;
+
+        case Syscall::SYS_WRITE0:
+            handle_sys_write0(parameter);
+            break;
+
         default:
             std::cerr << "[ERROR] Unknown syscall: 0x" << std::hex
                       << static_cast<int>(operation_number) << std::dec << std::endl;
             regs.write(Register::a0, -1);
-            internal_errno = ENOSYS;
+            errno = ENOSYS;
             break;
     }
-}
-
-// Helper: Validate file handle
-bool RV32::is_valid_file_handle(uint32_t handle) const {
-    return file_table.find(handle) != file_table.end();
-}
-
-// Helper: Check if handle is a standard stream
-bool is_standard_stream(uint32_t handle) {
-    return handle <= 2;
 }
 
 void RV32::handle_sys_exit(uint32_t exit_code) const {
@@ -837,72 +836,12 @@ void RV32::handle_sys_exit_extended(const uint32_t parameter) const {
 }
 
 void RV32::handle_sys_flen(uint32_t parameter) {
-    try {
-        const uint32_t handle = read_u32(parameter);
-
-        if (Config::SYSCALL_DEBUG) {
-            std::cout << std::dec
-                      << "[DEBUG] handle_sys_flen(): handle given: " << handle
-                      << ", errno: " << internal_errno << std::endl;
-        }
-
-        // Standard streams don't have a length
-        if (is_standard_stream(handle)) {
-            regs.write(Register::a0, static_cast<uint32_t>(-1));
-            // DON'T set errno for standard streams!
-            // The library is just checking if they're seekable
-            // internal_errno = ESPIPE;  // ← REMOVE THIS
-            return;
-        }
-
-        auto it = file_table.find(handle);
-        if (it == file_table.end() || it->second == nullptr) {
-            regs.write(Register::a0, static_cast<uint32_t>(-1));
-            internal_errno = EBADF;
-            return;
-        }
-
-        // Save current position
-        const std::streampos current_pos = it->second->tellg();
-
-        // Seek to end to get file size
-        it->second->seekg(0, std::ios::end);
-        const std::streampos file_size = it->second->tellg();
-
-        // Restore position
-        it->second->seekg(current_pos);
-
-        if (it->second->fail()) {
-            regs.write(Register::a0, static_cast<uint32_t>(-1));
-            internal_errno = EIO;
-            return;
-        }
-
-        regs.write(Register::a0, static_cast<uint32_t>(file_size));
-
-    } catch (const std::exception& e) {
-        std::cerr << "[ERROR] SYS_FLEN: " << e.what() << std::endl;
-        regs.write(Register::a0, static_cast<uint32_t>(-1));
-        internal_errno = EIO;
-    }
+    const uint32_t handle = read_u32(parameter);
+    ssize_t length = fht->getLength(handle);
+    regs.write(Register::a0, length);
 }
 
 void RV32::handle_sys_istty(uint32_t parameter) {
-    try {
-        const uint32_t handle = read_u32(parameter);
-
-        if (handle >= file_table.size()) {
-            regs.write(Register::a0, 0);
-            return;
-        }
-
-        const bool is_tty = is_standard_stream(handle);
-        regs.write(Register::a0, is_tty ? 1 : 0);
-
-    } catch (const std::exception& e) {
-        std::cerr << "[ERROR] SYS_ISTTY: " << e.what() << std::endl;
-        regs.write(Register::a0, 0);
-    }
 }
 
 void RV32::handle_sys_write(uint32_t parameter) {
@@ -911,73 +850,19 @@ void RV32::handle_sys_write(uint32_t parameter) {
         uint32_t buffer_ptr;
         uint32_t length;
     };
+    const std::vector<uint8_t> raw = read_bytes(parameter, sizeof(WriteArgs));
 
-    try {
-        const std::vector<uint8_t> raw = read_bytes(parameter, sizeof(WriteArgs));
-
-        if (raw.size() < sizeof(WriteArgs)) {
-            std::cerr << "[ERROR] SYS_WRITE: Invalid parameter block" << std::endl;
-            regs.write(Register::a0, -1);
-            internal_errno = EINVAL;
-            return;
-        }
-
-        const auto* args = reinterpret_cast<const WriteArgs*>(raw.data());
-        const std::vector<uint8_t> buffer = read_bytes(args->buffer_ptr, args->length);
-
-        // Handle standard streams
-        if (is_standard_stream(args->handle)) {
-            if (args->handle == 0) {
-                // stdin - write not supported
-                regs.write(Register::a0, -1);
-                internal_errno = EBADF;
-                return;
-            }
-
-            std::ostream& stream = (args->handle == 1) ? std::cout : std::cerr;
-            stream.write(reinterpret_cast<const char*>(buffer.data()), args->length);
-
-            if (stream.good()) {
-                regs.write(Register::a0, 0);  // Success
-            } else {
-                regs.write(Register::a0, args->length);  // Bytes not written
-                internal_errno = EIO;
-            }
-            return;
-        }
-
-        // Handle file writes
-        const uint32_t file_index = args->handle - 3;
-
-        if (!is_valid_file_handle(file_index)) {
-            regs.write(Register::a0, args->length);
-            internal_errno = EBADF;
-            return;
-        }
-
-        auto& file = file_table[file_index];
-        const std::streampos before = file->tellp();
-
-        file->write(reinterpret_cast<const char*>(buffer.data()), args->length);
-
-        const std::streampos after = file->tellp();
-        const size_t written = (file->good() || file->eof())
-            ? static_cast<size_t>(after - before)
-            : 0;
-
-        // Return number of bytes NOT written (0 = success)
-        const uint32_t not_written = args->length - written;
-        regs.write(Register::a0, not_written);
-
-        if (not_written > 0) {
-            internal_errno = EIO;
-        }
-
-    } catch (const std::exception& e) {
-        std::cerr << "[ERROR] SYS_WRITE: " << e.what() << std::endl;
+    if (raw.size() < sizeof(WriteArgs)) {
+        std::cerr << "[ERROR] SYS_WRITE: Invalid parameter block" << std::endl;
         regs.write(Register::a0, -1);
-        internal_errno = EIO;
+        errno = EINVAL;
+        return;
     }
+
+    const auto* args = reinterpret_cast<const WriteArgs*>(raw.data());
+    const std::vector<uint8_t> buffer = read_bytes(args->buffer_ptr, args->length);
+    fht->write(args->handle, reinterpret_cast<const char *>(buffer.data()), buffer.size());
+    regs.write(Register::a0, 0);
 }
 
 void RV32::handle_sys_open(uint32_t parameter) {
@@ -987,153 +872,145 @@ void RV32::handle_sys_open(uint32_t parameter) {
         uint32_t filename_length;
     };
 
-    try {
-        const std::vector<uint8_t> raw = read_bytes(parameter, sizeof(OpenArgs));
+    const std::vector<uint8_t> raw = read_bytes(parameter, sizeof(OpenArgs));
 
-        if (raw.size() < sizeof(OpenArgs)) {
-            regs.write(Register::a0, static_cast<uint32_t>(-1));
-            internal_errno = EINVAL;
-            return;
-        }
-
-        const auto* args = reinterpret_cast<const OpenArgs*>(raw.data());
-        const std::vector<uint8_t> filename_buffer = read_bytes(args->filename_ptr, args->filename_length + 1);
-        const char* filename = reinterpret_cast<const char*>(filename_buffer.data());
-
-        if (Config::SYSCALL_DEBUG) {
-            std::cout << std::dec
-            << "[DEBUG] handle_sys_open(): Trying to open file: " << filename
-            << ", mode: " << args->mode
-            << ", current errno: " << internal_errno << std::endl;
-        }
-
-        if (strcmp(filename, ":tt") == 0) {
-            uint32_t handle;
-
-            // According to spec:
-            // - Read modes (0-3: r, rb, r+, r+b) -> stdin (handle 0)
-            // - Write modes (4-7: w, wb, w+, w+b) -> stdout (handle 1)
-            // - Append modes (8-11: a, ab, a+, a+b) -> stderr (handle 2)
-
-            if (args->mode <= 3) {
-                handle = 0;  // stdin
-            } else if (args->mode <= 7) {
-                handle = 1;  // stdout
-            } else {
-                handle = 2;  // stderr
-            }
-
-            regs.write(Register::a0, handle);
-            return;
-        }
-
-        // Map semihosting mode to C++ fstream flags
-        std::ios_base::openmode mode;
-        switch (args->mode) {
-            case 0:  // "r"
-                mode = std::ios::in;
-                break;
-            case 1:  // "rb"
-                mode = std::ios::in | std::ios::binary;
-                break;
-            case 2:  // "r+"
-                mode = std::ios::in | std::ios::out;
-                break;
-            case 3:  // "r+b"
-                mode = std::ios::in | std::ios::out | std::ios::binary;
-                break;
-            case 4:  // "w"
-                mode = std::ios::out | std::ios::trunc;
-                break;
-            case 5:  // "wb"
-                mode = std::ios::out | std::ios::trunc | std::ios::binary;
-                break;
-            case 6:  // "w+"
-                mode = std::ios::in | std::ios::out | std::ios::trunc;
-                break;
-            case 7:  // "w+b"
-                mode = std::ios::in | std::ios::out | std::ios::trunc | std::ios::binary;
-                break;
-            case 8:  // "a"
-                mode = std::ios::out | std::ios::app;
-                break;
-            case 9:  // "ab"
-                mode = std::ios::out | std::ios::app | std::ios::binary;
-                break;
-            case 10: // "a+"
-                mode = std::ios::in | std::ios::out | std::ios::app;
-                break;
-            case 11: // "a+b"
-                mode = std::ios::in | std::ios::out | std::ios::app | std::ios::binary;
-                break;
-            default:
-                regs.write(Register::a0, static_cast<uint32_t>(-1));
-                internal_errno = EINVAL;
-                return;
-        }
-
-        auto file_handle = std::make_unique<std::fstream>(filename, mode);
-
-        if (!file_handle->is_open()) {
-            regs.write(Register::a0, static_cast<uint32_t>(-1));
-            internal_errno = ENOENT;
-            return;
-        }
-
-        const uint32_t handle = next_handle;
-        file_table[handle] = std::move(file_handle);
-
-        // Find next available handle
-        uint32_t next = 3;
-        for (const auto& [k, v] : file_table) {
-            if (k < 3) continue;  // Skip standard streams
-            if (k >= next) {
-                next = k + 1;
-            }
-        }
-        next_handle = next;
-
-        regs.write(Register::a0, handle);
-
-    } catch (const std::exception& e) {
-        std::cerr << "[ERROR] SYS_OPEN: " << e.what() << std::endl;
-        regs.write(Register::a0, static_cast<uint32_t>(-1));
-        internal_errno = EIO;
+    if (raw.size() < sizeof(OpenArgs)) {
+        regs.write(Register::a0, -1);
+        errno = EINVAL;
+        return;
     }
+
+    const auto* args = reinterpret_cast<const OpenArgs*>(raw.data());
+    const std::vector<uint8_t> filename_buffer = read_bytes(args->filename_ptr, args->filename_length + 1);
+    const char* filename = reinterpret_cast<const char*>(filename_buffer.data());
+
+    // Map semihosting mode to C++ fstream flags
+    std::ios_base::openmode mode;
+    switch (args->mode) {
+        case 0:  // "r"
+            mode = std::ios::in;
+            break;
+        case 1:  // "rb"
+            mode = std::ios::in | std::ios::binary;
+            break;
+        case 2:  // "r+"
+            mode = std::ios::in | std::ios::out;
+            break;
+        case 3:  // "r+b"
+            mode = std::ios::in | std::ios::out | std::ios::binary;
+            break;
+        case 4:  // "w"
+            mode = std::ios::out | std::ios::trunc;
+            break;
+        case 5:  // "wb"
+            mode = std::ios::out | std::ios::trunc | std::ios::binary;
+            break;
+        case 6:  // "w+"
+            mode = std::ios::in | std::ios::out | std::ios::trunc;
+            break;
+        case 7:  // "w+b"
+            mode = std::ios::in | std::ios::out | std::ios::trunc | std::ios::binary;
+            break;
+        case 8:  // "a"
+            mode = std::ios::out | std::ios::app;
+            break;
+        case 9:  // "ab"
+            mode = std::ios::out | std::ios::app | std::ios::binary;
+            break;
+        case 10: // "a+"
+            mode = std::ios::in | std::ios::out | std::ios::app;
+            break;
+        case 11: // "a+b"
+            mode = std::ios::in | std::ios::out | std::ios::app | std::ios::binary;
+            break;
+        default:
+            regs.write(Register::a0, static_cast<uint32_t>(-1));
+            errno = EINVAL;
+            return;
+    }
+
+    int handle = fht->open(filename, mode);
+
+    regs.write(Register::a0, handle);
 }
 
 void RV32::handle_sys_close(uint32_t parameter) {
-    try {
-        const uint32_t handle = read_u32(parameter);
+    const uint32_t handle = read_u32(parameter);
+    fht->close(handle);
+    regs.write(Register::a0, 0);
+}
 
-        if (Config::SYSCALL_DEBUG) {
-            std::cout << std::dec
-            << "[DEBUG] handle_sys_close(): Trying to close handle: " << handle
-            << ", current errno: " << internal_errno << std::endl;
-        }
+void RV32::handle_sys_seek(uint32_t parameter) {
+    struct SeekArgs {
+        uint32_t handle;
+        uint32_t abs_position;
+    };
+    const std::vector<uint8_t> raw = read_bytes(parameter, sizeof(SeekArgs));
 
-        // Can't close standard streams
-        if (is_standard_stream(handle)) {
-            regs.write(Register::a0, 0);
-            return;
-        }
-
-        auto file = std::move(file_table.at(handle));
-
-        if (file != nullptr) {
-            file->close();
-            next_handle = static_cast<uint32_t>(handle);
-            regs.write(Register::a0, 0);
-        } else {
-            regs.write(Register::a0, -1);
-            internal_errno = EBADF;
-        }
-
-    } catch (const std::exception& e) {
-        std::cerr << "[ERROR] SYS_CLOSE: " << e.what() << std::endl;
+    if (raw.size() < sizeof(SeekArgs)) {
         regs.write(Register::a0, -1);
-        internal_errno = EIO;
+        errno = EINVAL;
+        return;
     }
+    const auto* args = reinterpret_cast<const SeekArgs*>(raw.data());
+
+    // std::cerr << "[DEBUG] sys_seek(): Seeking to position: " << args->abs_position << " on handle: " << args->handle << std::endl;
+
+    if (fht->seek(args->handle, args->abs_position) != -1) {
+        regs.write(Register::a0, 0);
+        return;
+    }
+    regs.write(Register::a0, -1);
+}
+
+void RV32::handle_sys_read(uint32_t parameter) {
+    struct ReadArgs {
+        uint32_t handle;
+        uint32_t buffer_ptr;
+        uint32_t count;
+    };
+    const std::vector<uint8_t> raw = read_bytes(parameter, sizeof(ReadArgs));
+
+    if (raw.size() < sizeof(ReadArgs)) {
+        regs.write(Register::a0, -1);
+        errno = EINVAL;
+        return;
+    }
+
+    const auto* args = reinterpret_cast<const ReadArgs*>(raw.data());
+
+    // Allocate a host buffer to read into
+    std::vector<uint8_t> host_buffer(args->count);
+
+    // Read into the host buffer
+    ssize_t bytes_read = fht->read(args->handle, reinterpret_cast<char *>(host_buffer.data()), args->count);
+
+    if (bytes_read == -1) {
+        // Error occurred, errno is already set by fht->read()
+        regs.write(Register::a0, -1);
+        return;
+    }
+
+
+
+    // Write the data from host buffer to emulated memory
+    write_bytes(args->buffer_ptr, host_buffer);
+
+    uint32_t bytes_not_read = args->count - bytes_read;
+    regs.write(Register::a0, bytes_not_read);
+}
+
+void RV32::handle_sys_write0(uint32_t parameter) {
+    uint32_t ptr = parameter;
+
+    while (true) {
+        uint8_t c = read_u8(ptr);
+        if (c == 0) break;
+        std::cout.put(static_cast<char>(c));
+        ptr++;
+    }
+
+    std::cout.flush(); // optional, depends on how "debug channel" is modeled
 }
 
 

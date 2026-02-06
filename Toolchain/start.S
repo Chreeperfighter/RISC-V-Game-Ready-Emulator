@@ -16,6 +16,9 @@ _start:
     la gp, __global_pointer$
     .option pop
 
+    # Initialize semihosting BEFORE __libc_init_array
+    # call init_semihosting
+
     # --- Call global constructors ---
     call __libc_init_array
 

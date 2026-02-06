@@ -1,8 +1,8 @@
 #define DOOM_IMPLEMENTATION
 #include "PureDOOM.h"
 #include "syscalls.h"
-#include "doom1_wad.h"
 
+#include <stdio.h>
 #include <stdint.h>
 #include <string.h>
 #include <stdbool.h>
@@ -130,94 +130,34 @@ static KeyMapping key_mappings[] = {
 // FILE I/O - Embedded WAD Support
 // ============================================================================
 
-typedef struct {
-    const unsigned char* data;
-    unsigned int size;
-    unsigned int position;
-} EmbeddedFile;
-
-static EmbeddedFile g_wad_file = {0};
-
 static void* embedded_open(const char* filename, const char* mode) {
-    // Only support WAD files
-    if (strcmp(filename, "./doom1.wad") != 0) {
-        return NULL;
-    }
-    if (!strstr(filename, ".wad") && !strstr(filename, ".WAD")) {
-        return NULL;
-    }
-
-    printf("Opening embedded WAD: %s (%u bytes)\n", filename, DOOM1_WAD_len);
-
-    g_wad_file.data = DOOM1_WAD;
-    g_wad_file.size = DOOM1_WAD_len;
-    g_wad_file.position = 0;
-
-    return &g_wad_file;
+    return (void*)fopen(filename, mode);
 }
 
 static void embedded_close(void* handle) {
-    (void)handle;
+    fclose((FILE*)handle);
 }
 
 static int embedded_read(void* handle, void* buf, int count) {
-    EmbeddedFile* file = (EmbeddedFile*)handle;
-
-    if (!file || file->position >= file->size) {
-        return 0;
-    }
-
-    int bytes_available = file->size - file->position;
-    int bytes_to_read = (count < bytes_available) ? count : bytes_available;
-
-    memcpy(buf, file->data + file->position, bytes_to_read);
-    file->position += bytes_to_read;
-
-    return bytes_to_read;
+    return (int)fread(buf, 1, (size_t)count, (FILE*)handle);
 }
 
 static int embedded_write(void* handle, const void* buf, int count) {
-    (void)handle;
-    (void)buf;
-    (void)count;
-    return 0;
+    return (int)fwrite(buf, 1, (size_t)count, (FILE*)handle);
 }
 
 static int embedded_seek(void* handle, int offset, doom_seek_t origin) {
-    EmbeddedFile* file = (EmbeddedFile*)handle;
-    int new_position;
-
-    switch (origin) {
-        case DOOM_SEEK_SET:
-            new_position = offset;
-            break;
-        case DOOM_SEEK_CUR:
-            new_position = file->position + offset;
-            break;
-        case DOOM_SEEK_END:
-            new_position = file->size + offset;
-            break;
-        default:
-            return -1;
-    }
-
-    if (new_position < 0 || new_position > (int)file->size) {
-        return -1;
-    }
-
-    file->position = new_position;
-    return 0;
+    return fseek((FILE*)handle, offset, origin);
 }
 
 static int embedded_tell(void* handle) {
-    EmbeddedFile* file = (EmbeddedFile*)handle;
-    return file ? file->position : -1;
+    return (int)ftell((FILE*)handle);
 }
 
 static int embedded_eof(void* handle) {
-    EmbeddedFile* file = (EmbeddedFile*)handle;
-    return (file && file->position >= file->size) ? 1 : 0;
+    return feof((FILE*)handle);
 }
+
 
 // ============================================================================
 // TIMING

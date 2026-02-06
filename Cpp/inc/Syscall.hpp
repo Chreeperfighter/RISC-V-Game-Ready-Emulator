@@ -57,6 +57,8 @@ enum class Syscall : uint32_t {
     /*
      * SEMIHOSTING
      */
+
+    // TODO: Custom Semihosting better adaption, 32 bit! so number can be 0xFxxxxxxx!
     SYS_EXIT = 0x18,
     /*
     An application calls this operation to report an exception to the debugger directly. The most common use is to report
@@ -64,7 +66,7 @@ enum class Syscall : uint32_t {
     */
     SYS_EXIT_EXTENDED = 0x20,
 
-    SYS_GET_FRAMEBUFFER_INFO = 0x12,
+    SYS_GET_FRAMEBUFFER_INFO = 0xF2,
     /*
     Returns framebuffer configuration information.
     Entry
@@ -80,7 +82,7 @@ enum class Syscall : uint32_t {
         • field 3: Framebuffer bits per pixel (uint32_t)
     */
 
-    SYS_SHOW_FRAMEBUFFER = 0x11,
+    SYS_SHOW_FRAMEBUFFER = 0xF1,
     /*
     Returns framebuffer configuration information.
     Entry
@@ -88,7 +90,7 @@ enum class Syscall : uint32_t {
     Return
     */
 
-    SYS_GET_US = 0x04,
+    SYS_GET_US = 0xFF4,
     /*
     Return the time in us
     Entry:
@@ -102,7 +104,7 @@ enum class Syscall : uint32_t {
         • field 1: Time in us (uint32_t)
     */
 
-    SYS_SLEEP_US = 0x06,
+    SYS_SLEEP_US = 0xF6,
     /*
     On entry, the PARAMETER REGISTER contains a pointer to a data block:
         Time to sleep in us.
@@ -111,20 +113,20 @@ enum class Syscall : uint32_t {
         • –1 if an error occurs (invalid address).
     */
 
-    SYS_KEY_AVAILABLE = 0x07,
+    SYS_KEY_AVAILABLE = 0xF7,
     /*
     On exit, the RETURN REGISTER contains:
         0 if queue is empty
         != 0 if queue isn't empty
     */
 
-    SYS_GET_KEY = 0x08,
+    SYS_GET_KEY = 0xF8,
     /*
     On exit, the RETURN REGISTER contains:
         Key Code
     */
 
-    SYS_IS_KEY_DOWN = 0x0A,
+    SYS_IS_KEY_DOWN = 0xFA,
     /*
     Returns if the given key is down
     Entry
@@ -136,7 +138,7 @@ enum class Syscall : uint32_t {
         • -1 if an error occurred.
     */
 
-    SYS_GET_MOUSE_POS = 0x14,
+    SYS_GET_MOUSE_POS = 0xF4,
     /*
     Returns the position of the mouse cursor
     Entry
@@ -148,7 +150,7 @@ enum class Syscall : uint32_t {
         y position
     */
 
-    SYS_IS_MOUSE_BUTTON_DOWN = 0x03,
+    SYS_IS_MOUSE_BUTTON_DOWN = 0xF3,
     /*
     Entry
     On entry, the PARAMETER REGISTER contains a pointer to a data block:
@@ -246,6 +248,56 @@ enum class Syscall : uint32_t {
     On exit, the RETURN REGISTER contains:
         • 0 if the call is successful
         • –1 if the call is not successful.
+    */
+    SYS_SEEK = 0x0A,
+    /*
+    Seeks to a specified position in a file using an offset specified from the start of the file.
+    The file is assumed to be a byte array and the offset is given in bytes.
+    6.17.1 Entry
+    On entry, the PARAMETER REGISTER contains a pointer to a two-field data block:
+    field 1
+        A handle for a seekable file object.
+    field 2
+        The absolute byte position to seek to.
+    6.17.2 Return
+    On exit, the RETURN REGISTER contains:
+        • 0 if the request is successful.
+        • A negative value if the request is not successful. Use SYS_ERRNO (0x13) to read the value of the host errno
+    variable describing the error.
+    */
+    SYS_READ = 0x06,
+    /*
+    Reads the contents of a file into a buffer.
+    The file position is specified either:
+        • Explicitly by a SYS_SEEK (0x0A).
+        • Implicitly one byte beyond the previous SYS_READ (0x06) or SYS_WRITE (0x05) request.
+    The file position is at the start of the file when it is opened, and is lost when the file is closed. Perform the file operation
+    as a single action whenever possible. For example, do not split a read of 16KB into four 4KB chunks unless there is no
+    alternative.
+    6.13.1 Entry
+    On entry, the PARAMETER REGISTER contains a pointer to a three-field data block:
+    field 1
+        Contains a handle for a file previously opened with SYS_OPEN (0x01).
+    field 2
+        Points to a buffer.
+    field 3
+        Contains the number of bytes to read to the buffer from the file.
+    6.13.2 Return
+    On exit, the RETURN REGISTER contains the number of bytes not filled in the buffer
+    (buffer_length - bytes_read) as follows:
+        • If the RETURN REGISTER is 0, the entire buffer was successfully filled.
+        • If the RETURN REGISTER is the same as field 3, no bytes were read (EOF can be assumed).
+        • If the RETURN REGISTER contains a value smaller than field 3, the read succeeded but the buffer was only
+    partly filled. For interactive devices, this is the most common return value.
+    */
+    SYS_WRITE0 = 0x04,
+    /*
+    Writes a null-terminated string to the debug channel.
+    When executed under an ARM debugger, the characters appear on the host debugger console.
+    6.24.1 Entry
+    On entry, the PARAMETER REGISTER contains a pointer to the first byte of the string.
+    6.24.2 Return
+    None. The RETURN REGISTER is corrupted.
     */
 };
 

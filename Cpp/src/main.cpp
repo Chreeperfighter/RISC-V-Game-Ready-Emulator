@@ -40,7 +40,8 @@ void step_cpu(RV32 &cpu, RV32Debugger &dbg) {
 }
 
 int main() {
-    RV32 cpu(true, true);
+    std::string base_dir = "/Users/mark.verbeek/Data/Projects/RISC-V-Game-Ready-Emulator/rv32_rootfs/DOOM";
+    RV32 cpu(true, true, base_dir);
     Display display(cpu);
     display.init_display();
 
@@ -51,12 +52,14 @@ int main() {
     RV32Debugger debugger(cpu, elf_loader);
     std::vector<ELFSection> sections = elf_loader.get_sections();
     for (const auto& section : sections) {
+        /*
         std::cout <<
             "Name: " << section.name <<
                 ", Adress: " << section.address <<
                     ", Type: " << section.type <<
                         ", Size: " << section.size <<
                             std::endl;
+        */
         cpu.load_section(section);
     }
     cpu.set_entry(elf_loader.get_entry());

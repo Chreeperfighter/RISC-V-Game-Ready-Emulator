@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.30)
 project(Cpp)
 
-set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_STANDARD 17)
 
 # Use ARM Homebrew on Apple Silicon
 if(APPLE)
@@ -41,6 +41,8 @@ add_executable(Cpp
         inc/Input.hpp
         inc/RV32Debugger.hpp
         inc/ELFLoader.hpp
+        src/FileHandle.cpp
+        inc/FIleHandle.hpp
 )
 
 target_include_directories(Cpp PRIVATE
