@@ -3,6 +3,8 @@ project(Cpp)
 
 set(CMAKE_CXX_STANDARD 17)
 
+add_subdirectory(toml11)
+
 # Use ARM Homebrew on Apple Silicon
 if(APPLE)
     # Check if we're on Apple Silicon
@@ -43,6 +45,7 @@ add_executable(Cpp
         inc/ELFLoader.hpp
         src/FileHandle.cpp
         inc/FIleHandle.hpp
+        src/Config.cpp
 )
 
 target_include_directories(Cpp PRIVATE

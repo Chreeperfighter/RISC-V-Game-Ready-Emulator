@@ -8,7 +8,7 @@ void print_separator(const char* title) {
 void test_basic_write_read() {
     print_separator("TEST 1: Basic Write and Read");
 
-    FILE* f = fopen("/Users/mark.verbeek/Data/Projects/RISC-V-Game-Ready-Emulator/Programs/File/test_output.txt", "w");
+    FILE* f = fopen("test_output.txt", "w");
     if (f == NULL) {
         printf("ERROR: Failed to open file for writing\n");
         return;
@@ -23,7 +23,7 @@ void test_basic_write_read() {
     printf("✓ Closed file\n");
 
     // Now read it back
-    f = fopen("/Users/mark.verbeek/Data/Projects/RISC-V-Game-Ready-Emulator/Programs/File/test_output.txt", "r");
+    f = fopen("test_output.txt", "r");
     if (f == NULL) {
         printf("ERROR: Failed to open file for reading\n");
         return;
@@ -44,7 +44,7 @@ void test_basic_write_read() {
 void test_fprintf_fscanf() {
     print_separator("TEST 2: fprintf and fscanf");
 
-    FILE* f = fopen("/Users/mark.verbeek/Data/Projects/RISC-V-Game-Ready-Emulator/Programs/File/test_format.txt", "w");
+    FILE* f = fopen("test_format.txt", "w");
     if (f == NULL) {
         printf("ERROR: Failed to open file\n");
         return;
@@ -57,7 +57,7 @@ void test_fprintf_fscanf() {
     fclose(f);
 
     // Read it back
-    f = fopen("/Users/mark.verbeek/Data/Projects/RISC-V-Game-Ready-Emulator/Programs/File/test_format.txt", "r");
+    f = fopen("test_format.txt", "r");
     if (f == NULL) {
         printf("ERROR: Failed to open file for reading\n");
         return;
@@ -89,7 +89,7 @@ void test_fprintf_fscanf() {
 void test_fgets_fputs() {
     print_separator("TEST 3: fgets and fputs");
 
-    FILE* f = fopen("/Users/mark.verbeek/Data/Projects/RISC-V-Game-Ready-Emulator/Programs/File/test_lines.txt", "w");
+    FILE* f = fopen("test_lines.txt", "w");
     if (f == NULL) {
         printf("ERROR: Failed to open file\n");
         return;
@@ -102,7 +102,7 @@ void test_fgets_fputs() {
     fclose(f);
 
     // Read back line by line
-    f = fopen("/Users/mark.verbeek/Data/Projects/RISC-V-Game-Ready-Emulator/Programs/File/test_lines.txt", "r");
+    f = fopen("test_lines.txt", "r");
     if (f == NULL) {
         printf("ERROR: Failed to open file for reading\n");
         return;
@@ -128,7 +128,7 @@ void test_fgets_fputs() {
 void test_fseek_ftell() {
     print_separator("TEST 4: fseek and ftell (SEEK_SET only)");
 
-    FILE* f = fopen("/Users/mark.verbeek/Data/Projects/RISC-V-Game-Ready-Emulator/Programs/File/test_seek.txt", "w");
+    FILE* f = fopen("test_seek.txt", "w");
     if (f == NULL) {
         printf("ERROR: Failed to open file\n");
         return;
@@ -139,7 +139,7 @@ void test_fseek_ftell() {
     printf("✓ Wrote test data: 0123456789ABCDEF\n");
 
     // Test seeking
-    f = fopen("/Users/mark.verbeek/Data/Projects/RISC-V-Game-Ready-Emulator/Programs/File/test_seek.txt", "r");
+    f = fopen("test_seek.txt", "r");
     if (f == NULL) {
         printf("ERROR: Failed to open file for reading\n");
         return;
@@ -194,7 +194,7 @@ void test_fseek_ftell() {
 void test_binary_io() {
     print_separator("TEST 5: Binary I/O");
 
-    FILE* f = fopen("/Users/mark.verbeek/Data/Projects/RISC-V-Game-Ready-Emulator/Programs/File/test_binary.bin", "wb");
+    FILE* f = fopen("test_binary.bin", "wb");
     if (f == NULL) {
         printf("ERROR: Failed to open file\n");
         return;
@@ -206,7 +206,7 @@ void test_binary_io() {
     fclose(f);
 
     // Read back
-    f = fopen("/Users/mark.verbeek/Data/Projects/RISC-V-Game-Ready-Emulator/Programs/File/test_binary.bin", "rb");
+    f = fopen("test_binary.bin", "rb");
     if (f == NULL) {
         printf("ERROR: Failed to open file for reading\n");
         return;
@@ -245,7 +245,7 @@ void test_append_mode() {
     print_separator("TEST 6: Append Mode");
 
     // Write initial content
-    FILE* f = fopen("/Users/mark.verbeek/Data/Projects/RISC-V-Game-Ready-Emulator/Programs/File/test_append.txt", "w");
+    FILE* f = fopen("test_append.txt", "w");
     if (f == NULL) {
         printf("ERROR: Failed to open file\n");
         return;
@@ -255,7 +255,7 @@ void test_append_mode() {
     printf("✓ Wrote initial content\n");
 
     // Append to it
-    f = fopen("/Users/mark.verbeek/Data/Projects/RISC-V-Game-Ready-Emulator/Programs/File/test_append.txt", "a");
+    f = fopen("test_append.txt", "a");
     if (f == NULL) {
         printf("ERROR: Failed to open file for appending\n");
         return;
@@ -266,7 +266,7 @@ void test_append_mode() {
     printf("✓ Appended content\n");
 
     // Read all
-    f = fopen("/Users/mark.verbeek/Data/Projects/RISC-V-Game-Ready-Emulator/Programs/File/test_append.txt", "r");
+    f = fopen("test_append.txt", "r");
     if (f == NULL) {
         printf("ERROR: Failed to open file for reading\n");
         return;
@@ -292,7 +292,7 @@ void test_append_mode() {
 void test_feof_ferror() {
     print_separator("TEST 7: feof and ferror");
 
-    FILE* f = fopen("/Users/mark.verbeek/Data/Projects/RISC-V-Game-Ready-Emulator/Programs/File/test_eof.txt", "w");
+    FILE* f = fopen("test_eof.txt", "w");
     if (f == NULL) {
         printf("ERROR: Failed to open file\n");
         return;
@@ -301,7 +301,7 @@ void test_feof_ferror() {
     fclose(f);
     printf("✓ Created test file\n");
 
-    f = fopen("/Users/mark.verbeek/Data/Projects/RISC-V-Game-Ready-Emulator/Programs/File/test_eof.txt", "r");
+    f = fopen("test_eof.txt", "r");
     if (f == NULL) {
         printf("ERROR: Failed to open file for reading\n");
         return;
@@ -336,7 +336,7 @@ void test_feof_ferror() {
 void test_rewind() {
     print_separator("TEST 8: rewind");
 
-    FILE* f = fopen("/Users/mark.verbeek/Data/Projects/RISC-V-Game-Ready-Emulator/Programs/File/test_rewind.txt", "w");
+    FILE* f = fopen("test_rewind.txt", "w");
     if (f == NULL) {
         printf("ERROR: Failed to open file\n");
         return;
@@ -345,7 +345,7 @@ void test_rewind() {
     fclose(f);
     printf("✓ Wrote: ABCDEFGHIJ\n");
 
-    f = fopen("/Users/mark.verbeek/Data/Projects/RISC-V-Game-Ready-Emulator/Programs/File/test_rewind.txt", "r");
+    f = fopen("test_rewind.txt", "r");
     if (f == NULL) {
         printf("ERROR: Failed to open file for reading\n");
         return;
@@ -392,9 +392,9 @@ void test_stdin_stdout() {
 void test_multiple_files() {
     print_separator("TEST 10: Multiple Open Files");
 
-    FILE* f1 = fopen("/Users/mark.verbeek/Data/Projects/RISC-V-Game-Ready-Emulator/Programs/File/test_multi1.txt", "w");
-    FILE* f2 = fopen("/Users/mark.verbeek/Data/Projects/RISC-V-Game-Ready-Emulator/Programs/File/test_multi2.txt", "w");
-    FILE* f3 = fopen("/Users/mark.verbeek/Data/Projects/RISC-V-Game-Ready-Emulator/Programs/File/test_multi3.txt", "w");
+    FILE* f1 = fopen("test_multi1.txt", "w");
+    FILE* f2 = fopen("test_multi2.txt", "w");
+    FILE* f3 = fopen("test_multi3.txt", "w");
 
     if (f1 == NULL || f2 == NULL || f3 == NULL) {
         printf("ERROR: Failed to open files\n");
@@ -419,7 +419,7 @@ void test_multiple_files() {
     printf("✓ Closed all files\n");
 
     // Verify by reading back
-    f1 = fopen("/Users/mark.verbeek/Data/Projects/RISC-V-Game-Ready-Emulator/Programs/File/test_multi1.txt", "r");
+    f1 = fopen("test_multi1.txt", "r");
     if (f1 == NULL) {
         printf("ERROR: Failed to reopen file 1\n");
         return;
@@ -439,10 +439,10 @@ void test_edge_cases() {
     int errors = 0;
 
     // Test 1: Empty file
-    FILE* f = fopen("/Users/mark.verbeek/Data/Projects/RISC-V-Game-Ready-Emulator/Programs/File/test_empty.txt", "w");
+    FILE* f = fopen("test_empty.txt", "w");
     fclose(f);
 
-    f = fopen("/Users/mark.verbeek/Data/Projects/RISC-V-Game-Ready-Emulator/Programs/File/test_empty.txt", "r");
+    f = fopen("test_empty.txt", "r");
     char buffer[10];
     size_t bytes_read = fread(buffer, 1, sizeof(buffer), f);
     printf("✓ Empty file read: %d bytes (expected 0) - %s\n",
@@ -451,11 +451,11 @@ void test_edge_cases() {
     fclose(f);
 
     // Test 2: Reading past EOF
-    f = fopen("/Users/mark.verbeek/Data/Projects/RISC-V-Game-Ready-Emulator/Programs/File/test_eof2.txt", "w");
+    f = fopen("test_eof2.txt", "w");
     fputs("ABC", f);
     fclose(f);
 
-    f = fopen("/Users/mark.verbeek/Data/Projects/RISC-V-Game-Ready-Emulator/Programs/File/test_eof2.txt", "r");
+    f = fopen("test_eof2.txt", "r");
     fread(buffer, 1, 10, f);  // Try to read more than available
     if (feof(f)) {
         printf("✓ Reading past EOF sets EOF flag - PASS\n");
@@ -476,7 +476,7 @@ void test_edge_cases() {
     }
 
     // Test 4: Write then read without closing (flush test)
-    f = fopen("/Users/mark.verbeek/Data/Projects/RISC-V-Game-Ready-Emulator/Programs/File/test_flush.txt", "w+");
+    f = fopen("test_flush.txt", "w+");
     if (f != NULL) {
         fputs("TestData", f);
         fflush(f);  // Flush to ensure data is written
@@ -505,7 +505,7 @@ void test_edge_cases() {
 void test_character_io() {
     print_separator("TEST 12: Character I/O (fgetc/fputc)");
 
-    FILE* f = fopen("/Users/mark.verbeek/Data/Projects/RISC-V-Game-Ready-Emulator/Programs/File/test_chars.txt", "w");
+    FILE* f = fopen("test_chars.txt", "w");
     if (f == NULL) {
         printf("ERROR: Failed to open file\n");
         return;
@@ -522,7 +522,7 @@ void test_character_io() {
     fclose(f);
 
     // Read them back
-    f = fopen("/Users/mark.verbeek/Data/Projects/RISC-V-Game-Ready-Emulator/Programs/File/test_chars.txt", "r");
+    f = fopen("test_chars.txt", "r");
     if (f == NULL) {
         printf("ERROR: Failed to open file for reading\n");
         return;
@@ -542,7 +542,7 @@ void test_mixed_read_write() {
     print_separator("TEST 13: Mixed Read/Write Operations");
 
     // Create initial file
-    FILE* f = fopen("/Users/mark.verbeek/Data/Projects/RISC-V-Game-Ready-Emulator/Programs/File/test_mixed.txt", "w");
+    FILE* f = fopen("test_mixed.txt", "w");
     if (f == NULL) {
         printf("ERROR: Failed to open file\n");
         return;
@@ -552,7 +552,7 @@ void test_mixed_read_write() {
     printf("✓ Created initial file with 3 lines\n");
 
     // Open for reading and writing
-    f = fopen("/Users/mark.verbeek/Data/Projects/RISC-V-Game-Ready-Emulator/Programs/File/test_mixed.txt", "r+");
+    f = fopen("test_mixed.txt", "r+");
     if (f == NULL) {
         printf("ERROR: Failed to open file for r+\n");
         return;
@@ -568,7 +568,7 @@ void test_mixed_read_write() {
     fclose(f);
 
     // Read entire file
-    f = fopen("/Users/mark.verbeek/Data/Projects/RISC-V-Game-Ready-Emulator/Programs/File/test_mixed.txt", "r");
+    f = fopen("test_mixed.txt", "r");
     printf("✓ Final file content:\n");
     while (fgets(buffer, sizeof(buffer), f) != NULL) {
         printf("  %s", buffer);
