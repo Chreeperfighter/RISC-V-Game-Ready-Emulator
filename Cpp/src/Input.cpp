@@ -18,8 +18,8 @@ bool Input::process_event(const SDL_Event &event) {
     if (event.type == SDL_MOUSEMOTION) {
         const int32_t mouse_x = event.motion.x;
         const int32_t mouse_y = event.motion.y;
-        const int32_t scaled_x = (mouse_x * static_cast<int32_t>(Config::FB_WIDTH)) / window_w;
-        const int32_t scaled_y = (mouse_y * static_cast<int32_t>(Config::FB_HEIGHT)) / window_h;
+        const int32_t scaled_x = (mouse_x * g_config.framebuffer_width) / window_w;
+        const int32_t scaled_y = (mouse_y * g_config.framebuffer_height) / window_h;
         rv32.set_mouse_pos(scaled_x, scaled_y);
     } else if (event.type == SDL_MOUSEBUTTONDOWN) {
         const uint32_t button = event.button.button;

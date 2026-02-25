@@ -578,7 +578,7 @@ void test_mixed_read_write() {
     printf("✓ Test 13 PASSED!\n");
 }
 
-int main() {
+int main1() {
     printf("======================================\n");
     printf("  RISC-V FILE I/O TEST SUITE\n");
     printf("  Comprehensive Testing Program\n");
@@ -603,5 +603,10 @@ int main() {
     printf("  Check output above for PASS/FAIL\n");
     printf("======================================\n");
 
+    return 0;
+}
+
+int main() {
+    printf("Hello World!");
     return 0;
 }

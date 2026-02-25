@@ -20,7 +20,7 @@ typedef struct {
 
 class ELFLoader {
 public:
-    void parse(const char *path);
+    void parse(std::string& path);
     uint32_t get_entry() const;
     std::vector<ELFSection> get_sections() const {
         return sections;

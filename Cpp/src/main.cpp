@@ -7,6 +7,7 @@
 #include "RV32.hpp"
 #include "Input.hpp"
 #include "RV32Debugger.hpp"
+#include "Config.hpp"
 
 #include <atomic>
 #include <thread>
@@ -40,7 +41,8 @@ void step_cpu(RV32 &cpu, RV32Debugger &dbg) {
 }
 
 int main() {
-    std::string base_dir =
+    g_config = Config::load("/Users/mark.verbeek/Data/Projects/RISC-V-Game-Ready-Emulator/Cpp/config/config.toml");
+    std::string base_dir = g_config.storage_path;
     RV32 cpu(true, true, base_dir);
     Display display(cpu);
     display.init_display();
@@ -48,18 +50,18 @@ int main() {
     Input input(cpu, display);
 
     ELFLoader elf_loader;
-    elf_loader.parse();
+    elf_loader.parse(g_config.binary_path);
     RV32Debugger debugger(cpu, elf_loader);
     std::vector<ELFSection> sections = elf_loader.get_sections();
     for (const auto& section : sections) {
-        /*
-        std::cout <<
-            "Name: " << section.name <<
-                ", Adress: " << section.address <<
-                    ", Type: " << section.type <<
-                        ", Size: " << section.size <<
-                            std::endl;
-        */
+        if (g_config.debug_enabled) {
+            std::cout <<
+               "Name: " << section.name <<
+                   ", Adress: " << section.address <<
+                       ", Type: " << section.type <<
+                           ", Size: " << section.size <<
+                               std::endl;
+        }
         cpu.load_section(section);
     }
     cpu.set_entry(elf_loader.get_entry());

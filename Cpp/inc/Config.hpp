@@ -5,20 +5,45 @@
 #ifndef CONFIG_HPP
 #define CONFIG_HPP
 #include <cstdint>
+#include <toml.hpp>
+#include <string>
 
-namespace Config {
-    constexpr uint32_t RAM_ORIGIN = 0x00000000;
-    constexpr uint32_t RAM_SIZE = 32 * 1024 * 1024;
-    constexpr uint32_t RAM_END = RAM_ORIGIN + RAM_SIZE;
+struct Config {
+    // Binary
+    std::string binary_path;
 
-    constexpr uint32_t STACK_MARGIN = 2 * 1024 * 1024;
+    // Storage
+    std::string storage_path;
 
-    constexpr uint32_t FB_WIDTH = 320;
-    constexpr uint32_t FB_HEIGHT = 200;
-    constexpr uint32_t FB_BPP = 4; // Bytes per pixel
-    constexpr uint32_t FB_SIZE = FB_WIDTH * FB_HEIGHT * FB_BPP;
+    // RAM
+    uint32_t ram_origin;
+    uint32_t ram_end;
+    uint32_t ram_size_bytes;  // convert from MB
+    uint32_t stack_margin_bytes;  // convert from MB
 
-    constexpr bool SYSCALL_DEBUG = false;
-}
+    // Framebuffer
+    int framebuffer_width;
+    int framebuffer_height;
+    int framebuffer_bpp;
+    int framebuffer_size_bytes;
+    std::string framebuffer_format;
+
+    // Debug
+    bool debug_enabled;
+
+    // Init
+    bool randomize_registers;
+    bool randomize_ram;
+    bool zero_bss;
+
+    // Load from TOML file
+    static Config load(const std::string& path);
+
+    // Get default config
+    static Config defaults();
+};
+
+// Global instance (define in config.cpp)
+extern Config g_config;
 
 #endif //CONFIG_HPP

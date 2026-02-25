@@ -16,8 +16,8 @@
 
 RV32::RV32(bool randomizeRegs, bool randomizeMemory, std::string base_dir) : rng(std::random_device{}()), pc(0),
                                                                    update_pc(true),
-                                                                   ram(Config::RAM_SIZE, 0),
-                                                                   transfer_buffer(Config::FB_SIZE) {
+                                                                   ram(g_config.ram_size_bytes, 0),
+                                                                   transfer_buffer(g_config.framebuffer_size_bytes) {
     fht = new FileHandleTable(base_dir);
     init_regs(randomizeRegs);
     if (randomizeMemory) {
@@ -52,8 +52,8 @@ void RV32::step() {
 }
 
 void RV32::load_section(const ELFSection &section) {
-    if (section.address < Config::RAM_ORIGIN ||
-        section.address + section.size > Config::RAM_ORIGIN + Config::RAM_SIZE) {
+    if (section.address < g_config.ram_origin ||
+        section.address + section.size > g_config.ram_origin + g_config.ram_size_bytes) {
         std::cerr <<
             "Section: '" << section.name << "' doesn't fit in RAM" <<
         std::endl;
@@ -64,7 +64,7 @@ void RV32::load_section(const ELFSection &section) {
         if (section.type == SHT_NOBITS) {
             // Zero-fill sections with no data in file (.bss)
             std::fill_n(
-                ram.begin() + (section.address - Config::RAM_ORIGIN),
+                ram.begin() + (section.address - g_config.ram_origin),
                 section.size,
                 0
             );
@@ -80,7 +80,7 @@ void RV32::load_section(const ELFSection &section) {
             std::copy_n(
                 section.data.begin(),
                 section.size,
-                ram.begin() + (section.address - Config::RAM_ORIGIN)
+                ram.begin() + (section.address - g_config.ram_origin)
             );
         }
     }
@@ -405,8 +405,8 @@ void RV32::execute(const DecodedInstruction inst) {
                     case Syscall::BRK: {
                         const uint32_t new_break_address = regs.read(Register::a0);
                         if (new_break_address != 0) {
-                            if (new_break_address >= heap_start && new_break_address <= Config::RAM_END -
-                                Config::STACK_MARGIN) {
+                            if (new_break_address >= heap_start && new_break_address <= g_config.ram_end -
+                                g_config.stack_margin_bytes) {
                                 heap_end = new_break_address;
                             } else {
                                 std::cerr << "[WARN] brk: address 0x" << std::hex << new_break_address
@@ -419,18 +419,18 @@ void RV32::execute(const DecodedInstruction inst) {
                     case Syscall::SHOW_BUFFER: {
                         transfer_buffer_address = regs.read(Register::a0);
                         std::lock_guard<std::mutex> lock(transfer_buffer_mtx);
-                        transfer_buffer = read_bytes(transfer_buffer_address, Config::FB_SIZE);
+                        transfer_buffer = read_bytes(transfer_buffer_address, g_config.framebuffer_size_bytes);
                         break;
                     }
                     case Syscall::GET_FRAMEBUFFER_INFO: {
                         const uint32_t address = regs.read(Register::a0);
-                        if (address < Config::RAM_ORIGIN || address > Config::RAM_END) {
+                        if (address < g_config.ram_origin || address > g_config.ram_end) {
                             regs.write(Register::a0, -1); // Failure
                             break;
                         }
-                        write_u32(address, Config::FB_WIDTH);
-                        write_u32(address + 4, Config::FB_HEIGHT);
-                        write_u32(address + 8, Config::FB_BPP);
+                        write_u32(address, g_config.framebuffer_width);
+                        write_u32(address + 4, g_config.framebuffer_height);
+                        write_u32(address + 8, g_config.framebuffer_bpp / 8);
                         regs.write(Register::a0, 0); // Success
                         break;
                     }
@@ -619,7 +619,7 @@ void RV32::handle_semihosting() {
     const auto operation_number = static_cast<Syscall>(regs.read(Register::a0));
     const uint32_t parameter = regs.read(Register::a1);
 
-    if (Config::SYSCALL_DEBUG) {
+    if (g_config.debug_enabled) {
         std::cout << std::hex << "[SYSCALL] Nummer: 0x" << static_cast<int>(operation_number) << std::endl;
     }
 
@@ -720,13 +720,13 @@ void RV32::handle_sys_exit(uint32_t exit_code) const {
 
 void RV32::handle_sys_get_framebuffer_info(uint32_t parameter) {
     uint32_t address = parameter;
-    if (address < Config::RAM_ORIGIN || address > Config::RAM_END) {
+    if (address < g_config.ram_origin || address > g_config.ram_end) {
         regs.write(Register::a0, -1); // Failure
         return;
     }
-    write_u32(address, Config::FB_WIDTH);
-    write_u32(address + 4, Config::FB_HEIGHT);
-    write_u32(address + 8, Config::FB_BPP);
+    write_u32(address, g_config.framebuffer_width);
+    write_u32(address + 4, g_config.framebuffer_height);
+    write_u32(address + 8, g_config.framebuffer_bpp / 8);
     regs.write(Register::a0, 0); // Success
 }
 
@@ -734,17 +734,17 @@ void RV32::handle_sys_show_framebuffer(uint32_t parameter) {
     transfer_buffer_address = parameter;
 
     // Check if the address is valid
-    if (parameter < Config::RAM_ORIGIN ||
-        parameter + Config::FB_SIZE > Config::RAM_END) {
+    if (parameter < g_config.ram_origin ||
+        parameter + g_config.framebuffer_size_bytes > g_config.ram_end) {
         std::cerr << "ERROR: Invalid framebuffer address: 0x"
                   << std::hex << parameter
-                  << " (would read until 0x" << (parameter + Config::FB_SIZE) << ")"
+                  << " (would read until 0x" << (parameter + g_config.framebuffer_size_bytes) << ")"
                   << std::endl;
         return;
         }
 
     std::lock_guard<std::mutex> lock(transfer_buffer_mtx);
-    transfer_buffer = read_bytes(transfer_buffer_address, Config::FB_SIZE);
+    transfer_buffer = read_bytes(transfer_buffer_address, g_config.framebuffer_size_bytes);
 }
 
 void RV32::handle_sys_get_mouse_pos(uint32_t parameter) {
@@ -764,7 +764,7 @@ void RV32::handle_sys_is_mouse_button_down(uint32_t parameter) {
 
 void RV32::handle_sys_get_us(uint32_t parameter) {
     uint32_t address = parameter;
-    if (address < Config::RAM_ORIGIN || address > Config::RAM_END) {
+    if (address < g_config.ram_origin || address > g_config.ram_end) {
         regs.write(Register::a0, -1); // Failure
         return;
     }
@@ -778,7 +778,7 @@ void RV32::handle_sys_get_us(uint32_t parameter) {
 
 void RV32::handle_sys_sleep_us(uint32_t parameter) {
     uint32_t address = parameter;
-    if (address < Config::RAM_ORIGIN || address > Config::RAM_END) {
+    if (address < g_config.ram_origin || address > g_config.ram_end) {
         regs.write(Register::a0, -1); // Failure
         return;
     }
@@ -1101,7 +1101,7 @@ uint8_t RV32::read_u8(const uint32_t address) const {
 
 std::vector<uint8_t> RV32::read_bytes(uint32_t address, size_t size) const {
     const uint32_t upper_address = address + size;
-    if (!(Config::RAM_ORIGIN <= address && upper_address <= Config::RAM_END)) {
+    if (!(g_config.ram_origin <= address && upper_address <= g_config.ram_end)) {
         std::cerr << std::hex << std::showbase
                   << "RV32::read_bytes(): address " << address << " out of range"
                   << std::dec << std::endl;
@@ -1109,14 +1109,14 @@ std::vector<uint8_t> RV32::read_bytes(uint32_t address, size_t size) const {
         return {};
     }
 
-    address -= Config::RAM_ORIGIN;
+    address -= g_config.ram_origin;
     return {ram.begin() + address, ram.begin() + address + static_cast<long>(size)};
 }
 
 template<typename T>
 T RV32::read_value(uint32_t address) const {
     const uint32_t upper_address = address + sizeof(T);
-    if (!(Config::RAM_ORIGIN <= address && upper_address <= Config::RAM_END)) {
+    if (!(g_config.ram_origin <= address && upper_address <= g_config.ram_end)) {
         std::cerr << std::hex << std::showbase
                   << pc << ": "
                   << "RV32::read_value(): address " << address << " out of range"
@@ -1125,7 +1125,7 @@ T RV32::read_value(uint32_t address) const {
         return {};
     }
 
-    address -= Config::RAM_ORIGIN;
+    address -= g_config.ram_origin;
     T value;
 
     std::copy_n(
@@ -1159,7 +1159,7 @@ void RV32::write_bytes(uint32_t address, const std::vector<uint8_t> &value) {
                   << pc << ": " << "RV32::write_value(): address " << address << " overwriting program code"
                   << std::endl;
     }
-    if (!(Config::RAM_ORIGIN <= address && upper_address <= Config::RAM_END)) {
+    if (!(g_config.ram_origin <= address && upper_address <= g_config.ram_end)) {
         std::cerr << std::hex << std::showbase
                   << "RV32::read_bytes(): address " << address << " out of range"
                   << std::dec << std::endl;
@@ -1167,7 +1167,7 @@ void RV32::write_bytes(uint32_t address, const std::vector<uint8_t> &value) {
         return;
     }
 
-    address -= Config::RAM_ORIGIN;
+    address -= g_config.ram_origin;
     std::copy(value.begin(), value.end(), ram.begin() + address);
 }
 
@@ -1181,8 +1181,8 @@ void RV32::write_value(uint32_t address, T value) {
                   << std::endl;
     }
 
-    if (Config::RAM_ORIGIN <= address && upper_address <= Config::RAM_END) {
-        address -= Config::RAM_ORIGIN;
+    if (g_config.ram_origin <= address && upper_address <= g_config.ram_end) {
+        address -= g_config.ram_origin;
         std::copy(reinterpret_cast<const uint8_t*>(&value),
                   reinterpret_cast<const uint8_t*>(&value) + sizeof(T),
                   ram.begin() + address);

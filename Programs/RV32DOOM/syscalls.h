@@ -8,15 +8,15 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-#define SYS_GET_FRAMEBUFFER_INFO 0xF2
-#define SYS_SHOW_FRAMEBUFFER  0xF1
-#define SYS_GET_MOUSE_POS 0x14
-#define SYS_IS_MOUSE_BUTTON_DOWN 0x03
-#define SYS_GET_US 0xFF4
-#define SYS_SLEEP_US 0xF6
-#define SYS_KEY_AVAILABLE 0xF7
-#define SYS_GET_KEY 0xF8
-#define SYS_IS_KEY_DOWN 0xFA
+#define SYS_GET_FRAMEBUFFER_INFO 0x100
+#define SYS_SHOW_FRAMEBUFFER  0x101
+#define SYS_GET_MOUSE_POS 0x107
+#define SYS_IS_MOUSE_BUTTON_DOWN 0x108
+#define SYS_GET_US 0x102
+#define SYS_SLEEP_US 0x103
+#define SYS_KEY_AVAILABLE 0x104
+#define SYS_GET_KEY 0x105
+#define SYS_IS_KEY_DOWN 0x106
 
 static inline int sys_get_framebuffer_info(void *address) {
     register uint32_t a0 asm("a0");

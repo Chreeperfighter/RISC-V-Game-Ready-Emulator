@@ -1,5 +1,5 @@
 [binary]
-path = "/Users/mark.verbeek/Data/Projects/RISC-V-Game-Ready-Emulator/Programs/RV32DOOM/cmake-build-release-rv32i/RV32DOOM"
+path = "//Users/mark.verbeek/Data/Projects/RISC-V-Game-Ready-Emulator/Programs/RV32DOOM/cmake-build-release-rv32i/RV32DOOM"
 
 [storage]
 path = "/Users/mark.verbeek/Data/Projects/RISC-V-Game-Ready-Emulator/rv32_rootfs/DOOM"
@@ -15,7 +15,7 @@ height = 200
 format = "ARGB"
 
 [debug]
-log_level = "info"
+enabled = false
 
 [init]
 randomize_registers = true

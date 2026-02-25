@@ -10,7 +10,7 @@ void Display::init_display() {
     context.window = SDL_CreateWindow(
         "RISC-V Emulator",
         SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
-        Config::FB_WIDTH, Config::FB_HEIGHT,
+        g_config.framebuffer_width, g_config.framebuffer_height,
         SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI
     );
     context.renderer = SDL_CreateRenderer(
@@ -22,14 +22,14 @@ void Display::init_display() {
         context.renderer,
         SDL_PIXELFORMAT_ARGB8888,
         SDL_TEXTUREACCESS_STREAMING,
-        Config::FB_WIDTH, Config::FB_HEIGHT
+        g_config.framebuffer_width, g_config.framebuffer_height
     );
 }
 
 void Display::update_display() {
-    std::vector<uint8_t> framebuffer(Config::FB_SIZE);
+    std::vector<uint8_t> framebuffer(g_config.framebuffer_size_bytes);
     rv32.get_transfer_buffer(framebuffer);
-    for (int i = 0; i < Config::FB_WIDTH * Config::FB_HEIGHT; i++) {
+    for (int i = 0; i < g_config.framebuffer_width * g_config.framebuffer_height; i++) {
         int index = i * 4;
         int r = framebuffer[index];
         int g = framebuffer[index + 1];
@@ -48,15 +48,15 @@ void Display::update_display() {
     if (SDL_LockTexture(context.texture, nullptr, &pixels, &pitch) == 0) {
         // Copy framebuffer data to texture
         // If pitch matches your framebuffer width, you can do a single memcpy
-        if (pitch == Config::FB_WIDTH * 4) {
-            memcpy(pixels, framebuffer_addr, Config::FB_SIZE);
+        if (pitch == g_config.framebuffer_width * 4) {
+            memcpy(pixels, framebuffer_addr, g_config.framebuffer_size_bytes);
         } else {
             // If pitch differs, copy row by row
-            for (int y = 0; y < Config::FB_HEIGHT; y++) {
+            for (int y = 0; y < g_config.framebuffer_height; y++) {
                 memcpy(
                     static_cast<uint8_t*>(pixels) + y * pitch,
-                    framebuffer_addr + y * Config::FB_WIDTH * 4,
-                    Config::FB_WIDTH * 4
+                    framebuffer_addr + y * g_config.framebuffer_width * 4,
+                    g_config.framebuffer_width * 4
                 );
             }
         }

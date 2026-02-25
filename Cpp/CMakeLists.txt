@@ -3,8 +3,6 @@ project(Cpp)
 
 set(CMAKE_CXX_STANDARD 17)
 
-add_subdirectory(toml11)
-
 # Use ARM Homebrew on Apple Silicon
 if(APPLE)
     # Check if we're on Apple Silicon
@@ -51,6 +49,7 @@ add_executable(Cpp
 target_include_directories(Cpp PRIVATE
         ${CMAKE_SOURCE_DIR}/inc
         ${SDL2_INCLUDE_DIRS}
+        toml11/include
 )
 
 target_link_libraries(Cpp

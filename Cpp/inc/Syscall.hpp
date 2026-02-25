@@ -66,7 +66,7 @@ enum class Syscall : uint32_t {
     */
     SYS_EXIT_EXTENDED = 0x20,
 
-    SYS_GET_FRAMEBUFFER_INFO = 0xF2,
+    SYS_GET_FRAMEBUFFER_INFO = 0x100,
     /*
     Returns framebuffer configuration information.
     Entry
@@ -82,7 +82,7 @@ enum class Syscall : uint32_t {
         • field 3: Framebuffer bits per pixel (uint32_t)
     */
 
-    SYS_SHOW_FRAMEBUFFER = 0xF1,
+    SYS_SHOW_FRAMEBUFFER = 0x101,
     /*
     Returns framebuffer configuration information.
     Entry
@@ -90,7 +90,7 @@ enum class Syscall : uint32_t {
     Return
     */
 
-    SYS_GET_US = 0xFF4,
+    SYS_GET_US = 0x102,
     /*
     Return the time in us
     Entry:
@@ -104,7 +104,7 @@ enum class Syscall : uint32_t {
         • field 1: Time in us (uint32_t)
     */
 
-    SYS_SLEEP_US = 0xF6,
+    SYS_SLEEP_US = 0x103,
     /*
     On entry, the PARAMETER REGISTER contains a pointer to a data block:
         Time to sleep in us.
@@ -113,20 +113,20 @@ enum class Syscall : uint32_t {
         • –1 if an error occurs (invalid address).
     */
 
-    SYS_KEY_AVAILABLE = 0xF7,
+    SYS_KEY_AVAILABLE = 0x104,
     /*
     On exit, the RETURN REGISTER contains:
         0 if queue is empty
         != 0 if queue isn't empty
     */
 
-    SYS_GET_KEY = 0xF8,
+    SYS_GET_KEY = 0x105,
     /*
     On exit, the RETURN REGISTER contains:
         Key Code
     */
 
-    SYS_IS_KEY_DOWN = 0xFA,
+    SYS_IS_KEY_DOWN = 0x106,
     /*
     Returns if the given key is down
     Entry
@@ -138,7 +138,7 @@ enum class Syscall : uint32_t {
         • -1 if an error occurred.
     */
 
-    SYS_GET_MOUSE_POS = 0xF4,
+    SYS_GET_MOUSE_POS = 0x107,
     /*
     Returns the position of the mouse cursor
     Entry
@@ -150,7 +150,7 @@ enum class Syscall : uint32_t {
         y position
     */
 
-    SYS_IS_MOUSE_BUTTON_DOWN = 0xF3,
+    SYS_IS_MOUSE_BUTTON_DOWN = 0x108,
     /*
     Entry
     On entry, the PARAMETER REGISTER contains a pointer to a data block:

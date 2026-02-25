@@ -7,7 +7,7 @@
 #include <fstream>
 #include <iostream>
 
-void ELFLoader::parse(const char *path) {
+void ELFLoader::parse(std::string& path) {
     std::ifstream file(path, std::ios::binary);
     if (!file) {
         std::cerr << "Failed to open file " << path << std::endl;
