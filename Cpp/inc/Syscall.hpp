@@ -10,7 +10,6 @@ enum class Syscall : uint32_t {
     /*
      * SEMIHOSTING
      */
-
     SYS_EXIT = 0x18,
     /*
     An application calls this operation to report an exception to the debugger directly. The most common use is to report

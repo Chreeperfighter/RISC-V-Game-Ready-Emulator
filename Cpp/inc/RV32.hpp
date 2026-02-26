@@ -36,6 +36,13 @@ struct DecodedInstruction {
 	} format;
 };
 
+enum class TrapReason {
+	None,
+	Breakpoint,
+	IllegalInst,
+	MemFault,
+};
+
 class RV32 {
 public:
     RV32(bool randomizeRegs, bool randomizeMemory, std::string base_dir);
@@ -81,18 +88,19 @@ public:
 		mouse_pos_y = y;
 	}
 	mutable bool running = true;
-	bool breakpoint_hit = false;
+	TrapReason trap = TrapReason::None;
+	std::string trap_message;
 
 private:
-	uint32_t fetch() const;
-	DecodedInstruction decode(uint32_t data) const;
+	uint32_t fetch();
+	DecodedInstruction decode(uint32_t data);
     void execute(DecodedInstruction inst);
     void init_regs(bool initRandom);
-	uint64_t read_u64(uint32_t address) const;
-	uint32_t read_u32(uint32_t address) const;
-	uint16_t read_u16(uint32_t address) const;
-	uint8_t read_u8(uint32_t address) const;
-	std::vector<uint8_t> read_bytes(uint32_t address, size_t size) const;
+	uint64_t read_u64(uint32_t address);
+	uint32_t read_u32(uint32_t address);
+	uint16_t read_u16(uint32_t address);
+	uint8_t read_u8(uint32_t address);
+	std::vector<uint8_t> read_bytes(uint32_t address, size_t size);
 	void write_u64(uint32_t address, uint64_t value);
 	void write_u32(uint32_t address, uint32_t value);
 	void write_u16(uint32_t address, uint16_t value);
@@ -106,7 +114,7 @@ private:
 	static void decode_j_type(DecodedInstruction &inst, uint32_t data);
 	static uint32_t get_bits(uint32_t data, unsigned int start, unsigned int end);
     void handle_sys_exit(uint32_t exit_code) const;
-    void handle_sys_exit_extended(uint32_t parameter) const;
+    void handle_sys_exit_extended(uint32_t parameter);
 	void handle_sys_get_framebuffer_info(uint32_t parameter);
 	void handle_sys_show_framebuffer(uint32_t parameter);
 	void handle_sys_get_mouse_pos(uint32_t parameter);
@@ -125,12 +133,13 @@ private:
 	void handle_sys_read(uint32_t parameter);
 	void handle_sys_write0(uint32_t parameter);
 	static int32_t sign_extend(uint32_t value, unsigned int fromBits);
-	void print_inst(DecodedInstruction inst) const;
+	void print_inst(DecodedInstruction inst);
 	template<typename T>
-	T read_value(uint32_t address) const;
+	T read_value(uint32_t address);
 	template<typename T>
 	void write_value(uint32_t address, T value);
 	void handle_semihosting();
+	void trigger_trap(TrapReason trap_reason, const std::string &message);
 
     bool is_queue_empty() const {
 		std::lock_guard<std::mutex> lock(queue_mtx);

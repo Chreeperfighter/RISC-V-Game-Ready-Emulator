@@ -7,17 +7,19 @@
 
 #include "RV32.hpp"
 #include "ELFLoader.hpp"
+#include "Config.hpp"
+
+#include <set>
 
 class RV32Debugger {
 public:
-    explicit RV32Debugger(RV32 &rv32_obj, ELFLoader &elf_obj) : rv32(rv32_obj), elf_loader(elf_obj), running(true) {}
+    explicit RV32Debugger(RV32 &rv32_obj, ELFLoader &elf_obj);
     void on_breakpoint();
+    bool should_break();
 private:
     RV32 &rv32;
     ELFLoader &elf_loader;
-    bool running;
+    std::set<uint32_t> breakpoint_addresses;
 };
-
-
 
 #endif //RV32DEBUGGER_HPP

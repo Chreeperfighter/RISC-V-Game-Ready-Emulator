@@ -27,11 +27,8 @@ RV32::RV32(bool randomizeRegs, bool randomizeMemory, std::string base_dir) : rng
     }
 }
 
-void RV32::print_inst(DecodedInstruction inst) const {
-    std::cerr << std::hex << std::showbase << pc << ": " << std::dec << "opcode=" << static_cast<int>(inst.opcode)
-            << " funct3=" << static_cast<int>(inst.funct3)
-            << " funct7=" << static_cast<int>(inst.funct7) << std::endl;
-    running = false;
+void RV32::print_inst(DecodedInstruction inst) {
+    trigger_trap(TrapReason::IllegalInst, "UNHANDLED_INST: opcode=0x" + std::to_string(static_cast<int>(inst.opcode)) + " at PC=0x" + std::to_string(pc));
 }
 
 void RV32::step() {
@@ -39,7 +36,6 @@ void RV32::step() {
     const DecodedInstruction instruction = decode(data);
 
     update_pc = true;
-    breakpoint_hit = false;
     execute(instruction);
 
     if (!semihosting_instruction && semihosting_step != 0) {
@@ -54,9 +50,7 @@ void RV32::step() {
 void RV32::load_section(const ELFSection &section) {
     if (section.address < g_config.ram_origin ||
         section.address + section.size > g_config.ram_origin + g_config.ram_size_bytes) {
-        std::cerr <<
-            "Section: '" << section.name << "' doesn't fit in RAM" <<
-        std::endl;
+        trigger_trap(TrapReason::MemFault, "Section: '" + section.name + "' doesn't fit in RAM");
         return;
         }
 
@@ -90,11 +84,11 @@ void RV32::set_entry(const uint32_t entry) {
     pc = entry;
 }
 
-uint32_t RV32::fetch() const {
+uint32_t RV32::fetch() {
     return read_u32(pc);
 }
 
-DecodedInstruction RV32::decode(const uint32_t data) const {
+DecodedInstruction RV32::decode(const uint32_t data) {
     const auto opcode = static_cast<Opcode>(data & 0x7F);
     DecodedInstruction instruction{};
     instruction.opcode = opcode;
@@ -123,8 +117,7 @@ DecodedInstruction RV32::decode(const uint32_t data) const {
             decode_j_type(instruction, data);
             break;
         default:
-            std::cerr << "Unknown opcode: " << std::dec << static_cast<int>(opcode) << "\n";
-            running = false;
+            trigger_trap(TrapReason::IllegalInst, "Unknown opcode: " + std::to_string(static_cast<int>(opcode)));
             break;
     }
     return instruction;
@@ -315,8 +308,7 @@ void RV32::execute(const DecodedInstruction inst) {
 
         case Opcode::MISC_MEM: {
             // TODO: Implement MISC_MEM
-            std::cerr << "MISC_MEM not implemented" << std::endl;
-            running = false;
+            trigger_trap(TrapReason::IllegalInst, "MISC_MEM not implemented");
             break;
         }
 
@@ -330,7 +322,6 @@ void RV32::execute(const DecodedInstruction inst) {
                 }
                 else {
                     // TODO: Fix Breakpoints
-                    breakpoint_hit = true;
                 }
             }
             break;
@@ -439,13 +430,25 @@ void RV32::execute(const DecodedInstruction inst) {
     }
 }
 
+void RV32::trigger_trap(TrapReason trap_reason, const std::string &message) {
+    trap = trap_reason;
+    trap_message = message;
+    if (!g_config.debug_enabled) {
+        running = false;
+    }
+}
+
+inline void debug_print(const std::string &message) {
+    if (g_config.debug_enabled) {
+        std::cout << "[DEBUG]: " << message << std::endl;
+    }
+}
+
 void RV32::handle_semihosting() {
     const auto operation_number = static_cast<Syscall>(regs.read(Register::a0));
     const uint32_t parameter = regs.read(Register::a1);
 
-    if (g_config.debug_enabled) {
-        std::cout << std::hex << "[SYSCALL] Nummer: 0x" << static_cast<int>(operation_number) << std::endl;
-    }
+    debug_print("TEST");
 
     switch (operation_number) {
         case Syscall::SYS_EXIT:
@@ -529,8 +532,7 @@ void RV32::handle_semihosting() {
             break;
 
         default:
-            std::cerr << "[ERROR] Unknown syscall: 0x" << std::hex
-                      << static_cast<int>(operation_number) << std::dec << std::endl;
+            trigger_trap(TrapReason::IllegalInst, "Unknown semihosting number: " + std::to_string(static_cast<int>(operation_number)));
             regs.write(Register::a0, -1);
             errno = ENOSYS;
             break;
@@ -560,10 +562,7 @@ void RV32::handle_sys_show_framebuffer(uint32_t parameter) {
     // Check if the address is valid
     if (parameter < g_config.ram_origin ||
         parameter + g_config.framebuffer_size_bytes > g_config.ram_end) {
-        std::cerr << "ERROR: Invalid framebuffer address: 0x"
-                  << std::hex << parameter
-                  << " (would read until 0x" << (parameter + g_config.framebuffer_size_bytes) << ")"
-                  << std::endl;
+        trigger_trap(TrapReason::IllegalInst, "Invalid framebuffer address");
         return;
         }
 
@@ -629,7 +628,7 @@ void RV32::handle_sys_is_key_down(uint32_t parameter) {
     regs.write(Register::a0, key_state[key] ? 1 : 0);
 }
 
-void RV32::handle_sys_exit_extended(const uint32_t parameter) const {
+void RV32::handle_sys_exit_extended(const uint32_t parameter) {
     struct ExitArgs {
         uint32_t reason_code;
         uint32_t subcode;
@@ -639,8 +638,7 @@ void RV32::handle_sys_exit_extended(const uint32_t parameter) const {
         const std::vector<uint8_t> raw = read_bytes(parameter, sizeof(ExitArgs));
 
         if (raw.size() < sizeof(ExitArgs)) {
-            std::cerr << "[ERROR] SYS_EXIT_EXTENDED: Invalid parameter block" << std::endl;
-            running = false;
+            trigger_trap(TrapReason::IllegalInst, "SYS_EXIT_EXTENDED: Invalid parameter block");
             return;
         }
 
@@ -654,8 +652,7 @@ void RV32::handle_sys_exit_extended(const uint32_t parameter) const {
         running = false;
 
     } catch (const std::exception& e) {
-        std::cerr << "[ERROR] SYS_EXIT_EXTENDED: " << e.what() << std::endl;
-        running = false;
+        trigger_trap(TrapReason::IllegalInst, "SYS_EXIT_EXTENDED: " + std::string(e.what()));
     }
 }
 
@@ -677,7 +674,7 @@ void RV32::handle_sys_write(uint32_t parameter) {
     const std::vector<uint8_t> raw = read_bytes(parameter, sizeof(WriteArgs));
 
     if (raw.size() < sizeof(WriteArgs)) {
-        std::cerr << "[ERROR] SYS_WRITE: Invalid parameter block" << std::endl;
+        trigger_trap(TrapReason::IllegalInst, "SYS_WRITE: Invalid parameter block");
         regs.write(Register::a0, -1);
         errno = EINVAL;
         return;
@@ -777,8 +774,6 @@ void RV32::handle_sys_seek(uint32_t parameter) {
         return;
     }
     const auto* args = reinterpret_cast<const SeekArgs*>(raw.data());
-
-    // std::cerr << "[DEBUG] sys_seek(): Seeking to position: " << args->abs_position << " on handle: " << args->handle << std::endl;
 
     if (fht->seek(args->handle, args->abs_position) != -1) {
         regs.write(Register::a0, 0);
@@ -907,29 +902,26 @@ void RV32::decode_j_type(DecodedInstruction &inst, const uint32_t data) {
     inst.imm = sign_extend(imm, 21);
 }
 
-uint64_t RV32::read_u64(const uint32_t address) const {
+uint64_t RV32::read_u64(const uint32_t address) {
     return read_value<uint32_t>(address);
 }
 
-uint32_t RV32::read_u32(const uint32_t address) const {
+uint32_t RV32::read_u32(const uint32_t address) {
     return read_value<uint32_t>(address);
 }
 
-uint16_t RV32::read_u16(const uint32_t address) const {
+uint16_t RV32::read_u16(const uint32_t address) {
     return read_value<uint16_t>(address);
 }
 
-uint8_t RV32::read_u8(const uint32_t address) const {
+uint8_t RV32::read_u8(const uint32_t address) {
     return read_value<uint8_t>(address);
 }
 
-std::vector<uint8_t> RV32::read_bytes(uint32_t address, size_t size) const {
+std::vector<uint8_t> RV32::read_bytes(uint32_t address, size_t size) {
     const uint32_t upper_address = address + size;
     if (!(g_config.ram_origin <= address && upper_address <= g_config.ram_end)) {
-        std::cerr << std::hex << std::showbase
-                  << "RV32::read_bytes(): address " << address << " out of range"
-                  << std::dec << std::endl;
-        running = false;
+        trigger_trap(TrapReason::MemFault, "READ_BYTES: address " + std::to_string(address) + " out of range");
         return {};
     }
 
@@ -938,14 +930,10 @@ std::vector<uint8_t> RV32::read_bytes(uint32_t address, size_t size) const {
 }
 
 template<typename T>
-T RV32::read_value(uint32_t address) const {
+T RV32::read_value(uint32_t address) {
     const uint32_t upper_address = address + sizeof(T);
     if (!(g_config.ram_origin <= address && upper_address <= g_config.ram_end)) {
-        std::cerr << std::hex << std::showbase
-                  << pc << ": "
-                  << "RV32::read_value(): address " << address << " out of range"
-                  << std::dec << std::endl;
-        running = false;
+        trigger_trap(TrapReason::MemFault, "READ_VALUE: address " + std::to_string(address) + " out of range");
         return {};
     }
 
@@ -979,15 +967,11 @@ void RV32::write_u8(const uint32_t address, const uint8_t value) {
 void RV32::write_bytes(uint32_t address, const std::vector<uint8_t> &value) {
     const uint32_t upper_address = address + value.size();
     if (text_start <= address && upper_address < text_end) {
-        std::cerr << std::hex << std::showbase << "[WRN] "
-                  << pc << ": " << "RV32::write_value(): address " << address << " overwriting program code"
-                  << std::endl;
+        trigger_trap(TrapReason::MemFault, "WRITE_BYTES: address overwrites program code");
+        return;
     }
     if (!(g_config.ram_origin <= address && upper_address <= g_config.ram_end)) {
-        std::cerr << std::hex << std::showbase
-                  << "RV32::read_bytes(): address " << address << " out of range"
-                  << std::dec << std::endl;
-        running = false;
+        trigger_trap(TrapReason::MemFault, "WRITE_BYTES: address out of range");
         return;
     }
 
@@ -1000,9 +984,8 @@ void RV32::write_value(uint32_t address, T value) {
     const uint32_t upper_address = address + sizeof(T);
 
     if (text_start <= address && upper_address < text_end) {
-        std::cerr << std::hex << std::showbase << "[WRN] "
-                  << pc << ": " << "RV32::write_value(): address " << address << " overwriting program code"
-                  << std::endl;
+        trigger_trap(TrapReason::MemFault, "WRITE_VALUE: address overwrites program code");
+        return;
     }
 
     if (g_config.ram_origin <= address && upper_address <= g_config.ram_end) {
@@ -1013,10 +996,7 @@ void RV32::write_value(uint32_t address, T value) {
         return;
     }
 
-    std::cerr << std::hex << std::showbase
-              << pc << ": " << "RV32::write_value(): address " << address << " out of range"
-              << std::dec << std::endl;
-    running = false;
+    trigger_trap(TrapReason::MemFault, "WRITE_VALUE: address out of range");
 }
 
 void inline RV32::init_regs(const bool initRandom) {

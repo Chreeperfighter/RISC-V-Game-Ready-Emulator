@@ -16,10 +16,16 @@ Config Config::defaults() {
     cfg.ram_origin = 0x00000000;
     cfg.ram_size_bytes = 32 * 1024 * 1024;  // 32MB
     cfg.stack_margin_bytes = 2 * 1024 * 1024;  // 2MB
+    cfg.ram_end = cfg.ram_origin + cfg.ram_size_bytes;
     cfg.framebuffer_width = 320;
     cfg.framebuffer_height = 200;
+    cfg.framebuffer_bpp = 32;
     cfg.framebuffer_format = "ARGB";
+    cfg.framebuffer_size_bytes = cfg.framebuffer_width * cfg.framebuffer_height * (cfg.framebuffer_bpp / 8);
     cfg.debug_enabled = false;
+    cfg.perf_monitor = false;
+    cfg.fps = 60;
+    cfg.breakpoints = {};
     cfg.randomize_registers = true;
     cfg.randomize_ram = true;
     cfg.zero_bss = true;
@@ -78,6 +84,28 @@ Config Config::load(const std::string& path) {
         if (data.contains("debug")) {
             const auto& debug = toml::find(data, "debug");
             cfg.debug_enabled = toml::find<bool>(debug, "enabled");
+            if (debug.contains("perf_monitor"))
+                cfg.perf_monitor = toml::find<bool>(debug, "perf_monitor");
+            if (debug.contains("fps"))
+                cfg.fps = toml::find<int>(debug, "fps");
+
+            if (debug.contains("breakpoint")) {
+                const auto& bps = toml::find(debug, "breakpoint");
+                for (const auto& bp : bps.as_array()) {
+                    BreakpointConfig bpc;
+                    if (bp.contains("address")) {
+                        const auto hex = toml::find<std::string>(bp, "address");
+                        bpc.address = static_cast<uint32_t>(std::stoul(hex, nullptr, 16));
+                    }
+                    if (bp.contains("file"))
+                        bpc.file = toml::find<std::string>(bp, "file");
+                    if (bp.contains("line"))
+                        bpc.line = toml::find<uint32_t>(bp, "line");
+                    if (bp.contains("condition"))
+                        bpc.condition = toml::find<std::string>(bp, "condition");
+                    cfg.breakpoints.push_back(bpc);
+                }
+            }
         }
 
         // Init

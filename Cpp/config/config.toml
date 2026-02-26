@@ -1,8 +1,8 @@
 [binary]
-path = "//Users/mark.verbeek/Data/Projects/RISC-V-Game-Ready-Emulator/Programs/RV32DOOM/cmake-build-release-rv32i/RV32DOOM"
+path = "/Users/mark.verbeek/Data/Projects/RISC-V-Game-Ready-Emulator/Programs/File/cmake-build-debug-rv32i/File"
 
 [storage]
-path = "/Users/mark.verbeek/Data/Projects/RISC-V-Game-Ready-Emulator/rv32_rootfs/DOOM"
+path = "/Users/mark.verbeek/Data/Projects/RISC-V-Game-Ready-Emulator/rv32_rootfs/File"
 
 [ram]
 ram_origin = 0x00000000
@@ -15,7 +15,16 @@ height = 200
 format = "ARGB"
 
 [debug]
-enabled = false
+enabled = true
+perf_monitor = false
+fps = 60
+
+[[debug.breakpoint]]
+address = "0x00001234"
+
+[[debug.breakpoint]]
+file = "main.c"
+line = 42
 
 [init]
 randomize_registers = true

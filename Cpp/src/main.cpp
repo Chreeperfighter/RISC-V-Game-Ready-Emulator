@@ -14,10 +14,6 @@
 #include <chrono>
 #include <iostream>
 
-#define FPS 60
-#define FRAME_TIME_US (1000000 / FPS)
-#define PERF_MONITOR false  // Toggle performance monitoring here
-
 using namespace std::chrono;
 
 std::atomic<bool> running(true);
@@ -29,12 +25,14 @@ std::atomic<uint64_t> instructions_executed(0);
 void step_cpu(RV32 &cpu, RV32Debugger &dbg) {
     while (cpu.running && running.load()) {
         cpu.step();
-        if (PERF_MONITOR) {
+        if (g_config.perf_monitor) {
             instructions_executed.fetch_add(1, std::memory_order_relaxed);
         }
-        // std::cout << "0x" << std::hex << cpu.get_pc() << std::endl;
-        if (cpu.breakpoint_hit) {
-            dbg.on_breakpoint();
+        if (g_config.debug_enabled) {
+            if (cpu.trap != TrapReason::None || dbg.should_break()) {
+                dbg.on_breakpoint();
+                cpu.trap = TrapReason::None;
+            }
         }
     }
     running.store(false);
@@ -53,6 +51,15 @@ int main() {
     elf_loader.parse(g_config.binary_path);
     RV32Debugger debugger(cpu, elf_loader);
     std::vector<ELFSection> sections = elf_loader.get_sections();
+    std::vector<ELFDebugSection> debug_sections = elf_loader.get_debug_sections();
+    for (const auto& section : debug_sections) {
+        if (g_config.debug_enabled) {
+            std::cout <<
+                "Debug: " << section.name <<
+                    ", Size: " << section.data.size() <<
+                        std::endl;
+        }
+    }
     for (const auto& section : sections) {
         if (g_config.debug_enabled) {
             std::cout <<
@@ -84,13 +91,13 @@ int main() {
             input.process_event(event);
         }
         auto current_time = steady_clock::now();
-        auto next_frame = last_frame + microseconds(FRAME_TIME_US);
+        auto next_frame = last_frame + microseconds(1000000 / g_config.fps);
         if (current_time >= next_frame) {
             last_frame = next_frame;
             display.update_display();
 
             // Performance monitoring (once per second)
-            if (PERF_MONITOR) {
+            if (g_config.perf_monitor) {
                 auto elapsed = duration_cast<milliseconds>(current_time - perf_start).count();
                 if (elapsed >= 1000) {
                     uint64_t current_inst = instructions_executed.load(std::memory_order_relaxed);

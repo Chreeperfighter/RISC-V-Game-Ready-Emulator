@@ -7,6 +7,15 @@
 #include <cstdint>
 #include <toml.hpp>
 #include <string>
+#include <vector>
+#include <optional>
+
+struct BreakpointConfig {
+    std::optional<uint32_t> address;
+    std::optional<std::string> file;
+    std::optional<uint32_t> line;
+    std::optional<std::string> condition;  // future
+};
 
 struct Config {
     // Binary
@@ -30,6 +39,9 @@ struct Config {
 
     // Debug
     bool debug_enabled;
+    bool perf_monitor;
+    int fps;
+    std::vector<BreakpointConfig> breakpoints;
 
     // Init
     bool randomize_registers;
