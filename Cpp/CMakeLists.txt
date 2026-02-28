@@ -27,6 +27,7 @@ add_executable(Cpp
         src/Input.cpp
         src/RV32Debugger.cpp
         src/ELFLoader.cpp
+        src/DWARFReader.cpp
         src/Display.cpp
 
         # Headers (optional)

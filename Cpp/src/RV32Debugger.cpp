@@ -12,6 +12,7 @@ RV32Debugger::RV32Debugger(RV32 &rv32_obj, ELFLoader &elf_obj) : rv32(rv32_obj),
         if (bp.address)
             breakpoint_addresses.insert(*bp.address);
     }
+    dwarf.parse(elf_loader.get_debug_sections());
 }
 
 void RV32Debugger::on_breakpoint() {

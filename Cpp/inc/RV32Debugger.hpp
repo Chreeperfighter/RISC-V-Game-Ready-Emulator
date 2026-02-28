@@ -8,6 +8,7 @@
 #include "RV32.hpp"
 #include "ELFLoader.hpp"
 #include "Config.hpp"
+#include "DWARFReader.hpp"
 
 #include <set>
 
@@ -20,6 +21,7 @@ private:
     RV32 &rv32;
     ELFLoader &elf_loader;
     std::set<uint32_t> breakpoint_addresses;
+    DWARFReader dwarf;
 };
 
 #endif //RV32DEBUGGER_HPP

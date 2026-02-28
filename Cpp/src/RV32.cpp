@@ -448,8 +448,6 @@ void RV32::handle_semihosting() {
     const auto operation_number = static_cast<Syscall>(regs.read(Register::a0));
     const uint32_t parameter = regs.read(Register::a1);
 
-    debug_print("TEST");
-
     switch (operation_number) {
         case Syscall::SYS_EXIT:
             handle_sys_exit(parameter);
