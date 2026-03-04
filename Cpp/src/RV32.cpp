@@ -632,26 +632,22 @@ void RV32::handle_sys_exit_extended(const uint32_t parameter) {
         uint32_t subcode;
     };
 
-    try {
-        const std::vector<uint8_t> raw = read_bytes(parameter, sizeof(ExitArgs));
+    const std::vector<uint8_t> raw = read_bytes(parameter, sizeof(ExitArgs));
 
-        if (raw.size() < sizeof(ExitArgs)) {
-            trigger_trap(TrapReason::IllegalInst, "SYS_EXIT_EXTENDED: Invalid parameter block");
-            return;
-        }
-
-        const auto* args = reinterpret_cast<const ExitArgs*>(raw.data());
-
-        if (args->reason_code == 0x20026) {
-            std::cout << "Process finished with exit code "
-                      << static_cast<int32_t>(args->subcode) << std::endl;
-        }
-
-        running = false;
-
-    } catch (const std::exception& e) {
-        trigger_trap(TrapReason::IllegalInst, "SYS_EXIT_EXTENDED: " + std::string(e.what()));
+    if (raw.size() < sizeof(ExitArgs)) {
+        trigger_trap(TrapReason::IllegalInst, "SYS_EXIT_EXTENDED: Invalid parameter block");
+        return;
     }
+
+    ExitArgs args{};
+    memcpy(&args, raw.data(), sizeof(ExitArgs));
+
+    if (args.reason_code == 0x20026) {
+        std::cout << "Process finished with exit code "
+                  << static_cast<int32_t>(args.subcode) << std::endl;
+    }
+
+    running = false;
 }
 
 void RV32::handle_sys_flen(uint32_t parameter) {
@@ -678,9 +674,10 @@ void RV32::handle_sys_write(uint32_t parameter) {
         return;
     }
 
-    const auto* args = reinterpret_cast<const WriteArgs*>(raw.data());
-    const std::vector<uint8_t> buffer = read_bytes(args->buffer_ptr, args->length);
-    fht->write(args->handle, reinterpret_cast<const char *>(buffer.data()), buffer.size());
+    WriteArgs args{};
+    memcpy(&args, raw.data(), sizeof(WriteArgs));
+    const std::vector<uint8_t> buffer = read_bytes(args.buffer_ptr, args.length);
+    fht->write(args.handle, reinterpret_cast<const char *>(buffer.data()), buffer.size());
     regs.write(Register::a0, 0);
 }
 
@@ -699,13 +696,14 @@ void RV32::handle_sys_open(uint32_t parameter) {
         return;
     }
 
-    const auto* args = reinterpret_cast<const OpenArgs*>(raw.data());
-    const std::vector<uint8_t> filename_buffer = read_bytes(args->filename_ptr, args->filename_length + 1);
+    OpenArgs args{};
+    memcpy(&args, raw.data(), sizeof(OpenArgs));
+    const std::vector<uint8_t> filename_buffer = read_bytes(args.filename_ptr, args.filename_length + 1);
     const char* filename = reinterpret_cast<const char*>(filename_buffer.data());
 
     // Map semihosting mode to C++ fstream flags
     std::ios_base::openmode mode;
-    switch (args->mode) {
+    switch (args.mode) {
         case 0:  // "r"
             mode = std::ios::in;
             break;
@@ -771,9 +769,10 @@ void RV32::handle_sys_seek(uint32_t parameter) {
         errno = EINVAL;
         return;
     }
-    const auto* args = reinterpret_cast<const SeekArgs*>(raw.data());
+    SeekArgs args{};
+    memcpy(&args, raw.data(), sizeof(SeekArgs));
 
-    if (fht->seek(args->handle, args->abs_position) != -1) {
+    if (fht->seek(args.handle, args.abs_position) != -1) {
         regs.write(Register::a0, 0);
         return;
     }
@@ -794,13 +793,14 @@ void RV32::handle_sys_read(uint32_t parameter) {
         return;
     }
 
-    const auto* args = reinterpret_cast<const ReadArgs*>(raw.data());
+    ReadArgs args{};
+    memcpy(&args, raw.data(), sizeof(ReadArgs));
 
     // Allocate a host buffer to read into
-    std::vector<uint8_t> host_buffer(args->count);
+    std::vector<uint8_t> host_buffer(args.count);
 
     // Read into the host buffer
-    ssize_t bytes_read = fht->read(args->handle, reinterpret_cast<char *>(host_buffer.data()), args->count);
+    ssize_t bytes_read = fht->read(args.handle, reinterpret_cast<char *>(host_buffer.data()), args.count);
 
     if (bytes_read == -1) {
         // Error occurred, errno is already set by fht->read()
@@ -808,12 +808,10 @@ void RV32::handle_sys_read(uint32_t parameter) {
         return;
     }
 
-
-
     // Write the data from host buffer to emulated memory
-    write_bytes(args->buffer_ptr, host_buffer);
+    write_bytes(args.buffer_ptr, host_buffer);
 
-    uint32_t bytes_not_read = args->count - bytes_read;
+    uint32_t bytes_not_read = args.count - bytes_read;
     regs.write(Register::a0, bytes_not_read);
 }
 

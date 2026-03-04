@@ -94,15 +94,12 @@ Config Config::load(const std::string& path) {
                 for (const auto& bp : bps.as_array()) {
                     BreakpointConfig bpc;
                     if (bp.contains("address")) {
-                        const auto hex = toml::find<std::string>(bp, "address");
-                        bpc.address = static_cast<uint32_t>(std::stoul(hex, nullptr, 16));
+                        bpc.address = toml::find<int>(bp, "address");
                     }
                     if (bp.contains("file"))
                         bpc.file = toml::find<std::string>(bp, "file");
                     if (bp.contains("line"))
                         bpc.line = toml::find<uint32_t>(bp, "line");
-                    if (bp.contains("condition"))
-                        bpc.condition = toml::find<std::string>(bp, "condition");
                     cfg.breakpoints.push_back(bpc);
                 }
             }

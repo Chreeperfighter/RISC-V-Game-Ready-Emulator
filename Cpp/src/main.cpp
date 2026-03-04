@@ -51,15 +51,6 @@ int main() {
     elf_loader.parse(g_config.binary_path);
     RV32Debugger debugger(cpu, elf_loader);
     std::vector<ELFSection> sections = elf_loader.get_sections();
-    std::vector<ELFDebugSection> debug_sections = elf_loader.get_debug_sections();
-    for (const auto& section : debug_sections) {
-        if (g_config.debug_enabled) {
-            std::cout <<
-                "Debug: " << section.name <<
-                    ", Size: " << section.data.size() <<
-                        std::endl;
-        }
-    }
     for (const auto& section : sections) {
         if (g_config.debug_enabled) {
             std::cout <<

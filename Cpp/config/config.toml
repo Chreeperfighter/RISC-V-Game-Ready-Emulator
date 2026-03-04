@@ -17,14 +17,14 @@ format = "ARGB"
 [debug]
 enabled = true
 perf_monitor = false
-fps = 60
+fps = 35
+
+# [[debug.breakpoint]]
+# address = 0x24
 
 [[debug.breakpoint]]
-address = "0x00001234"
-
-[[debug.breakpoint]]
-file = "main.c"
-line = 42
+file = "/Users/mark.verbeek/Data/Projects/RISC-V-Game-Ready-Emulator/Programs/File/src/main.c"
+line = 612
 
 [init]
 randomize_registers = true

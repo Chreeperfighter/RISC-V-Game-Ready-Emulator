@@ -14,7 +14,6 @@ struct BreakpointConfig {
     std::optional<uint32_t> address;
     std::optional<std::string> file;
     std::optional<uint32_t> line;
-    std::optional<std::string> condition;  // future
 };
 
 struct Config {

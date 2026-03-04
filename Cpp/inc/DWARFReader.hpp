@@ -24,6 +24,7 @@ class DWARFReader {
 public:
     void parse(const std::vector<ELFDebugSection>& sections);
     std::optional<LineEntry> lookup_line(uint32_t pc) const;
+    std::optional<uint32_t> lookup_address(const std::string& file, uint32_t line) const;
 
 private:
     void parse_debug_line(const ELFDebugSection& section);
@@ -33,6 +34,7 @@ private:
     static int64_t  read_sleb128(const uint8_t* data, size_t& offset);
 
     std::vector<LineEntry> line_entries;  // sorted by address
+    std::vector<uint8_t> debug_line_str_data;
 };
 
 #endif //DWARFREADER_HPP
