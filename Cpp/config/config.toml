@@ -15,7 +15,7 @@ height = 200
 format = "ARGB"
 
 [debug]
-enabled = true
+enabled = false
 perf_monitor = false
 fps = 35
 

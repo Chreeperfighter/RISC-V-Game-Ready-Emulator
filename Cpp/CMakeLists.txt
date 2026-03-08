@@ -20,6 +20,9 @@ endif()
 
 find_package(SDL2 REQUIRED)
 
+find_library(LIBDWARF_LIB dwarf HINTS /opt/homebrew/lib /usr/local/lib REQUIRED)
+find_path(LIBDWARF_INCLUDE libdwarf.h HINTS /opt/homebrew/include/libdwarf-2 /usr/local/include/libdwarf-2 REQUIRED)
+
 add_executable(Cpp
         # Sources
         src/main.cpp
@@ -29,30 +32,18 @@ add_executable(Cpp
         src/ELFLoader.cpp
         src/DWARFReader.cpp
         src/Display.cpp
-
-        # Headers (optional)
-        inc/RV32.hpp
-        inc/config.hpp
-        inc/ISA.hpp
-        inc/Syscall.hpp
-        inc/Registers.hpp
-        inc/elf.h
-        inc/ascii.h
-        inc/Display.hpp
-        inc/Input.hpp
-        inc/RV32Debugger.hpp
-        inc/ELFLoader.hpp
         src/FileHandle.cpp
-        inc/FIleHandle.hpp
         src/Config.cpp
 )
 
 target_include_directories(Cpp PRIVATE
         ${CMAKE_SOURCE_DIR}/inc
         ${SDL2_INCLUDE_DIRS}
+        ${LIBDWARF_INCLUDE}
         toml11/include
 )
 
 target_link_libraries(Cpp
     ${SDL2_LIBRARIES}
+    ${LIBDWARF_LIB}
 )

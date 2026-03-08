@@ -6,15 +6,21 @@
 
 #include <algorithm>
 #include <iostream>
+#include <map>
 
 void DWARFReader::parse(const std::vector<ELFDebugSection>& sections) {
     for (const auto& section : sections) {
+        std::cout << section.name << std::endl;
         if (section.name == ".debug_line_str")
             debug_line_str_data = section.data;
+        else if (section.name == ".debug_abbrev")
+            debug_abbrev_data = section.data;
     }
     for (const auto& section : sections) {
         if (section.name == ".debug_line")
             parse_debug_line(section);
+        else if (section.name == ".debug_info")
+            parse_debug_info(section);
     }
 
     // Sort by address for binary search in lookup_line()
@@ -49,7 +55,39 @@ std::optional<uint32_t> DWARFReader::lookup_address(const std::string& file, uin
     return best;
 }
 
+std::map<uint64_t, AbbrevDeclaration> DWARFReader::get_abbrev_table(size_t offset) const {
+    std::map<uint64_t, AbbrevDeclaration> abbrev_table;
+    while (offset < debug_abbrev_data.size()) {
+        AbbrevDeclaration abbrev_declaration{};
 
+        uint64_t abbrev_code = read_uleb128(debug_abbrev_data.data(), offset);
+        if (abbrev_code == 0x0) {
+            break;
+        }
+        abbrev_declaration.tag = read_uleb128(debug_abbrev_data.data(), offset);
+        uint8_t children = debug_abbrev_data[offset++];
+        if (children == DW_CHILDREN_yes) {
+            abbrev_declaration.has_children = true;
+        }
+        else if (children == DW_CHILDREN_no) {
+            abbrev_declaration.has_children = false;
+        }
+        while (offset < debug_abbrev_data.size()) {
+            AbbrevAttribute abbrev_attribute{};
+            abbrev_attribute.name = read_uleb128(debug_abbrev_data.data(), offset);
+            abbrev_attribute.form = read_uleb128(debug_abbrev_data.data(), offset);
+            if (abbrev_attribute.name == 0 && abbrev_attribute.form == 0) {
+                break;
+            }
+            if (abbrev_attribute.form == DW_FORM_implicit_const) {
+                abbrev_attribute.value = read_sleb128(debug_abbrev_data.data(), offset);
+            }
+            abbrev_declaration.attributes.push_back(abbrev_attribute);
+        }
+        abbrev_table.insert({abbrev_code, abbrev_declaration});
+    }
+    return abbrev_table;
+}
 
 void DWARFReader::parse_debug_line(const ELFDebugSection& section) {
     struct __attribute__((packed)) Header {
@@ -90,10 +128,9 @@ void DWARFReader::parse_debug_line(const ELFDebugSection& section) {
     size_t start_offset = 0;
     size_t end_offset;
     Header header{};
-    std::vector<std::string> directories;
-    std::vector<std::string> file_names;
-    int cu_index = 0;
     while (start_offset < section.data.size()) {
+        std::vector<std::string> directories;
+        std::vector<std::string> file_names;
         size_t offset = start_offset;
         memcpy(&header, section.data.data() + offset, sizeof(Header));
         end_offset = offset + 4 + header.unit_length;
@@ -325,6 +362,134 @@ void DWARFReader::parse_debug_line(const ELFDebugSection& section) {
         start_offset = end_offset;
     }
 }
+
+void DWARFReader::parse_debug_info(const ELFDebugSection &section) {
+    struct __attribute__((packed)) Header {
+        uint32_t unit_length;
+        uint16_t version;
+        uint8_t unit_type;
+        uint8_t address_size;
+        uint32_t debug_abbrev_offset;
+        uint64_t type_signature;
+        uint32_t type_offset;
+        uint64_t dwo_id;
+    };
+
+    size_t offset = 0;
+    Header header{};
+    size_t initial_header_size = sizeof(uint32_t) + sizeof(uint16_t) + sizeof(uint8_t);
+    memcpy(&header, section.data.data() + offset, initial_header_size);
+    offset += initial_header_size;
+
+    switch (header.unit_type) {
+        case DW_UT_compile: {
+            header.address_size = section.data[offset++];
+            memcpy(&header.debug_abbrev_offset, section.data.data() + offset, sizeof(uint32_t));
+            offset += sizeof(uint32_t);
+            break;
+        }
+        default: {
+            std::cerr << "ERROR unit_type" << std::endl;
+            break;
+        }
+    }
+    size_t abbrev_offset = header.debug_abbrev_offset;
+    std::map<uint64_t, AbbrevDeclaration> abbrev_table = get_abbrev_table(abbrev_offset);
+}
+
+FormValue DWARFReader::read_form_value(const std::vector<uint8_t>& data, size_t& offset, uint64_t form) {
+    FormValue v{};
+    switch (form) {
+        case DW_FORM_addr:
+        case DW_FORM_data4:
+        case DW_FORM_ref4:
+        case DW_FORM_strp:
+        case DW_FORM_line_strp:
+        case DW_FORM_sec_offset:
+            memcpy(&v.u, data.data()+offset, 4); offset += 4;
+            break;
+        case DW_FORM_data1:
+        case DW_FORM_ref1:
+        case DW_FORM_flag:
+            v.u = data[offset++];
+            break;
+        case DW_FORM_data2:
+        case DW_FORM_ref2:
+            memcpy(&v.u, data.data()+offset, 2);
+            offset += 2; break;
+        case DW_FORM_data8:
+        case DW_FORM_ref8:
+            memcpy(&v.u, data.data()+offset, 8);
+            offset += 8;
+            break;
+        case DW_FORM_udata:
+        case DW_FORM_ref_udata:
+        case DW_FORM_addrx:
+        case DW_FORM_loclistx:
+        case DW_FORM_rnglistx:
+            v.u = read_uleb128(data.data(), offset);
+            break;
+        case DW_FORM_sdata:
+            v.u = (uint64_t)read_sleb128(data.data(), offset);
+            break;
+        case DW_FORM_flag_present:
+            v.u = 1;
+            break;
+        case DW_FORM_implicit_const:
+            break;  // value already in abbrev table, 0 bytes here
+        case DW_FORM_string:
+            v.str = reinterpret_cast<const char*>(data.data()+offset);
+            offset += v.str.size() + 1; break;
+        case DW_FORM_exprloc: {
+            uint64_t len = read_uleb128(data.data(), offset);
+            v.block = {data.begin()+offset, data.begin()+offset+len};
+            offset += len; break;
+        }
+        default:
+            std::cerr << "[DWARF] Unknown form: 0x" << std::hex << form << std::dec << std::endl;
+            break;
+    }
+    return v;
+}
+
+void DWARFReader::walk_dies(const std::vector<uint8_t>& data, size_t offset, size_t end, const std::map<uint64_t, AbbrevDeclaration>& abbrev_table, int depth) {
+    while (offset < end) {
+        uint64_t abbrev_code = read_uleb128(data.data(), offset);
+        if (abbrev_code == 0)
+            return;
+        auto it = abbrev_table.find(abbrev_code);
+        if (it == abbrev_table.end()) {
+            // handle error
+            return;
+        }
+        const AbbrevDeclaration& abbrev_declaration = it->second;
+
+        std::optional<std::string>          name;
+        std::optional<uint32_t>             low_pc;
+        std::optional<uint32_t>             high_pc;
+        std::optional<std::vector<uint8_t>> location;
+        std::optional<uint32_t>             type_ref;
+        std::optional<uint64_t>             byte_size;
+
+        for (const AbbrevAttribute& attribute : abbrev_declaration.attributes) {
+            FormValue v = read_form_value(data, offset, attribute.form);
+            switch (attribute.name) {
+                case DW_AT_name:
+                    name = v.str;
+                    break;
+                case DW_AT_low_pc:
+                    low_pc = v.u;
+                    break;
+                case DW_AT_high_pc:
+                    high_pc = v.u;
+                    break;
+                case DW_AT_location:
+                    break;
+            }
+        }
+    }
+}
+
 
 uint64_t DWARFReader::read_uleb128(const uint8_t* data, size_t& offset) {
     uint64_t result = 0;
