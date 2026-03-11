@@ -3,7 +3,9 @@
 //
 
 // config.cpp
-#include "config.hpp"
+#include "Config.hpp"
+#include "Utils.hpp"
+
 #include <toml.hpp>
 #include <iostream>
 
@@ -20,7 +22,7 @@ Config Config::defaults() {
     cfg.framebuffer_width = 320;
     cfg.framebuffer_height = 200;
     cfg.framebuffer_bpp = 32;
-    cfg.framebuffer_format = "ARGB";
+    cfg.framebuffer_format = "ARGB8888";
     cfg.framebuffer_size_bytes = cfg.framebuffer_width * cfg.framebuffer_height * (cfg.framebuffer_bpp / 8);
     cfg.debug_enabled = false;
     cfg.perf_monitor = false;
@@ -66,16 +68,16 @@ Config Config::load(const std::string& path) {
             cfg.framebuffer_height = toml::find<int>(fb, "height");
             cfg.framebuffer_format = toml::find<std::string>(fb, "format");
 
-            if (cfg.framebuffer_format == "ARGB") {
+            if (cfg.framebuffer_format == "ARGB8888") {
                 cfg.framebuffer_bpp = 32;
-            } else if (cfg.framebuffer_format == "RGB") {
+            } else if (cfg.framebuffer_format == "RGBA8888") {
+                cfg.framebuffer_bpp = 32;
+            } else if (cfg.framebuffer_format == "RGB888") {
                 cfg.framebuffer_bpp = 24;
             } else if (cfg.framebuffer_format == "RGB565") {
                 cfg.framebuffer_bpp = 16;
             } else {
-                std::cerr << "[ERROR] Config::load(): Unknown framebuffer format: "
-                          << cfg.framebuffer_format << std::endl;
-                throw std::runtime_error("Invalid framebuffer format");
+                emulator_error("Config::load() --> Unknown framebuffer format: " + cfg.framebuffer_format);
             }
             cfg.framebuffer_size_bytes = cfg.framebuffer_width * cfg.framebuffer_height * (cfg.framebuffer_bpp / 8);
         }

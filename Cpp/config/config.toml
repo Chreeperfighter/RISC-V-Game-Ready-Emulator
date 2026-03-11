@@ -1,8 +1,8 @@
 [binary]
-path = "/Users/mark.verbeek/Data/Projects/RISC-V-Game-Ready-Emulator/Programs/File/cmake-build-debug-rv32i/File"
+path = "/Users/mark.verbeek/Data/Projects/RISC-V-Game-Ready-Emulator/Programs/Peanut-GB-RV32/cmake-build-release-rv32i/Peanut_GB_RV32"
 
 [storage]
-path = "/Users/mark.verbeek/Data/Projects/RISC-V-Game-Ready-Emulator/rv32_rootfs/File"
+path = "/Users/mark.verbeek/Data/Projects/RISC-V-Game-Ready-Emulator/rv32_rootfs/Peanut_GB_RV32"
 
 [ram]
 ram_origin = 0x00000000
@@ -10,21 +10,21 @@ ram_size_mb = 32
 stack_margin_mb = 2
 
 [framebuffer]
-width = 320
-height = 200
-format = "ARGB"
+width = 160
+height = 144
+format = "RGB565"
 
 [debug]
 enabled = false
 perf_monitor = false
-fps = 35
+fps = 60
 
 # [[debug.breakpoint]]
 # address = 0x24
 
 [[debug.breakpoint]]
-file = "/Users/mark.verbeek/Data/Projects/RISC-V-Game-Ready-Emulator/Programs/File/src/main.c"
-line = 612
+file = "/Users/mark.verbeek/Data/Projects/RISC-V-Game-Ready-Emulator/Programs/Peanut-GB-RV32/main.c"
+line = 394
 
 [init]
 randomize_registers = true

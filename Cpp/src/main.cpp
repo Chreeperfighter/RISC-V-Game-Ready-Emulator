@@ -49,7 +49,7 @@ int main() {
 
     ELFLoader elf_loader;
     elf_loader.parse(g_config.binary_path);
-    RV32Debugger debugger(cpu, elf_loader);
+    RV32Debugger debugger(cpu);
     std::vector<ELFSection> sections = elf_loader.get_sections();
     for (const auto& section : sections) {
         if (g_config.debug_enabled) {

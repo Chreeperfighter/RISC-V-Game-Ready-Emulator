@@ -18,20 +18,12 @@ typedef struct {
     std::string name;
 } ELFSection;
 
-typedef struct {
-    std::string name;
-    std::vector<uint8_t> data;
-} ELFDebugSection;
-
 class ELFLoader {
 public:
     void parse(std::string& path);
     uint32_t get_entry() const;
     std::vector<ELFSection> get_sections() const {
         return elf_sections;
-    }
-    std::vector<ELFDebugSection> get_debug_sections() const {
-        return debug_sections;
     }
 private:
     void parse_sections();
@@ -42,7 +34,6 @@ private:
     std::vector<Elf32_Shdr> shdrs{};
     std::vector<char> shstrtab{};
     std::vector<ELFSection> elf_sections{};
-    std::vector<ELFDebugSection> debug_sections{};
 };
 
 

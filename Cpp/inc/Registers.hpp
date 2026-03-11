@@ -120,7 +120,6 @@ public:
 
 private:
     std::array<uint32_t, NUM_REGS> regs{};
-    uint32_t dummy = 0;
 };
 
 

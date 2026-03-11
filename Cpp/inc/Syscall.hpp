@@ -17,7 +17,7 @@ enum class Syscall : uint32_t {
     */
     SYS_EXIT_EXTENDED = 0x20,
 
-    SYS_GET_FRAMEBUFFER_INFO = 0x100,
+    SYS_GET_DISPLAY_INFO = 0x100,
     /*
     Returns framebuffer configuration information.
     Entry

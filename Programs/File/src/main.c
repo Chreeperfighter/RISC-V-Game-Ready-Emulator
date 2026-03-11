@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <string.h>
 
+/*
 void print_separator(const char* title) {
     printf("\n========== %s ==========\n", title);
 }
@@ -605,8 +606,20 @@ int main1() {
 
     return 0;
 }
+*/
+
+void test() {
+    int           a = -42;
+    unsigned int  b = 100;
+    char          c = 'Z';
+    float         d = 3.14f;
+    short         e = -7;
+    long          f = 123456;
+
+    printf("a=%d b=%u c=%c d=%f e=%d f=%ld\n", a, b, c, d, e, f);
+}
 
 int main() {
-    printf("Hello World!");
+    test();
     return 0;
 }

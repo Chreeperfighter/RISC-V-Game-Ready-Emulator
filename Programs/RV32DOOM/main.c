@@ -15,7 +15,6 @@
 #define DOOM_HEIGHT 200
 #define TARGET_FPS 35
 #define TARGET_FRAME_US (1000000 / TARGET_FPS)
-#define STUTTER_THRESHOLD_US (2 * TARGET_FRAME_US)
 #define STATS_INTERVAL_US 1000000  // 1 second
 
 // ============================================================================
@@ -229,34 +228,14 @@ static void process_input(void) {
 // ============================================================================
 
 typedef struct {
-    int32_t update_us;
-    int32_t blit_us;
-    int32_t total_us;
-} FrameTiming;
-
-typedef struct {
     int frame_count;
     int32_t timer_start;
-    int32_t worst_frame_us;
 } PerformanceStats;
 
 static PerformanceStats g_perf_stats = {0};
 
-static void check_for_stutter(const FrameTiming* timing) {
-    if (timing->total_us > STUTTER_THRESHOLD_US) {
-        printf("[STUTTER] frame=%.2f ms  update=%.2f ms  blit=%.2f ms\n",
-               timing->total_us / 1000.0,
-               timing->update_us / 1000.0,
-               timing->blit_us / 1000.0);
-    }
-}
-
-static void update_performance_stats(const FrameTiming* timing) {
+static void update_performance_stats(void) {
     g_perf_stats.frame_count++;
-
-    if (timing->total_us > g_perf_stats.worst_frame_us) {
-        g_perf_stats.worst_frame_us = timing->total_us;
-    }
 
     int32_t now = get_time_us();
     int32_t elapsed = now - g_perf_stats.timer_start;
@@ -264,15 +243,10 @@ static void update_performance_stats(const FrameTiming* timing) {
     if (elapsed >= STATS_INTERVAL_US) {
         double fps = (double)g_perf_stats.frame_count * 1000000.0 / elapsed;
         double avg_frame_ms = (double)elapsed / g_perf_stats.frame_count / 1000.0;
-        double worst_frame_ms = (double)g_perf_stats.worst_frame_us / 1000.0;
+        printf("FPS=%.1f  frame=%.2f ms\n", fps, avg_frame_ms);
 
-        printf("[STATS] FPS=%.2f  avg_frame=%.2f ms  worst_frame=%.2f ms\n",
-               fps, avg_frame_ms, worst_frame_ms);
-
-        // Reset stats
         g_perf_stats.timer_start = now;
         g_perf_stats.frame_count = 0;
-        g_perf_stats.worst_frame_us = 0;
     }
 }
 
@@ -336,33 +310,42 @@ static void initialize_performance_tracking(void) {
 // MAIN GAME LOOP
 // ============================================================================
 
+struct DisplayInfo {
+    uint32_t width;
+    uint32_t height;
+    uint32_t format;
+    uint32_t bpp;
+};
+
+enum DisplayFormat {
+    FORMAT_ARGB8888 = 0,
+    FORMAT_RGB565 = 1,
+    FORMAT_RGB888 = 2,
+    FORMAT_RGBA8888 = 3,
+};
+
 static void run_game_loop(void) {
+    struct DisplayInfo display_info = {0};
+    sys_get_display_info(&display_info);
+    if (display_info.format != FORMAT_RGBA8888) {
+        fprintf(stderr, "fatal: unsupported display format %u, expected RGBA8888\n", display_info.format);
+        exit(1);
+    }
+    if (display_info.width != 320 || display_info.height != 200) {
+        fprintf(stderr, "fatal: unsupported display resolution %ux%u, expected 320x200\n", display_info.width, display_info.height);
+        exit(1);
+    }
     while (1) {
         int32_t frame_start = get_time_us();
-        FrameTiming timing = {0};
 
-        // Process input
         process_input();
-
-        // Update game logic
-        int32_t update_start = get_time_us();
         doom_update();
-        timing.update_us = get_time_us() - update_start;
 
-        // Render to screen
         uint8_t* framebuffer = doom_get_framebuffer(4);
-        int32_t blit_start = get_time_us();
         sys_show_framebuffer(framebuffer);
-        timing.blit_us = get_time_us() - blit_start;
 
-        // Calculate frame timing
-        timing.total_us = get_time_us() - frame_start;
+        update_performance_stats();
 
-        // Performance monitoring
-        check_for_stutter(&timing);
-        update_performance_stats(&timing);
-
-        // Maintain target frame rate
         limit_frame_rate();
     }
 }

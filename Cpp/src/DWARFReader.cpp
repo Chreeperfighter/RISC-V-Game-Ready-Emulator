@@ -4,43 +4,54 @@
 
 #include "DWARFReader.hpp"
 
+#include <libdwarf.h>
+#include <dwarf.h>
 #include <algorithm>
 #include <iostream>
-#include <map>
 
-void DWARFReader::parse(const std::vector<ELFDebugSection>& sections) {
-    for (const auto& section : sections) {
-        std::cout << section.name << std::endl;
-        if (section.name == ".debug_line_str")
-            debug_line_str_data = section.data;
-        else if (section.name == ".debug_abbrev")
-            debug_abbrev_data = section.data;
+void DWARFReader::parse(const std::string& elf_path) {
+    Dwarf_Error err = nullptr;
+    Dwarf_Debug dbg = nullptr;
+    int res = dwarf_init_path(elf_path.c_str(), nullptr, 0, 0, nullptr, nullptr, &dbg, &err);
+    if (res != DW_DLV_OK) {
+        std::cerr << "[DWARF] Failed to open: " << elf_path << std::endl;
+        return;
     }
-    for (const auto& section : sections) {
-        if (section.name == ".debug_line")
-            parse_debug_line(section);
-        else if (section.name == ".debug_info")
-            parse_debug_info(section);
+    m_dbg = dbg;
+
+    Dwarf_Die cu_die = nullptr;
+    Dwarf_Unsigned cu_header_length = 0;
+    Dwarf_Half version = 0, address_size = 0, length_size = 0, extension_size = 0, header_cu_type = 0;
+    Dwarf_Off abbrev_offset = 0;
+    Dwarf_Sig8 type_sig{};
+    Dwarf_Unsigned typeoffset = 0, next_cu_offset = 0;
+    while (dwarf_next_cu_header_e(dbg, true, &cu_die,
+            &cu_header_length, &version, &abbrev_offset, &address_size, &length_size,
+            &extension_size, &type_sig, &typeoffset, &next_cu_offset, &header_cu_type, &err) == DW_DLV_OK) {
+        parse_lines(cu_die);
+        walk_dies(cu_die);
+        dwarf_dealloc_die(cu_die);
+        cu_die = nullptr;
     }
 
-    // Sort by address for binary search in lookup_line()
+    m_dbg = nullptr;
+    dwarf_finish(dbg);
+
     std::sort(line_entries.begin(), line_entries.end(),
-        [](const LineEntry& a, const LineEntry& b) {
-            return a.address < b.address;
-        });
+        [](const LineEntry& a, const LineEntry& b) { return a.address < b.address; });
+    std::sort(sub_programs.begin(), sub_programs.end(),
+        [](const SubProgram& a, const SubProgram& b) { return a.low_pc < b.low_pc; });
 }
 
-std::optional<LineEntry> DWARFReader::lookup_line(uint32_t pc) const {
-    if (line_entries.empty())
-        return std::nullopt;
+// --- Lookup ---
 
-    // Find largest address <= pc
+std::optional<LineEntry> DWARFReader::lookup_line(uint32_t pc) const {
+    if (line_entries.empty()) return std::nullopt;
+
     auto it = std::upper_bound(line_entries.begin(), line_entries.end(), pc,
         [](uint32_t pc, const LineEntry& e) { return pc < e.address; });
 
-    if (it == line_entries.begin())
-        return std::nullopt;
-
+    if (it == line_entries.begin()) return std::nullopt;
     return *std::prev(it);
 }
 
@@ -55,466 +66,202 @@ std::optional<uint32_t> DWARFReader::lookup_address(const std::string& file, uin
     return best;
 }
 
-std::map<uint64_t, AbbrevDeclaration> DWARFReader::get_abbrev_table(size_t offset) const {
-    std::map<uint64_t, AbbrevDeclaration> abbrev_table;
-    while (offset < debug_abbrev_data.size()) {
-        AbbrevDeclaration abbrev_declaration{};
+const SubProgram* DWARFReader::lookup_subprogram(uint32_t pc) const {
+    // Find the first subprogram whose low_pc is greater than pc
+    auto it = std::upper_bound(sub_programs.begin(), sub_programs.end(), pc,
+        [](uint32_t pc, const SubProgram& s) { return pc < s.low_pc; });
 
-        uint64_t abbrev_code = read_uleb128(debug_abbrev_data.data(), offset);
-        if (abbrev_code == 0x0) {
-            break;
-        }
-        abbrev_declaration.tag = read_uleb128(debug_abbrev_data.data(), offset);
-        uint8_t children = debug_abbrev_data[offset++];
-        if (children == DW_CHILDREN_yes) {
-            abbrev_declaration.has_children = true;
-        }
-        else if (children == DW_CHILDREN_no) {
-            abbrev_declaration.has_children = false;
-        }
-        while (offset < debug_abbrev_data.size()) {
-            AbbrevAttribute abbrev_attribute{};
-            abbrev_attribute.name = read_uleb128(debug_abbrev_data.data(), offset);
-            abbrev_attribute.form = read_uleb128(debug_abbrev_data.data(), offset);
-            if (abbrev_attribute.name == 0 && abbrev_attribute.form == 0) {
-                break;
-            }
-            if (abbrev_attribute.form == DW_FORM_implicit_const) {
-                abbrev_attribute.value = read_sleb128(debug_abbrev_data.data(), offset);
-            }
-            abbrev_declaration.attributes.push_back(abbrev_attribute);
-        }
-        abbrev_table.insert({abbrev_code, abbrev_declaration});
-    }
-    return abbrev_table;
+    // If the first entry already starts after pc, nothing can contain it
+    if (it == sub_programs.begin())
+        return nullptr;
+
+    // Step back to the candidate whose low_pc <= pc
+    --it;
+
+    // Check that pc also falls before high_pc
+    if (pc < it->high_pc)
+        return &(*it);
+
+    return nullptr;
 }
 
-void DWARFReader::parse_debug_line(const ELFDebugSection& section) {
-    struct __attribute__((packed)) Header {
-        uint32_t unit_length;
-        uint16_t version;
-        uint8_t address_size;
-        uint8_t segment_selector_size;
-        uint32_t header_length;
-        uint8_t minimum_instruction_length;
-        uint8_t maximum_operations_per_instruction;
-        uint8_t default_is_stmt;
-        int8_t line_base;
-        uint8_t line_range;
-        uint8_t opcode_base;
-    };
+// --- Parsing ---
 
-    struct EntryFormat {
-        uint64_t content_type;
-        uint64_t form;
-    };
+void DWARFReader::parse_lines(Dwarf_Die cu_die) {
+    Dwarf_Error err = nullptr;
+    Dwarf_Unsigned version = 0;
+    Dwarf_Small table_count = 0;
+    Dwarf_Line_Context ctx = nullptr;
 
-    // State Machine Registers
-    struct State {
-        uint32_t address = 0;
-        uint32_t op_index = 0;
-        uint32_t file = 1;
-        uint32_t line = 1;
-        uint32_t column = 0;
-        bool is_stmt = false;
-        bool basic_block = false;
-        bool end_sequence = false;
-        bool prologue_end = false;
-        bool epilogue_begin= false;
-        uint32_t isa = 0;
-        uint32_t discriminator = 0;
-    };
+    if (dwarf_srclines_b(cu_die, &version, &table_count, &ctx, &err) != DW_DLV_OK)
+        return;
 
-    size_t start_offset = 0;
-    size_t end_offset;
-    Header header{};
-    while (start_offset < section.data.size()) {
-        std::vector<std::string> directories;
-        std::vector<std::string> file_names;
-        size_t offset = start_offset;
-        memcpy(&header, section.data.data() + offset, sizeof(Header));
-        end_offset = offset + 4 + header.unit_length;
-        offset += sizeof(Header);
-        offset += header.opcode_base - 1; // skip standard_opcode_lengths
+    Dwarf_Line* lines = nullptr;
+    Dwarf_Signed count = 0;
+    if (dwarf_srclines_from_linecontext(ctx, &lines, &count, &err) == DW_DLV_OK) {
+        for (Dwarf_Signed i = 0; i < count; i++) {
+            Dwarf_Addr addr = 0;
+            Dwarf_Unsigned lineno = 0, col = 0;
+            char* file = nullptr;
 
-        // Directories
-        uint8_t directory_entry_format_count = section.data[offset++];
-        std::vector<EntryFormat> directory_entry_formats;
-        for (uint8_t i = 0; i < directory_entry_format_count; ++i) {
-            uint64_t content_type_code = read_uleb128(section.data.data(), offset);
-            uint64_t form_code = read_uleb128(section.data.data(), offset);
-            directory_entry_formats.push_back(EntryFormat{content_type_code, form_code});
-        }
-        uint64_t directories_count = read_uleb128(section.data.data(), offset);
-        for (uint64_t i = 0; i < directories_count; ++i) {
-            for (const EntryFormat& format : directory_entry_formats) {
-                switch (format.content_type) {
-                    case DW_LNCT_path: {
-                        std::string path{};
-                        if (format.form == DW_FORM_string) {
-                            path = reinterpret_cast<const char *>(section.data.data() + offset);
-                            offset += path.size() + 1;
-                        }
-                        else if (format.form == DW_FORM_line_strp) {
-                            uint32_t str_offset;
-                            memcpy(&str_offset, section.data.data() + offset, sizeof(uint32_t));
-                            offset += sizeof(uint32_t);
-                            path = reinterpret_cast<const char *>(debug_line_str_data.data() + str_offset);
-                        }
-                        directories.push_back(path);
-                        break;
-                    }
-                    default: {
-                        std::cerr << "[DWARF] Directories: Unknown content type: " << std::hex << std::showbase <<
-                            format.content_type << std::dec << std::noshowbase << std::endl;
-                        break;
-                    }
-                }
-            }
-        }
+            dwarf_lineaddr(lines[i], &addr, &err);
+            dwarf_lineno(lines[i], &lineno, &err);
+            dwarf_lineoff_b(lines[i], &col, &err);
+            dwarf_linesrc(lines[i], &file, &err);
 
-        // File Names
-        uint8_t file_name_entry_format_count = section.data[offset++];
-        std::vector<EntryFormat> file_name_entry_formats;
-        for (uint8_t i = 0; i < file_name_entry_format_count; ++i) {
-            uint64_t content_type_code = read_uleb128(section.data.data(), offset);
-            uint64_t form_code = read_uleb128(section.data.data(), offset);
-            file_name_entry_formats.push_back(EntryFormat{content_type_code, form_code});
-        }
-
-        uint64_t file_names_count = read_uleb128(section.data.data(), offset);
-        for (uint64_t i = 0; i < file_names_count; ++i) {
-            std::string filename;
-            uint64_t dir_index = 0;
-            for (const EntryFormat& format : file_name_entry_formats) {
-                switch (format.content_type) {
-                    case DW_LNCT_path: {
-                        if (format.form == DW_FORM_string) {
-                            filename = reinterpret_cast<const char *>(section.data.data() + offset);
-                            offset += filename.size() + 1;
-                        }
-                        else if (format.form == DW_FORM_line_strp) {
-                            uint32_t str_offset;
-                            memcpy(&str_offset, section.data.data() + offset, sizeof(uint32_t));
-                            offset += sizeof(uint32_t);
-                            filename = reinterpret_cast<const char *>(debug_line_str_data.data() + str_offset);
-                        }
-                        break;
-                    }
-                    case DW_LNCT_directory_index: {
-                        if (format.form == DW_FORM_udata) {
-                            dir_index = read_uleb128(section.data.data(), offset);
-                        }
-                        else if (format.form == DW_FORM_data1) {
-                            dir_index = section.data[offset++];
-                        }
-                        else {
-                            std::cerr << "[DWARF] File Names: DW_LNCT_directory_index: Unknown content form: " << std::hex << std::showbase <<
-                                format.form << std::dec << std::noshowbase << std::endl;
-                        }
-                        break;
-                    }
-                    default: {
-                        std::cerr << "[DWARF] File Names: Unknown content type: " << std::hex << std::showbase <<
-                            format.content_type << std::dec << std::noshowbase << std::endl;
-                        break;
-                    }
-                }
-            }
-            std::string full = (dir_index < directories.size())
-                ? directories[dir_index] + "/" + filename
-                : filename;
-            file_names.push_back(full);
-        }
-        State state{};
-        state.is_stmt = header.default_is_stmt;
-
-        auto emit_row = [&]() {
-            if (!state.end_sequence) {
-                std::string filename = (state.file < file_names.size())
-                    ? file_names[state.file]
-                    : "";
-                line_entries.push_back(LineEntry{state.address, state.line, state.column, filename});
-
-            }
-        };
-
-        uint32_t program_start = start_offset + 4 + 2 + 1 + 1 + 4 + header.header_length;
-        offset = program_start;
-        while (offset < end_offset) {
-            uint8_t opcode = section.data[offset++];
-            // Extended
-            if (opcode == 0) {
-                uint64_t num_bytes = read_uleb128(section.data.data(), offset);
-                uint8_t extended_opcode = section.data[offset++];
-                switch (extended_opcode) {
-                    case DW_LNE_end_sequence: {
-                        state.end_sequence = true;
-                        emit_row();
-                        state = State{};
-                        state.is_stmt = header.default_is_stmt;
-                        break;
-                    }
-                    case DW_LNE_set_address: {
-                        uint32_t address;
-                        memcpy(&address, section.data.data() + offset, sizeof(uint32_t));
-                        offset += sizeof(uint32_t);
-                        state.address = address;
-                        state.op_index = 0;
-                        break;
-                    }
-                    case DW_LNE_set_discriminator: {
-                        uint64_t discriminator = read_uleb128(section.data.data(), offset);
-                        state.discriminator = discriminator;
-                        break;
-                    }
-                    default:
-                        offset += num_bytes - 1;
-                        break;
-                }
-            }
-            // Standard
-            else if (opcode < header.opcode_base) {
-                switch (opcode) {
-                    case DW_LNS_copy: {
-                        emit_row();
-                        state.discriminator = 0;
-                        state.basic_block = false;
-                        state.prologue_end = false;
-                        state.epilogue_begin = false;
-                        break;
-                    }
-                    case DW_LNS_advance_pc: {
-                        uint64_t operation_advance = read_uleb128(section.data.data(), offset);
-                        state.address += header.minimum_instruction_length * ((state.op_index + operation_advance) / header.maximum_operations_per_instruction);
-                        state.op_index = (state.op_index + operation_advance) % header.maximum_operations_per_instruction;
-                        break;
-                    }
-                    case DW_LNS_advance_line: {
-                        int64_t operand = read_sleb128(section.data.data(), offset);
-                        state.line += operand;
-                        break;
-                    }
-                    case DW_LNS_set_file: {
-                        uint64_t operand = read_uleb128(section.data.data(), offset);
-                        state.file = operand;
-                        break;
-                    }
-                    case DW_LNS_set_column: {
-                        uint64_t operand = read_uleb128(section.data.data(), offset);
-                        state.column = operand;
-                        break;
-                    }
-                    case DW_LNS_negate_stmt: {
-                        state.is_stmt = !state.is_stmt;
-                        break;
-                    }
-                    case DW_LNS_set_basic_block: {
-                        state.basic_block = true;
-                        break;
-                    }
-                    case DW_LNS_const_add_pc: {
-                        uint8_t adjusted_opcode = 255 - header.opcode_base;
-                        uint32_t operation_advance = adjusted_opcode / header.line_range;
-                        state.address += header.minimum_instruction_length * ((state.op_index + operation_advance) / header.maximum_operations_per_instruction);
-                        state.op_index = (state.op_index + operation_advance) % header.maximum_operations_per_instruction;
-                        break;
-                    }
-                    case DW_LNS_fixed_advance_pc: {
-                        uint16_t operand;
-                        memcpy(&operand, section.data.data() + offset, 2);
-                        offset += 2;
-                        state.address += operand;
-                        state.op_index = 0;
-                        break;
-                    }
-                    case DW_LNS_set_prologue_end: {
-                        state.prologue_end = true;
-                        break;
-                    }
-                    case DW_LNS_set_epilogue_begin: {
-                        state.epilogue_begin = true;
-                        break;
-                    }
-                    case DW_LNS_set_isa: {
-                        uint64_t operand = read_uleb128(section.data.data(), offset);
-                        state.isa = operand;
-                        break;
-                    }
-                    default:
-                        break;
-                }
-            }
-            // Special
-            else {
-                uint8_t adjusted_opcode = opcode - header.opcode_base;
-                uint32_t operation_advance = adjusted_opcode / header.line_range;
-                state.address += header.minimum_instruction_length * ((state.op_index + operation_advance) / header.maximum_operations_per_instruction);
-                state.op_index = (state.op_index + operation_advance) % header.maximum_operations_per_instruction;
-                state.line += header.line_base + (adjusted_opcode % header.line_range);
-                emit_row();
-                state.basic_block = false;
-                state.prologue_end = false;
-                state.epilogue_begin = false;
-                state.discriminator = 0;
-            }
-        }
-        start_offset = end_offset;
-    }
-}
-
-void DWARFReader::parse_debug_info(const ELFDebugSection &section) {
-    struct __attribute__((packed)) Header {
-        uint32_t unit_length;
-        uint16_t version;
-        uint8_t unit_type;
-        uint8_t address_size;
-        uint32_t debug_abbrev_offset;
-        uint64_t type_signature;
-        uint32_t type_offset;
-        uint64_t dwo_id;
-    };
-
-    size_t offset = 0;
-    Header header{};
-    size_t initial_header_size = sizeof(uint32_t) + sizeof(uint16_t) + sizeof(uint8_t);
-    memcpy(&header, section.data.data() + offset, initial_header_size);
-    offset += initial_header_size;
-
-    switch (header.unit_type) {
-        case DW_UT_compile: {
-            header.address_size = section.data[offset++];
-            memcpy(&header.debug_abbrev_offset, section.data.data() + offset, sizeof(uint32_t));
-            offset += sizeof(uint32_t);
-            break;
-        }
-        default: {
-            std::cerr << "ERROR unit_type" << std::endl;
-            break;
+            line_entries.push_back(LineEntry{
+                static_cast<uint32_t>(addr),
+                static_cast<uint32_t>(lineno),
+                static_cast<uint32_t>(col),
+                file ? std::string(file) : ""
+            });
         }
     }
-    size_t abbrev_offset = header.debug_abbrev_offset;
-    std::map<uint64_t, AbbrevDeclaration> abbrev_table = get_abbrev_table(abbrev_offset);
+
+    dwarf_srclines_dealloc_b(ctx);
 }
 
-FormValue DWARFReader::read_form_value(const std::vector<uint8_t>& data, size_t& offset, uint64_t form) {
-    FormValue v{};
-    switch (form) {
-        case DW_FORM_addr:
-        case DW_FORM_data4:
-        case DW_FORM_ref4:
-        case DW_FORM_strp:
-        case DW_FORM_line_strp:
-        case DW_FORM_sec_offset:
-            memcpy(&v.u, data.data()+offset, 4); offset += 4;
-            break;
-        case DW_FORM_data1:
-        case DW_FORM_ref1:
-        case DW_FORM_flag:
-            v.u = data[offset++];
-            break;
-        case DW_FORM_data2:
-        case DW_FORM_ref2:
-            memcpy(&v.u, data.data()+offset, 2);
-            offset += 2; break;
-        case DW_FORM_data8:
-        case DW_FORM_ref8:
-            memcpy(&v.u, data.data()+offset, 8);
-            offset += 8;
-            break;
-        case DW_FORM_udata:
-        case DW_FORM_ref_udata:
-        case DW_FORM_addrx:
-        case DW_FORM_loclistx:
-        case DW_FORM_rnglistx:
-            v.u = read_uleb128(data.data(), offset);
-            break;
-        case DW_FORM_sdata:
-            v.u = (uint64_t)read_sleb128(data.data(), offset);
-            break;
-        case DW_FORM_flag_present:
-            v.u = 1;
-            break;
-        case DW_FORM_implicit_const:
-            break;  // value already in abbrev table, 0 bytes here
-        case DW_FORM_string:
-            v.str = reinterpret_cast<const char*>(data.data()+offset);
-            offset += v.str.size() + 1; break;
-        case DW_FORM_exprloc: {
-            uint64_t len = read_uleb128(data.data(), offset);
-            v.block = {data.begin()+offset, data.begin()+offset+len};
-            offset += len; break;
-        }
-        default:
-            std::cerr << "[DWARF] Unknown form: 0x" << std::hex << form << std::dec << std::endl;
-            break;
-    }
-    return v;
-}
-
-void DWARFReader::walk_dies(const std::vector<uint8_t>& data, size_t offset, size_t end, const std::map<uint64_t, AbbrevDeclaration>& abbrev_table, int depth) {
-    while (offset < end) {
-        uint64_t abbrev_code = read_uleb128(data.data(), offset);
-        if (abbrev_code == 0)
-            return;
-        auto it = abbrev_table.find(abbrev_code);
-        if (it == abbrev_table.end()) {
-            // handle error
-            return;
-        }
-        const AbbrevDeclaration& abbrev_declaration = it->second;
-
-        std::optional<std::string>          name;
-        std::optional<uint32_t>             low_pc;
-        std::optional<uint32_t>             high_pc;
-        std::optional<std::vector<uint8_t>> location;
-        std::optional<uint32_t>             type_ref;
-        std::optional<uint64_t>             byte_size;
-
-        for (const AbbrevAttribute& attribute : abbrev_declaration.attributes) {
-            FormValue v = read_form_value(data, offset, attribute.form);
-            switch (attribute.name) {
-                case DW_AT_name:
-                    name = v.str;
-                    break;
-                case DW_AT_low_pc:
-                    low_pc = v.u;
-                    break;
-                case DW_AT_high_pc:
-                    high_pc = v.u;
-                    break;
-                case DW_AT_location:
-                    break;
-            }
-        }
-    }
-}
-
-
-uint64_t DWARFReader::read_uleb128(const uint8_t* data, size_t& offset) {
-    uint64_t result = 0;
-    int shift = 0;
-    while (true) {
-        const uint8_t byte = data[offset++];
-        result |= static_cast<uint64_t>(byte & 0x7F) << shift;
-        if ((byte & 0x80) == 0) break;
-        shift += 7;
-    }
-    return result;
-}
-
-int64_t DWARFReader::read_sleb128(const uint8_t* data, size_t& offset) {
-    int64_t result = 0;
+static int32_t read_sleb128(const uint8_t* data) {
+    int32_t result = 0;
     int shift = 0;
     uint8_t byte;
-    while (true) {
-        byte = data[offset++];
-        result |= static_cast<int64_t>(byte & 0x7F) << shift;
+    do {
+        byte = *data++;
+        result |= (byte & 0x7f) << shift;
         shift += 7;
-        if ((byte & 0x80) == 0) break;
-    }
-    // Sign extend if the last byte's sign bit is set
-    if (shift < 64 && (byte & 0x40))
-        result |= -(1LL << shift);
+    } while (byte & 0x80);
+    if (shift < 32 && (byte & 0x40))
+        result |= -(1 << shift);
     return result;
+}
+
+std::vector<Variable> DWARFReader::collect_variables(Dwarf_Die subprogram_die) {
+    std::vector<Variable> vars;
+    Dwarf_Error err = nullptr;
+
+    // Move into the first child of the subprogram
+    Dwarf_Die child = nullptr;
+    if (dwarf_child(subprogram_die, &child, &err) != DW_DLV_OK)
+        return vars;  // no children → no variables
+
+    // Lambda so we can call the same logic on each sibling without repeating code
+    auto try_parse = [&](Dwarf_Die die) {
+        Dwarf_Half tag = 0;
+        dwarf_tag(die, &tag, &err);
+
+        // Skip anything that isn't a variable or function parameter
+        if (tag != DW_TAG_variable && tag != DW_TAG_formal_parameter)
+            return;
+
+        Variable var{};
+
+        // --- Name ---
+        // dwarf_diename gives us the DW_AT_name string directly
+        char* name = nullptr;
+        if (dwarf_diename(die, &name, &err) == DW_DLV_OK && name)
+            var.name = name;
+
+        // --- Type ---
+        // DW_AT_type holds a reference (offset) to another DIE that describes the type.
+        // We follow that reference with dwarf_offdie_b to read the type's name and byte size.
+        Dwarf_Attribute type_attr = nullptr;
+        if (dwarf_attr(die, DW_AT_type, &type_attr, &err) == DW_DLV_OK) {
+            Dwarf_Off global_offset = 0;
+            // Convert the CU-relative ref to an absolute section offset
+            if (dwarf_global_formref(type_attr, &global_offset, &err) == DW_DLV_OK) {
+                Dwarf_Die type_die = nullptr;
+                // Jump to the type DIE (true = search .debug_info, not .debug_types)
+                if (dwarf_offdie_b(m_dbg, global_offset, true, &type_die, &err) == DW_DLV_OK) {
+                    char* type_name = nullptr;
+                    if (dwarf_diename(type_die, &type_name, &err) == DW_DLV_OK && type_name)
+                        var.type = type_name;
+
+                    // DW_AT_byte_size tells us how many bytes the type occupies
+                    Dwarf_Unsigned byte_size = 0;
+                    if (dwarf_bytesize(type_die, &byte_size, &err) == DW_DLV_OK)
+                        var.byte_size = static_cast<uint8_t>(byte_size);
+
+                    dwarf_dealloc_die(type_die);
+                }
+            }
+            dwarf_dealloc_attribute(type_attr);
+        }
+
+        // --- Location ---
+        // DW_AT_location is a tiny bytecode expression.
+        // We read it as a raw block and look at the first opcode byte.
+        Dwarf_Attribute loc_attr = nullptr;
+        if (dwarf_attr(die, DW_AT_location, &loc_attr, &err) == DW_DLV_OK) {
+            Dwarf_Block* block = nullptr;
+            if (dwarf_formblock(loc_attr, &block, &err) == DW_DLV_OK) {
+                const auto* expr = static_cast<const uint8_t*>(block->bl_data);
+                uint8_t op = expr[0];
+
+                if (op >= 0x50 && op <= 0x6f) {
+                    // DW_OP_reg0..DW_OP_reg31 — value lives entirely in a register
+                    var.in_register = true;
+                    var.reg = op - 0x50;
+                } else if (op == 0x91 && block->bl_len > 1) {
+                    // DW_OP_fbreg — value is in memory at frame_base + signed offset
+                    var.in_register = false;
+                    var.frame_offset = read_sleb128(expr + 1);
+                }
+
+                dwarf_dealloc(m_dbg, block, DW_DLA_BLOCK);
+            }
+            dwarf_dealloc_attribute(loc_attr);
+        }
+
+        if (!var.name.empty())
+            vars.push_back(std::move(var));
+    };
+
+    // Process first child, then walk all its siblings
+    try_parse(child);
+    Dwarf_Die sibling = nullptr;
+    while (dwarf_siblingof_c(child, &sibling, &err) == DW_DLV_OK) {
+        dwarf_dealloc_die(child);
+        child = sibling;
+        try_parse(child);
+    }
+    dwarf_dealloc_die(child);
+
+    return vars;
+}
+
+void DWARFReader::walk_dies(Dwarf_Die die) {
+    Dwarf_Error err = nullptr;
+    Dwarf_Half tag = 0;
+    dwarf_tag(die, &tag, &err);
+
+    if (tag == DW_TAG_subprogram) {
+        char* name = nullptr;
+        Dwarf_Addr low_pc = 0, high_pc = 0;
+        Dwarf_Half form = 0;
+        Dwarf_Form_Class form_class = DW_FORM_CLASS_UNKNOWN;
+
+        dwarf_diename(die, &name, &err);
+        dwarf_lowpc(die, &low_pc, &err);
+        if (dwarf_highpc_b(die, &high_pc, &form, &form_class, &err) == DW_DLV_OK) {
+            if (form_class != DW_FORM_CLASS_ADDRESS)
+                high_pc += low_pc;  // high_pc is a length, not an address
+        }
+
+        if (name && low_pc != high_pc)
+            sub_programs.push_back({std::string(name), static_cast<uint32_t>(low_pc), static_cast<uint32_t>(high_pc), collect_variables(die)});
+    }
+
+    // Recurse into children
+    Dwarf_Die child = nullptr;
+    if (dwarf_child(die, &child, &err) != DW_DLV_OK)
+        return;
+
+    walk_dies(child);
+    Dwarf_Die sibling = nullptr;
+    while (dwarf_siblingof_c(child, &sibling, &err) == DW_DLV_OK) {
+        dwarf_dealloc_die(child);
+        child = sibling;
+        walk_dies(child);
+    }
+    dwarf_dealloc_die(child);
 }

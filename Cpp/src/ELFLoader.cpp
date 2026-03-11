@@ -55,7 +55,6 @@ uint32_t ELFLoader::get_entry() const {
 
 void ELFLoader::parse_sections() {
     elf_sections.clear();
-    debug_sections.clear();
     for (int i = 0; i < ehdr.e_shnum; i++) {
         const Elf32_Shdr shdr = shdrs[i];
         std::string name = &shstrtab[shdr.sh_name];
@@ -82,13 +81,6 @@ void ELFLoader::parse_sections() {
             }
 
             elf_sections.push_back(section);
-        }
-        else if (name.rfind(".debug_", 0) == 0 && shdr.sh_size > 0) {
-            ELFDebugSection section;
-            section.name = name;
-            section.data.resize(shdr.sh_size);
-            std::copy_n(elf.data() + shdr.sh_offset, shdr.sh_size, section.data.begin());
-            debug_sections.push_back(section);
         }
     }
 }

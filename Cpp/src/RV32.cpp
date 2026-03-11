@@ -6,6 +6,7 @@
 #include "Config.hpp"
 #include "ISA.hpp"
 #include "Syscall.hpp"
+#include "Utils.hpp"
 
 #include <cstdint>
 #include <random>
@@ -321,7 +322,7 @@ void RV32::execute(const DecodedInstruction inst) {
                     semihosting_instruction = true;
                 }
                 else {
-                    // TODO: Fix Breakpoints
+                    trigger_trap(TrapReason::Breakpoint, "BREAKPOINT");
                 }
             }
             break;
@@ -457,8 +458,8 @@ void RV32::handle_semihosting() {
             handle_sys_exit_extended(parameter);
             break;
 
-        case Syscall::SYS_GET_FRAMEBUFFER_INFO:
-            handle_sys_get_framebuffer_info(parameter);
+        case Syscall::SYS_GET_DISPLAY_INFO:
+            handle_sys_get_display_info(parameter);
             break;
 
         case Syscall::SYS_SHOW_FRAMEBUFFER:
@@ -542,15 +543,34 @@ void RV32::handle_sys_exit(uint32_t exit_code) const {
     running = false;
 }
 
-void RV32::handle_sys_get_framebuffer_info(uint32_t parameter) {
+void RV32::handle_sys_get_display_info(uint32_t parameter) {
+    struct DisplayInfo {
+        uint32_t width;
+        uint32_t height;
+        uint32_t format;
+        uint32_t bpp;
+    } info{};
     uint32_t address = parameter;
     if (address < g_config.ram_origin || address > g_config.ram_end) {
         regs.write(Register::a0, -1); // Failure
         return;
     }
-    write_u32(address, g_config.framebuffer_width);
-    write_u32(address + 4, g_config.framebuffer_height);
-    write_u32(address + 8, g_config.framebuffer_bpp / 8);
+    info.width = g_config.framebuffer_width;
+    info.height = g_config.framebuffer_height;
+    info.bpp = g_config.framebuffer_bpp;
+    if (g_config.framebuffer_format == "ARGB8888")
+        info.format = 0;
+    else if (g_config.framebuffer_format == "RGB565")
+        info.format = 1;
+    else if (g_config.framebuffer_format == "RGB888")
+        info.format = 2;
+    else if (g_config.framebuffer_format == "RGBA8888")
+        info.format = 3;
+    else
+        emulator_error("RV32::handle_sys_get_display_info() --> Unknown framebuffer format: " + g_config.framebuffer_format);
+    std::vector<uint8_t> bytes(sizeof(info));
+    memcpy(bytes.data(), &info, sizeof(info));
+    write_bytes(address, bytes);
     regs.write(Register::a0, 0); // Success
 }
 
