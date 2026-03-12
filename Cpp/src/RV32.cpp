@@ -131,18 +131,100 @@ void RV32::execute(const DecodedInstruction inst) {
             const auto rs1_value = static_cast<int32_t>(regs.read(inst.rs1));
             const auto rs2_value = static_cast<int32_t>(regs.read(inst.rs2));
 
-            switch (inst.funct3) {
-                case Funct3::ADD_SUB: {
-                    switch (inst.funct7) {
-                        case Funct7::ADD:
-                            regs.write(inst.rd, static_cast<uint32_t>(rs1_value + rs2_value));
+            if (static_cast<uint8_t>(inst.funct7) == static_cast<uint8_t>(Funct7::MULDIV)) {
+                switch (inst.funct3) {
+                    case Funct3::MUL: {
+                        // Cast to uint32_t to avoid C++ Undefined Behavior on signed overflow
+                        uint32_t result = static_cast<uint32_t>(rs1_value) * static_cast<uint32_t>(rs2_value);
+                        regs.write(inst.rd, result);
+                        break;
+                    }
+                    case Funct3::MULH: {
+                        // Safe to cast directly to int64_t since they are already int32_t
+                        int64_t result = static_cast<int64_t>(rs1_value) * static_cast<int64_t>(rs2_value);
+                        regs.write(inst.rd, static_cast<uint32_t>(result >> 32));
+                        break;
+                    }
+                    case Funct3::MULHSU: {
+                        // rs1 is signed, rs2 must be zero-extended
+                        int64_t result = static_cast<int64_t>(rs1_value) * static_cast<int64_t>(static_cast<uint32_t>(
+                                             rs2_value));
+                        regs.write(inst.rd, static_cast<uint32_t>(result >> 32));
+                        break;
+                    }
+                    case Funct3::MULHU: {
+                        // Strip the sign first, THEN extend to 64-bit
+                        uint64_t result = static_cast<uint64_t>(static_cast<uint32_t>(rs1_value)) * static_cast<
+                                              uint64_t>(static_cast<uint32_t>(rs2_value));
+                        regs.write(inst.rd, static_cast<uint32_t>(result >> 32));
+                        break;
+                    }
+                    case Funct3::DIV: {
+                        if (rs2_value == 0) {
+                            regs.write(inst.rd, static_cast<uint32_t>(-1));
                             break;
-                        case Funct7::SUB:
-                            regs.write(inst.rd, static_cast<uint32_t>(rs1_value - rs2_value));
+                        }
+                        // Prevents hardware crash (SIGFPE) on the host machine
+                        if (rs1_value == static_cast<int32_t>(0x80000000) && rs2_value == -1) {
+                            regs.write(inst.rd, static_cast<uint32_t>(0x80000000));
                             break;
-                        default:
-                            print_inst(inst);
+                        }
+                        regs.write(inst.rd, static_cast<uint32_t>(rs1_value / rs2_value));
+                        break;
+                    }
+                    case Funct3::DIVU: {
+                        uint32_t u_rs1 = static_cast<uint32_t>(rs1_value);
+                        uint32_t u_rs2 = static_cast<uint32_t>(rs2_value);
+
+                        if (u_rs2 == 0) {
+                            regs.write(inst.rd, static_cast<uint32_t>(-1));
                             break;
+                        }
+                        regs.write(inst.rd, u_rs1 / u_rs2);
+                        break;
+                    }
+                    case Funct3::REM: {
+                        if (rs2_value == 0) {
+                            regs.write(inst.rd, static_cast<uint32_t>(rs1_value));
+                            break;
+                        }
+                        // Prevents hardware crash (SIGFPE) on the host machine
+                        if (rs1_value == static_cast<int32_t>(0x80000000) && rs2_value == -1) {
+                            regs.write(inst.rd, 0);
+                            break;
+                        }
+                        regs.write(inst.rd, static_cast<uint32_t>(rs1_value % rs2_value));
+                        break;
+                    }
+                    case Funct3::REMU: {
+                        uint32_t u_rs1 = static_cast<uint32_t>(rs1_value);
+                        uint32_t u_rs2 = static_cast<uint32_t>(rs2_value);
+
+                        if (u_rs2 == 0) {
+                            regs.write(inst.rd, u_rs1);
+                            break;
+                        }
+                        regs.write(inst.rd, u_rs1 % u_rs2);
+                        break;
+                    }
+                    default:
+                        print_inst(inst);
+                        break;
+                }
+            }
+            else {
+                switch (inst.funct3) {
+                    case Funct3::ADD_SUB: {
+                        switch (inst.funct7) {
+                            case Funct7::ADD:
+                                regs.write(inst.rd, static_cast<uint32_t>(rs1_value + rs2_value));
+                                break;
+                            case Funct7::SUB:
+                                regs.write(inst.rd, static_cast<uint32_t>(rs1_value - rs2_value));
+                                break;
+                            default:
+                                print_inst(inst);
+                                break;
                     }
                     break;
                 }
@@ -189,6 +271,7 @@ void RV32::execute(const DecodedInstruction inst) {
                 default:
                     print_inst(inst);
                     break;
+            }
             }
             break;
         }
@@ -308,8 +391,7 @@ void RV32::execute(const DecodedInstruction inst) {
         }
 
         case Opcode::MISC_MEM: {
-            // TODO: Implement MISC_MEM
-            trigger_trap(TrapReason::IllegalInst, "MISC_MEM not implemented");
+            emulator_warn("RV32::execute() --> MISC_MEM not implemented");
             break;
         }
 
@@ -596,7 +678,7 @@ void RV32::handle_sys_get_mouse_pos(uint32_t parameter) {
 void RV32::handle_sys_is_mouse_button_down(uint32_t parameter) {
     uint32_t button = read_u32(parameter);
     if (button > 2) {
-        std::cerr << "[WARN] mouse_button: "<< button << " out of range!" << std::endl;
+        emulator_warn("RV32::handle_sys_is_mouse_button_down() --> button " + std::to_string(button) + " out of range");
         regs.write(Register::a0, -1);
         return;
     }

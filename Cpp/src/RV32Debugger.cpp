@@ -125,6 +125,7 @@ void RV32Debugger::on_breakpoint() {
         case TrapReason::MemFault:    reason = "Memory Fault";         rv32.running = false; break;
         case TrapReason::None:        reason = "Breakpoint";           break;
     }
+    std::cout << rv32.trap_message << std::endl;
 
     // ── Collect content for all boxes first, then compute a shared width ──
 

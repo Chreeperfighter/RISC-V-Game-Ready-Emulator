@@ -3,15 +3,14 @@
 //
 
 #include "ELFLoader.hpp"
+#include "Utils.hpp"
 
 #include <fstream>
-#include <iostream>
 
 void ELFLoader::parse(std::string& path) {
     std::ifstream file(path, std::ios::binary);
     if (!file) {
-        std::cerr << "Failed to open file " << path << std::endl;
-        return;
+        emulator_error("ELFLoader::parse() --> failed to open: " + path);
     }
 
     file.seekg(0, std::ios::end);

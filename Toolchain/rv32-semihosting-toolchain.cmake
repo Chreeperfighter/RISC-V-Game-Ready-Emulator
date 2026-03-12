@@ -11,7 +11,7 @@ set(CMAKE_ASM_COMPILER riscv64-unknown-elf-gcc)
 set(TOOLCHAIN_DIR "${CMAKE_CURRENT_LIST_DIR}")
 
 # Common flags for RV32I with semihosting
-set(ARCH_FLAGS "-march=rv32i -misa-spec=2.2 -mno-fence-tso -mabi=ilp32 -mno-csr-check")
+set(ARCH_FLAGS "-march=rv32im -misa-spec=2.2 -mno-fence-tso -mabi=ilp32 -mno-csr-check")
 set(COMMON_FLAGS "${ARCH_FLAGS} -Wall")
 
 # Debug flags

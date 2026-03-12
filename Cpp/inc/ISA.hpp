@@ -83,20 +83,31 @@ enum class Funct3 : uint8_t {
     XOR =       0b100,
     SRL_SRA =   0b101,
     OR =        0b110,
-    AND =       0b111
+    AND =       0b111,
+
+    // M Extension
+    MUL =       0b000,
+    MULH =      0b001,
+    MULHSU =    0b010,
+    MULHU =     0b011,
+    DIV =       0b100,
+    DIVU =      0b101,
+    REM =       0b110,
+    REMU =      0b111,
 };
 
 enum class Funct7 : uint8_t {
     // OP_IMM
-    SLLI =  0b0000000,
-    SRLI =  0b0000000,
-    SRAI =  0b0100000,
+    SLLI =   0b0000000,
+    SRLI =   0b0000000,
+    SRAI =   0b0100000,
 
     // OP
-    ADD =   0b0000000,
-    SUB =   0b0100000,
-    SRL =   0b0000000,
-    SRA =   0b0100000
+    ADD =    0b0000000,
+    SUB =    0b0100000,
+    SRL =    0b0000000,
+    SRA =    0b0100000,
+    MULDIV = 0b0000001,
 };
 
 #endif //ISA_HPP

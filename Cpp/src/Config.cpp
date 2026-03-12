@@ -124,8 +124,7 @@ Config Config::load(const std::string& path) {
         }
 
     } catch (const std::exception& e) {
-        std::cerr << "Error loading config: " << e.what() << std::endl;
-        throw;
+        emulator_error("Config::load() --> " + std::string(e.what()));
     }
 
     return cfg;

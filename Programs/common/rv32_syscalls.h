@@ -18,11 +18,13 @@ static int32_t semihost(uint32_t nr, uint32_t param) {
     register int32_t  a0 asm("a0");
     register uint32_t a1 asm("a1") = param;
     asm volatile(
-        "li   a0, %2\n\t"
+        "mv   a0, %2\n\t"
         "slli zero, zero, 0x1f\n\t"
         "ebreak\n\t"
         "srai zero, zero, 0x7"
-        : "=r"(a0) : "r"(a1), "i"(nr) : "memory"
+        : "=r"(a0)
+        : "r"(a1), "r"(nr)
+        : "memory"
     );
     return a0;
 }

@@ -10,26 +10,14 @@ add_compile_definitions(
         DOOM_WIN32
 )
 
+add_subdirectory(../common common)
+
 # Only compile your main.c - PureDOOM.h is header-only
 set(SRC_DOOM
         main.c
         ${STARTUP_FILES}
+        main.c
 )
 
 add_executable(RV32DOOM ${SRC_DOOM})
-target_link_libraries(RV32DOOM m)
-
-# Add a custom command to produce RV32DOOM.dis
-add_custom_command(
-        OUTPUT RV32DOOM.dis
-        COMMAND ${CMAKE_OBJDUMP} -d $<TARGET_FILE:RV32DOOM> > RV32DOOM.dis
-        DEPENDS RV32DOOM
-        COMMENT "Disassembling RV32DOOM"
-        VERBATIM
-)
-
-# Attach the custom command to a custom target
-add_custom_target(disassemble
-        DEPENDS RV32DOOM.dis
-        COMMENT "Generating disassembly for RV32DOOM"
-)
+target_link_libraries(RV32DOOM rv32_common m)

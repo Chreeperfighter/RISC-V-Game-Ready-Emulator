@@ -3,6 +3,7 @@
 //
 
 #include "DWARFReader.hpp"
+#include "Utils.hpp"
 
 #include <libdwarf.h>
 #include <dwarf.h>
@@ -14,8 +15,7 @@ void DWARFReader::parse(const std::string& elf_path) {
     Dwarf_Debug dbg = nullptr;
     int res = dwarf_init_path(elf_path.c_str(), nullptr, 0, 0, nullptr, nullptr, &dbg, &err);
     if (res != DW_DLV_OK) {
-        std::cerr << "[DWARF] Failed to open: " << elf_path << std::endl;
-        return;
+        emulator_error("DWARFReader::parse() --> failed to open: " + elf_path);
     }
     m_dbg = dbg;
 

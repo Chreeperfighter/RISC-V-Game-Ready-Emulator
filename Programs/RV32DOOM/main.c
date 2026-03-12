@@ -1,6 +1,8 @@
 #define DOOM_IMPLEMENTATION
 #include "PureDOOM.h"
-#include "syscalls.h"
+#include "rv32_display.h"
+#include "rv32_input.h"
+#include "rv32_time.h"
 
 #include <stdio.h>
 #include <stdint.h>
@@ -15,7 +17,6 @@
 #define DOOM_HEIGHT 200
 #define TARGET_FPS 35
 #define TARGET_FRAME_US (1000000 / TARGET_FPS)
-#define STATS_INTERVAL_US 1000000  // 1 second
 
 // ============================================================================
 // INPUT MAPPING
@@ -170,8 +171,7 @@ typedef struct {
 static TimeState g_time_state = {0};
 
 static void doom_get_time(int* sec, int* usec) {
-    int32_t now;
-    sys_get_us(&now);
+    int32_t now = get_us(NULL);
 
     if (g_time_state.start_us == 0) {
         g_time_state.start_us = now;
@@ -192,12 +192,6 @@ static void doom_get_time(int* sec, int* usec) {
     int32_t time_us = tics * TARGET_FRAME_US;
     *sec = time_us / 1000000;
     *usec = time_us % 1000000;
-}
-
-static inline int32_t get_time_us(void) {
-    int32_t t;
-    sys_get_us(&t);
-    return t;
 }
 
 // ============================================================================
@@ -224,33 +218,6 @@ static void process_input(void) {
 }
 
 // ============================================================================
-// PERFORMANCE MONITORING
-// ============================================================================
-
-typedef struct {
-    int frame_count;
-    int32_t timer_start;
-} PerformanceStats;
-
-static PerformanceStats g_perf_stats = {0};
-
-static void update_performance_stats(void) {
-    g_perf_stats.frame_count++;
-
-    int32_t now = get_time_us();
-    int32_t elapsed = now - g_perf_stats.timer_start;
-
-    if (elapsed >= STATS_INTERVAL_US) {
-        double fps = (double)g_perf_stats.frame_count * 1000000.0 / elapsed;
-        double avg_frame_ms = (double)elapsed / g_perf_stats.frame_count / 1000.0;
-        printf("FPS=%.1f  frame=%.2f ms\n", fps, avg_frame_ms);
-
-        g_perf_stats.timer_start = now;
-        g_perf_stats.frame_count = 0;
-    }
-}
-
-// ============================================================================
 // FRAME RATE LIMITING
 // ============================================================================
 
@@ -261,11 +228,11 @@ typedef struct {
 static FrameRateLimiter g_limiter = {0};
 
 static void limit_frame_rate(void) {
-    int32_t now = get_time_us();
-    int32_t sleep_us = g_limiter.next_frame_time - now;
+    int32_t now = get_us(NULL);
+    int32_t us = g_limiter.next_frame_time - now;
 
-    if (sleep_us > 0) {
-        sys_sleep_us(sleep_us);
+    if (us > 0) {
+        sleep_us(us);
         g_limiter.next_frame_time += TARGET_FRAME_US;
     } else {
         // Running behind - resync to current time
@@ -298,35 +265,17 @@ static void initialize_doom(void) {
     doom_set_gettime(doom_get_time);
     doom_init(argc, argv, 0);
 
-    printf("DOOM initialized: %dx%d @ %d FPS\n", DOOM_WIDTH, DOOM_HEIGHT, TARGET_FPS);
 }
 
-static void initialize_performance_tracking(void) {
-    g_perf_stats.timer_start = get_time_us();
-    g_limiter.next_frame_time = get_time_us();
+static void initialize_frame_limiter(void) {
+    g_limiter.next_frame_time = get_us(NULL);
 }
 
 // ============================================================================
 // MAIN GAME LOOP
 // ============================================================================
-
-struct DisplayInfo {
-    uint32_t width;
-    uint32_t height;
-    uint32_t format;
-    uint32_t bpp;
-};
-
-enum DisplayFormat {
-    FORMAT_ARGB8888 = 0,
-    FORMAT_RGB565 = 1,
-    FORMAT_RGB888 = 2,
-    FORMAT_RGBA8888 = 3,
-};
-
 static void run_game_loop(void) {
-    struct DisplayInfo display_info = {0};
-    sys_get_display_info(&display_info);
+    struct DisplayInfo display_info = get_display_info(NULL);
     if (display_info.format != FORMAT_RGBA8888) {
         fprintf(stderr, "fatal: unsupported display format %u, expected RGBA8888\n", display_info.format);
         exit(1);
@@ -336,15 +285,11 @@ static void run_game_loop(void) {
         exit(1);
     }
     while (1) {
-        int32_t frame_start = get_time_us();
-
         process_input();
         doom_update();
 
         uint8_t* framebuffer = doom_get_framebuffer(4);
-        sys_show_framebuffer(framebuffer);
-
-        update_performance_stats();
+        show_framebuffer(framebuffer);
 
         limit_frame_rate();
     }
@@ -371,7 +316,7 @@ int main(int argc, char** argv) {
 
     init_layout();
     initialize_doom();
-    initialize_performance_tracking();
+    initialize_frame_limiter();
     run_game_loop();
 
     return 0;
