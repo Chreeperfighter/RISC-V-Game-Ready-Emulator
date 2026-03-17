@@ -7,12 +7,7 @@
 struct DisplayInfo get_display_info(bool *ok) {
     struct DisplayInfo display_info;
     int32_t err = sys_display_info(&display_info);
-    if (err == -1) {
-        *ok = false;
-    }
-    else {
-        *ok = true;
-    }
+    if (ok) *ok = (err != -1);
     return display_info;
 }
 

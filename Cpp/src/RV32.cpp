@@ -8,17 +8,15 @@
 #include "Syscall.hpp"
 #include "Utils.hpp"
 
-#include <cstdint>
 #include <random>
 #include <iostream>
 #include <mutex>
 #include <thread>
 #include <fstream>
 
-RV32::RV32(bool randomizeRegs, bool randomizeMemory, std::string base_dir) : rng(std::random_device{}()), pc(0),
-                                                                   update_pc(true),
-                                                                   ram(g_config.ram_size_bytes, 0),
-                                                                   transfer_buffer(g_config.framebuffer_size_bytes) {
+RV32::RV32(bool randomizeRegs, bool randomizeMemory, std::string base_dir)
+    : ram(g_config.ram_size_bytes, 0),
+      transfer_buffer(g_config.framebuffer_size_bytes) {
     fht = new FileHandleTable(base_dir);
     init_regs(randomizeRegs);
     if (randomizeMemory) {
@@ -28,34 +26,32 @@ RV32::RV32(bool randomizeRegs, bool randomizeMemory, std::string base_dir) : rng
     }
 }
 
-void RV32::print_inst(DecodedInstruction inst) {
-    trigger_trap(TrapReason::IllegalInst, "UNHANDLED_INST: opcode=0x" + std::to_string(static_cast<int>(inst.opcode)) + " at PC=0x" + std::to_string(pc));
-}
-
 void RV32::step() {
     const uint32_t data = fetch();
     const DecodedInstruction instruction = decode(data);
 
-    update_pc = true;
     execute(instruction);
 
     if (!semihosting_instruction && semihosting_step != 0) {
         semihosting_step = 0;
     }
-    if (update_pc) {
+    if (trap == TrapReason::None) {
         pc += 4;
     }
     cycles++;
 }
 
 void RV32::load_section(const ELFSection &section) {
-    if (section.address < g_config.ram_origin ||
-        section.address + section.size > g_config.ram_origin + g_config.ram_size_bytes) {
-        trigger_trap(TrapReason::MemFault, "Section: '" + section.name + "' doesn't fit in RAM");
+    if (!is_in_ram(section.address, section.size)) {
+        trigger_trap(TrapReason::MemFault, "RV32::load_section()",
+            "Section: " + section.name + " doesn't fit in RAM");
         return;
-        }
+    }
 
     if (section.flags & SHF_ALLOC) {
+        if (!(section.flags & SHF_WRITE)) {
+            ro_end = std::max(ro_end, section.address + section.size);
+        }
         if (section.type == SHT_NOBITS) {
             // Zero-fill sections with no data in file (.bss)
             std::fill_n(
@@ -63,13 +59,7 @@ void RV32::load_section(const ELFSection &section) {
                 section.size,
                 0
             );
-
-            if (section.name == ".bss") {
-                heap_start = section.address + section.size;
-                heap_end = heap_start;
-            }
-        }
-        else if (!section.data.empty()) {
+        } else if (!section.data.empty()) {
             // Copy any section with data into RAM
             // (handles .text, .rodata, .data, .init_array, etc.)
             std::copy_n(
@@ -86,7 +76,7 @@ void RV32::set_entry(const uint32_t entry) {
 }
 
 uint32_t RV32::fetch() {
-    return read_u32(pc);
+    return *reinterpret_cast<const uint32_t*>(ram.data() + (pc - g_config.ram_origin));
 }
 
 DecodedInstruction RV32::decode(const uint32_t data) {
@@ -118,7 +108,8 @@ DecodedInstruction RV32::decode(const uint32_t data) {
             decode_j_type(instruction, data);
             break;
         default:
-            trigger_trap(TrapReason::IllegalInst, "Unknown opcode: " + std::to_string(static_cast<int>(opcode)));
+            trigger_trap(TrapReason::IllegalInst, "RV32::decode()",
+                         "Unknown opcode: " + std::to_string(static_cast<int>(opcode)));
             break;
     }
     return instruction;
@@ -131,7 +122,7 @@ void RV32::execute(const DecodedInstruction inst) {
             const auto rs1_value = static_cast<int32_t>(regs.read(inst.rs1));
             const auto rs2_value = static_cast<int32_t>(regs.read(inst.rs2));
 
-            if (static_cast<uint8_t>(inst.funct7) == static_cast<uint8_t>(Funct7::MULDIV)) {
+            if (static_cast<uint8_t>(inst.funct7) == static_cast<uint8_t>(Funct7::MULDIV)) [[unlikely]] {
                 switch (inst.funct3) {
                     case Funct3::MUL: {
                         // Cast to uint32_t to avoid C++ Undefined Behavior on signed overflow
@@ -208,7 +199,8 @@ void RV32::execute(const DecodedInstruction inst) {
                         break;
                     }
                     default:
-                        print_inst(inst);
+                        trigger_trap(TrapReason::IllegalInst, "RV32::execute()",
+                                     "Unknown funct3: " + std::to_string(static_cast<int>(inst.funct3)));
                         break;
                 }
             }
@@ -223,55 +215,60 @@ void RV32::execute(const DecodedInstruction inst) {
                                 regs.write(inst.rd, static_cast<uint32_t>(rs1_value - rs2_value));
                                 break;
                             default:
-                                print_inst(inst);
+                                trigger_trap(TrapReason::IllegalInst, "RV32::execute()",
+                                             "Unknown funct7: " + std::to_string(static_cast<int>(inst.funct7)));
                                 break;
+                        }
+                        break;
                     }
-                    break;
-                }
-                case Funct3::SLT: {
-                    regs.write(inst.rd, (rs1_value < rs2_value) ? 1 : 0);
-                    break;
-                }
-                case Funct3::SLTU: {
-                    regs.write(inst.rd, (static_cast<uint32_t>(rs1_value) < static_cast<uint32_t>(rs2_value)) ? 1 : 0);
-                    break;
-                }
-                case Funct3::AND: {
-                    regs.write(inst.rd, static_cast<uint32_t>(rs1_value & rs2_value));
-                    break;
-                }
-                case Funct3::OR: {
-                    regs.write(inst.rd, static_cast<uint32_t>(rs1_value | rs2_value));
-                    break;
-                }
-                case Funct3::XOR: {
-                    regs.write(inst.rd, static_cast<uint32_t>(rs1_value ^ rs2_value));
-                    break;
-                }
-                case Funct3::SLL: {
-                    const auto amount = static_cast<uint8_t>(rs2_value & 0x1F);
-                    regs.write(inst.rd, static_cast<uint32_t>(rs1_value << amount));
-                    break;
-                }
-                case Funct3::SRL_SRA: {
-                    const auto amount = static_cast<uint8_t>(rs2_value & 0x1F);
-                    switch (inst.funct7) {
-                        case Funct7::SRL:
-                            regs.write(inst.rd, static_cast<uint32_t>(rs1_value) >> amount);
-                            break;
-                        case Funct7::SRA:
-                            regs.write(inst.rd, static_cast<uint32_t>(rs1_value >> amount));
-                            break;
-                        default:
-                            print_inst(inst);
-                            break;
+                    case Funct3::SLT: {
+                        regs.write(inst.rd, (rs1_value < rs2_value) ? 1 : 0);
+                        break;
                     }
-                    break;
+                    case Funct3::SLTU: {
+                        regs.write(inst.rd, (static_cast<uint32_t>(rs1_value) < static_cast<uint32_t>(rs2_value))
+                                                ? 1
+                                                : 0);
+                        break;
+                    }
+                    case Funct3::AND: {
+                        regs.write(inst.rd, static_cast<uint32_t>(rs1_value & rs2_value));
+                        break;
+                    }
+                    case Funct3::OR: {
+                        regs.write(inst.rd, static_cast<uint32_t>(rs1_value | rs2_value));
+                        break;
+                    }
+                    case Funct3::XOR: {
+                        regs.write(inst.rd, static_cast<uint32_t>(rs1_value ^ rs2_value));
+                        break;
+                    }
+                    case Funct3::SLL: {
+                        const auto amount = static_cast<uint8_t>(rs2_value & 0x1F);
+                        regs.write(inst.rd, static_cast<uint32_t>(rs1_value << amount));
+                        break;
+                    }
+                    case Funct3::SRL_SRA: {
+                        const auto amount = static_cast<uint8_t>(rs2_value & 0x1F);
+                        switch (inst.funct7) {
+                            case Funct7::SRL:
+                                regs.write(inst.rd, static_cast<uint32_t>(rs1_value) >> amount);
+                                break;
+                            case Funct7::SRA:
+                                regs.write(inst.rd, static_cast<uint32_t>(rs1_value >> amount));
+                                break;
+                            default:
+                                trigger_trap(TrapReason::IllegalInst, "RV32::execute()",
+                                             "Unknown funct7: " + std::to_string(static_cast<int>(inst.funct7)));
+                                break;
+                        }
+                        break;
+                    }
+                    default:
+                        trigger_trap(TrapReason::IllegalInst, "RV32::execute()",
+                                     "Unknown funct3: " + std::to_string(static_cast<int>(inst.funct3)));
+                        break;
                 }
-                default:
-                    print_inst(inst);
-                    break;
-            }
             }
             break;
         }
@@ -315,7 +312,8 @@ void RV32::execute(const DecodedInstruction inst) {
                         }
                         regs.write(inst.rd, static_cast<uint32_t>(rs1_value << amount));
                     } else {
-                        print_inst(inst);
+                        trigger_trap(TrapReason::IllegalInst, "RV32::execute()",
+                                     "Unknown funct7: " + std::to_string(static_cast<int>(inst.funct7)));
                     }
                     break;
                 }
@@ -336,13 +334,15 @@ void RV32::execute(const DecodedInstruction inst) {
                             regs.write(inst.rd, static_cast<uint32_t>(rs1_value >> amount));
                             break;
                         default:
-                            print_inst(inst);
+                            trigger_trap(TrapReason::IllegalInst, "RV32::execute()",
+                                         "Unknown funct7: " + std::to_string(static_cast<int>(inst.funct7)));
                             break;
                     }
                     break;
                 }
                 default:
-                    print_inst(inst);
+                    trigger_trap(TrapReason::IllegalInst, "RV32::execute()",
+                                 "Unknown funct3: " + std::to_string(static_cast<int>(inst.funct3)));
                     break;
             }
             break;
@@ -352,8 +352,7 @@ void RV32::execute(const DecodedInstruction inst) {
             const auto rs1_value = static_cast<int32_t>(regs.read(inst.rs1));
             const uint32_t address = static_cast<uint32_t>(rs1_value + inst.imm) & 0xFFFFFFFE;
             regs.write(inst.rd, pc + 4);
-            pc = address;
-            update_pc = false;
+            pc = address - 4;
             break;
         }
 
@@ -384,7 +383,8 @@ void RV32::execute(const DecodedInstruction inst) {
                     break;
                 }
                 default:
-                    print_inst(inst);
+                    trigger_trap(TrapReason::IllegalInst, "RV32::execute()",
+                                 "Unknown funct3: " + std::to_string(static_cast<int>(inst.funct3)));
                     break;
             }
             break;
@@ -402,9 +402,8 @@ void RV32::execute(const DecodedInstruction inst) {
                 if (semihosting_instruction && semihosting_step == 1) {
                     semihosting_step = 2;
                     semihosting_instruction = true;
-                }
-                else {
-                    trigger_trap(TrapReason::Breakpoint, "BREAKPOINT");
+                } else {
+                    trigger_trap(TrapReason::Breakpoint, "RV32::execute()", "BREAKPOINT");
                 }
             }
             break;
@@ -429,7 +428,8 @@ void RV32::execute(const DecodedInstruction inst) {
                     break;
                 }
                 default:
-                    print_inst(inst);
+                    trigger_trap(TrapReason::IllegalInst, "RV32::execute()",
+                                 "Unknown funct3: " + std::to_string(static_cast<int>(inst.funct3)));
                     break;
             }
             break;
@@ -442,48 +442,43 @@ void RV32::execute(const DecodedInstruction inst) {
             switch (inst.funct3) {
                 case Funct3::BEQ: {
                     if (rs1_value == rs2_value) {
-                        pc += inst.imm;
-                        update_pc = false;
+                        pc += inst.imm - 4;
                     }
                     break;
                 }
                 case Funct3::BNE: {
                     if (rs1_value != rs2_value) {
-                        pc += inst.imm;
-                        update_pc = false;
+                        pc += inst.imm - 4;
                     }
                     break;
                 }
                 case Funct3::BLT: {
                     if (rs1_value < rs2_value) {
-                        pc += inst.imm;
-                        update_pc = false;
+                        pc += inst.imm - 4;
                     }
                     break;
                 }
                 case Funct3::BLTU: {
                     if (static_cast<uint32_t>(rs1_value) < static_cast<uint32_t>(rs2_value)) {
-                        pc += inst.imm;
-                        update_pc = false;
+                        pc += inst.imm - 4;
                     }
                     break;
                 }
                 case Funct3::BGE: {
                     if (rs1_value >= rs2_value) {
-                        pc += inst.imm;
-                        update_pc = false;
+                        pc += inst.imm - 4;
                     }
                     break;
                 }
                 case Funct3::BGEU: {
                     if (static_cast<uint32_t>(rs1_value) >= static_cast<uint32_t>(rs2_value)) {
-                        pc += inst.imm;
-                        update_pc = false;
+                        pc += inst.imm - 4;
                     }
                     break;
                 }
                 default:
-                    print_inst(inst);
+                    trigger_trap(TrapReason::IllegalInst, "RV32::execute()",
+                                 "Unknown funct3: " + std::to_string(static_cast<int>(inst.funct3)));
                     break;
             }
             break;
@@ -502,29 +497,23 @@ void RV32::execute(const DecodedInstruction inst) {
         // J-Type
         case Opcode::JAL: {
             regs.write(inst.rd, pc + 4);
-            pc += inst.imm;
-            update_pc = false;
+            pc += inst.imm - 4;
             break;
         }
 
         default:
-            print_inst(inst);
+            trigger_trap(TrapReason::IllegalInst, "RV32::execute()",
+                         "Unknown Opcode: " + std::to_string(static_cast<int>(inst.opcode)));
             break;
     }
 }
 
-void RV32::trigger_trap(TrapReason trap_reason, const std::string &message) {
+void RV32::trigger_trap(TrapReason trap_reason, const std::string &function_name, const std::string &message) {
     trap = trap_reason;
-    trap_message = message;
-    if (!g_config.debug_enabled) {
-        running = false;
-    }
-}
-
-inline void debug_print(const std::string &message) {
-    if (g_config.debug_enabled) {
-        std::cout << "[DEBUG]: " << message << std::endl;
-    }
+    trap_message = function_name + " --> " + message;
+#ifndef EMULATOR_DEBUG
+    running = false;
+#endif
 }
 
 void RV32::handle_semihosting() {
@@ -576,6 +565,26 @@ void RV32::handle_semihosting() {
             handle_sys_is_key_down(parameter);
             break;
 
+        case Syscall::SYS_OPENDIR:
+            handle_sys_opendir(parameter);
+            break;
+
+        case Syscall::SYS_READDIR:
+            handle_sys_readdir(parameter);
+            break;
+
+        case Syscall::SYS_CLOSEDIR:
+            handle_sys_closedir(parameter);
+            break;
+
+        case Syscall::SYS_MKDIR:
+            handle_sys_mkdir(parameter);
+            break;
+
+        case Syscall::SYS_REWINDDIR:
+            handle_sys_rewinddir(parameter);
+            break;
+
         case Syscall::SYS_FLEN:
             handle_sys_flen(parameter);
             break;
@@ -600,6 +609,14 @@ void RV32::handle_semihosting() {
             handle_sys_close(parameter);
             break;
 
+        case Syscall::SYS_REMOVE:
+            handle_sys_remove(parameter);
+            break;
+
+        case Syscall::SYS_RENAME:
+            handle_sys_rename(parameter);
+            break;
+
         case Syscall::SYS_SEEK:
             handle_sys_seek(parameter);
             break;
@@ -613,14 +630,15 @@ void RV32::handle_semihosting() {
             break;
 
         default:
-            trigger_trap(TrapReason::IllegalInst, "Unknown semihosting number: " + std::to_string(static_cast<int>(operation_number)));
+            trigger_trap(TrapReason::IllegalInst, "RV32::handle_semihosting()",
+                         "Unknown Syscall: " + std::to_string(static_cast<int>(operation_number)));
             regs.write(Register::a0, -1);
             errno = ENOSYS;
             break;
     }
 }
 
-void RV32::handle_sys_exit(uint32_t exit_code) const {
+void RV32::handle_sys_exit(uint32_t exit_code) {
     std::cout << "Process exiting with code: " << exit_code << std::endl;
     running = false;
 }
@@ -649,7 +667,8 @@ void RV32::handle_sys_get_display_info(uint32_t parameter) {
     else if (g_config.framebuffer_format == "RGBA8888")
         info.format = 3;
     else
-        emulator_error("RV32::handle_sys_get_display_info() --> Unknown framebuffer format: " + g_config.framebuffer_format);
+        emulator_error(
+            "RV32::handle_sys_get_display_info() --> Unknown framebuffer format: " + g_config.framebuffer_format);
     std::vector<uint8_t> bytes(sizeof(info));
     memcpy(bytes.data(), &info, sizeof(info));
     write_bytes(address, bytes);
@@ -660,11 +679,11 @@ void RV32::handle_sys_show_framebuffer(uint32_t parameter) {
     transfer_buffer_address = parameter;
 
     // Check if the address is valid
-    if (parameter < g_config.ram_origin ||
-        parameter + g_config.framebuffer_size_bytes > g_config.ram_end) {
-        trigger_trap(TrapReason::IllegalInst, "Invalid framebuffer address");
+    if (!is_in_ram(parameter, g_config.framebuffer_size_bytes)) {
+        trigger_trap(TrapReason::MemFault, "RV32::handle_sys_show_framebuffer()",
+             "Invalid Framebuffer address: " + std::to_string(parameter));
         return;
-        }
+    }
 
     std::lock_guard<std::mutex> lock(transfer_buffer_mtx);
     transfer_buffer = read_bytes(transfer_buffer_address, g_config.framebuffer_size_bytes);
@@ -687,7 +706,7 @@ void RV32::handle_sys_is_mouse_button_down(uint32_t parameter) {
 
 void RV32::handle_sys_get_us(uint32_t parameter) {
     uint32_t address = parameter;
-    if (address < g_config.ram_origin || address > g_config.ram_end) {
+    if (!is_in_ram(address, sizeof(address))) {
         regs.write(Register::a0, -1); // Failure
         return;
     }
@@ -701,7 +720,7 @@ void RV32::handle_sys_get_us(uint32_t parameter) {
 
 void RV32::handle_sys_sleep_us(uint32_t parameter) {
     uint32_t address = parameter;
-    if (address < g_config.ram_origin || address > g_config.ram_end) {
+    if (!is_in_ram(address, sizeof(address))) {
         regs.write(Register::a0, -1); // Failure
         return;
     }
@@ -713,11 +732,11 @@ void RV32::handle_sys_sleep_us(uint32_t parameter) {
 void RV32::handle_sys_key_available(uint32_t parameter) {
     if (is_queue_empty()) {
         regs.write(Register::a0, 0);
-    }
-    else {
+    } else {
         regs.write(Register::a0, 1);
     }
 }
+
 void RV32::handle_sys_get_key(uint32_t parameter) {
     const uint32_t key = pop_from_queue();
     regs.write(Register::a0, key);
@@ -728,25 +747,98 @@ void RV32::handle_sys_is_key_down(uint32_t parameter) {
     regs.write(Register::a0, key_state[key] ? 1 : 0);
 }
 
+void RV32::handle_sys_opendir(uint32_t parameter) {
+    struct OpendirArgs {
+        uint32_t path_ptr;
+        uint32_t len;
+    } args{};
+
+    const std::vector<uint8_t> raw = read_bytes(parameter, sizeof(OpendirArgs));
+
+    memcpy(&args, raw.data(), sizeof(OpendirArgs));
+    const std::vector<uint8_t> path_buffer = read_bytes(args.path_ptr, args.len + 1);
+    const std::string path(reinterpret_cast<const char*>(path_buffer.data()));
+
+    int handle = fht->openDir(path);
+    regs.write(Register::a0, handle);
+}
+
+void RV32::handle_sys_readdir(uint32_t parameter) {
+    struct ReaddirArgs {
+        uint32_t handle;
+        uint32_t dirent_ptr;
+    } args{};
+
+    struct Dirent {
+        char d_type;
+        char d_name[256];
+    } dirent{};
+
+    const std::vector<uint8_t> raw = read_bytes(parameter, sizeof(ReaddirArgs));
+    memcpy(&args, raw.data(), sizeof(ReaddirArgs));
+    const std::filesystem::directory_entry* entry = fht->dirReadNext(args.handle);
+    if (entry == nullptr) {
+        regs.write(Register::a0, -1);
+        return;
+    }
+    std::string name = entry->path().filename().string();
+    dirent.d_type = entry->is_directory() ? DT_DIR : DT_REG;
+    memcpy(dirent.d_name, name.c_str(), name.length() + 1);
+    dirent.d_name[255] = '\0';
+    write_bytes(args.dirent_ptr, to_bytes(dirent));
+    regs.write(Register::a0, 0);
+}
+
+void RV32::handle_sys_closedir(uint32_t parameter) {
+    struct ClosedirArgs {
+        uint32_t handle;
+    } args{};
+
+    const std::vector<uint8_t> raw = read_bytes(parameter, sizeof(ClosedirArgs));
+    memcpy(&args, raw.data(), sizeof(ClosedirArgs));
+
+    regs.write(Register::a0, fht->closeDir(args.handle));
+}
+
+void RV32::handle_sys_mkdir(uint32_t parameter) {
+    struct MkdirArgs {
+        uint32_t path_ptr;
+        uint32_t len;
+    } args{};
+
+    const std::vector<uint8_t> raw = read_bytes(parameter, sizeof(MkdirArgs));
+    memcpy(&args, raw.data(), sizeof(MkdirArgs));
+
+    const std::vector<uint8_t> path_buffer = read_bytes(args.path_ptr, args.len + 1);
+    const std::string path(reinterpret_cast<const char*>(path_buffer.data()));
+
+    regs.write(Register::a0, fht->makeDir(path));
+}
+
+void RV32::handle_sys_rewinddir(uint32_t parameter) {
+    struct RewinddirArgs {
+        uint32_t handle;
+    } args{};
+
+    const std::vector<uint8_t> raw = read_bytes(parameter, sizeof(RewinddirArgs));
+    memcpy(&args, raw.data(), sizeof(RewinddirArgs));
+
+    regs.write(Register::a0, fht->rewindDir(args.handle));
+}
+
 void RV32::handle_sys_exit_extended(const uint32_t parameter) {
     struct ExitArgs {
         uint32_t reason_code;
         uint32_t subcode;
-    };
+    } args{};
 
     const std::vector<uint8_t> raw = read_bytes(parameter, sizeof(ExitArgs));
 
-    if (raw.size() < sizeof(ExitArgs)) {
-        trigger_trap(TrapReason::IllegalInst, "SYS_EXIT_EXTENDED: Invalid parameter block");
-        return;
-    }
-
-    ExitArgs args{};
     memcpy(&args, raw.data(), sizeof(ExitArgs));
 
     if (args.reason_code == 0x20026) {
         std::cout << "Process finished with exit code "
-                  << static_cast<int32_t>(args.subcode) << std::endl;
+                << static_cast<int32_t>(args.subcode) << std::endl;
     }
 
     running = false;
@@ -754,7 +846,7 @@ void RV32::handle_sys_exit_extended(const uint32_t parameter) {
 
 void RV32::handle_sys_flen(uint32_t parameter) {
     const uint32_t handle = read_u32(parameter);
-    ssize_t length = fht->getLength(handle);
+    ssize_t length = fht->getFileLength(handle);
     regs.write(Register::a0, length);
 }
 
@@ -766,20 +858,12 @@ void RV32::handle_sys_write(uint32_t parameter) {
         uint32_t handle;
         uint32_t buffer_ptr;
         uint32_t length;
-    };
+    } args{};
     const std::vector<uint8_t> raw = read_bytes(parameter, sizeof(WriteArgs));
 
-    if (raw.size() < sizeof(WriteArgs)) {
-        trigger_trap(TrapReason::IllegalInst, "SYS_WRITE: Invalid parameter block");
-        regs.write(Register::a0, -1);
-        errno = EINVAL;
-        return;
-    }
-
-    WriteArgs args{};
     memcpy(&args, raw.data(), sizeof(WriteArgs));
     const std::vector<uint8_t> buffer = read_bytes(args.buffer_ptr, args.length);
-    fht->write(args.handle, reinterpret_cast<const char *>(buffer.data()), buffer.size());
+    fht->writeFile(args.handle, reinterpret_cast<const char *>(buffer.data()), buffer.size());
     regs.write(Register::a0, 0);
 }
 
@@ -788,52 +872,46 @@ void RV32::handle_sys_open(uint32_t parameter) {
         uint32_t filename_ptr;
         uint32_t mode;
         uint32_t filename_length;
-    };
+    } args{};
 
     const std::vector<uint8_t> raw = read_bytes(parameter, sizeof(OpenArgs));
 
-    if (raw.size() < sizeof(OpenArgs)) {
-        regs.write(Register::a0, -1);
-        errno = EINVAL;
-        return;
-    }
-
-    OpenArgs args{};
     memcpy(&args, raw.data(), sizeof(OpenArgs));
     const std::vector<uint8_t> filename_buffer = read_bytes(args.filename_ptr, args.filename_length + 1);
-    const char* filename = reinterpret_cast<const char*>(filename_buffer.data());
+    const std::vector<uint8_t> path_buffer = read_bytes(args.filename_ptr, args.filename_length + 1);
+    const std::string filename(reinterpret_cast<const char*>(path_buffer.data()));
 
     // Map semihosting mode to C++ fstream flags
     std::ios_base::openmode mode;
     switch (args.mode) {
-        case 0:  // "r"
+        case 0: // "r"
             mode = std::ios::in;
             break;
-        case 1:  // "rb"
+        case 1: // "rb"
             mode = std::ios::in | std::ios::binary;
             break;
-        case 2:  // "r+"
+        case 2: // "r+"
             mode = std::ios::in | std::ios::out;
             break;
-        case 3:  // "r+b"
+        case 3: // "r+b"
             mode = std::ios::in | std::ios::out | std::ios::binary;
             break;
-        case 4:  // "w"
+        case 4: // "w"
             mode = std::ios::out | std::ios::trunc;
             break;
-        case 5:  // "wb"
+        case 5: // "wb"
             mode = std::ios::out | std::ios::trunc | std::ios::binary;
             break;
-        case 6:  // "w+"
+        case 6: // "w+"
             mode = std::ios::in | std::ios::out | std::ios::trunc;
             break;
-        case 7:  // "w+b"
+        case 7: // "w+b"
             mode = std::ios::in | std::ios::out | std::ios::trunc | std::ios::binary;
             break;
-        case 8:  // "a"
+        case 8: // "a"
             mode = std::ios::out | std::ios::app;
             break;
-        case 9:  // "ab"
+        case 9: // "ab"
             mode = std::ios::out | std::ios::app | std::ios::binary;
             break;
         case 10: // "a+"
@@ -848,33 +926,58 @@ void RV32::handle_sys_open(uint32_t parameter) {
             return;
     }
 
-    int handle = fht->open(filename, mode);
+    int handle = fht->openFile(filename, mode);
 
     regs.write(Register::a0, handle);
 }
 
 void RV32::handle_sys_close(uint32_t parameter) {
     const uint32_t handle = read_u32(parameter);
-    fht->close(handle);
+    fht->closeFile(handle);
     regs.write(Register::a0, 0);
+}
+
+void RV32::handle_sys_remove(uint32_t parameter) {
+    struct RemoveArgs {
+        uint32_t buffer_ptr;
+        uint32_t length;
+    } args{};
+
+    const std::vector<uint8_t> raw = read_bytes(parameter, sizeof(RemoveArgs));
+    memcpy(&args, raw.data(), sizeof(RemoveArgs));
+    const std::vector<uint8_t> path_buffer = read_bytes(args.buffer_ptr, args.length + 1);
+    const std::string path(reinterpret_cast<const char*>(path_buffer.data()));
+    regs.write(Register::a0, fht->removeFile(path));
+}
+
+void RV32::handle_sys_rename(uint32_t parameter) {
+    struct RenameArgs {
+        uint32_t old_ptr;
+        uint32_t old_length;
+        uint32_t new_ptr;
+        uint32_t new_length;
+    } args{};
+    
+    const std::vector<uint8_t> raw = read_bytes(parameter, sizeof(RenameArgs));
+    memcpy(&args, raw.data(), sizeof(RenameArgs));
+    const std::vector<uint8_t> old_path_buffer = read_bytes(args.old_ptr, args.old_length + 1);
+    const std::string old_path(reinterpret_cast<const char*>(old_path_buffer.data()));
+    const std::vector<uint8_t> new_path_buffer = read_bytes(args.new_ptr, args.new_length + 1);
+    const std::string new_path(reinterpret_cast<const char*>(new_path_buffer.data()));
+    regs.write(Register::a0, fht->renameFile(old_path, new_path));
+    
 }
 
 void RV32::handle_sys_seek(uint32_t parameter) {
     struct SeekArgs {
         uint32_t handle;
         uint32_t abs_position;
-    };
+    } args{};
     const std::vector<uint8_t> raw = read_bytes(parameter, sizeof(SeekArgs));
 
-    if (raw.size() < sizeof(SeekArgs)) {
-        regs.write(Register::a0, -1);
-        errno = EINVAL;
-        return;
-    }
-    SeekArgs args{};
     memcpy(&args, raw.data(), sizeof(SeekArgs));
 
-    if (fht->seek(args.handle, args.abs_position) != -1) {
+    if (fht->seekFile(args.handle, args.abs_position) != -1) {
         regs.write(Register::a0, 0);
         return;
     }
@@ -886,23 +989,16 @@ void RV32::handle_sys_read(uint32_t parameter) {
         uint32_t handle;
         uint32_t buffer_ptr;
         uint32_t count;
-    };
+    } args{};
     const std::vector<uint8_t> raw = read_bytes(parameter, sizeof(ReadArgs));
 
-    if (raw.size() < sizeof(ReadArgs)) {
-        regs.write(Register::a0, -1);
-        errno = EINVAL;
-        return;
-    }
-
-    ReadArgs args{};
     memcpy(&args, raw.data(), sizeof(ReadArgs));
 
     // Allocate a host buffer to read into
     std::vector<uint8_t> host_buffer(args.count);
 
     // Read into the host buffer
-    ssize_t bytes_read = fht->read(args.handle, reinterpret_cast<char *>(host_buffer.data()), args.count);
+    ssize_t bytes_read = fht->readFile(args.handle, reinterpret_cast<char *>(host_buffer.data()), args.count);
 
     if (bytes_read == -1) {
         // Error occurred, errno is already set by fht->read()
@@ -931,16 +1027,15 @@ void RV32::handle_sys_write0(uint32_t parameter) {
 }
 
 
-inline int32_t RV32::sign_extend(const uint32_t value, const unsigned int fromBits) {
+[[gnu::always_inline]] inline int32_t RV32::sign_extend(const uint32_t value, const unsigned int fromBits) {
     return static_cast<int32_t>(value << (32 - fromBits)) >> (32 - fromBits);
 }
 
-inline uint32_t RV32::get_bits(uint32_t data, unsigned start, unsigned end) {
+[[gnu::always_inline]] inline uint32_t RV32::get_bits(uint32_t data, unsigned start, unsigned end) {
     return (data >> start) & ((1u << (end - start + 1)) - 1);
 }
 
-void RV32::decode_r_type(DecodedInstruction &inst, const uint32_t data) {
-    inst.format = DecodedInstruction::Format::R_TYPE;
+[[gnu::always_inline]] void RV32::decode_r_type(DecodedInstruction &inst, const uint32_t data) {
     inst.rd = get_bits(data, 7, 11);
     inst.funct3 = static_cast<Funct3>(get_bits(data, 12, 14));
     inst.rs1 = get_bits(data, 15, 19);
@@ -948,8 +1043,7 @@ void RV32::decode_r_type(DecodedInstruction &inst, const uint32_t data) {
     inst.funct7 = static_cast<Funct7>(get_bits(data, 25, 31));
 }
 
-void RV32::decode_i_type(DecodedInstruction &inst, const uint32_t data) {
-    inst.format = DecodedInstruction::Format::I_TYPE;
+[[gnu::always_inline]] void RV32::decode_i_type(DecodedInstruction &inst, const uint32_t data) {
     inst.rd = get_bits(data, 7, 11);
     inst.funct3 = static_cast<Funct3>(get_bits(data, 12, 14));
     inst.rs1 = get_bits(data, 15, 19);
@@ -958,8 +1052,7 @@ void RV32::decode_i_type(DecodedInstruction &inst, const uint32_t data) {
     inst.imm = sign_extend(imm_11_0, 12);
 }
 
-void RV32::decode_s_type(DecodedInstruction &inst, const uint32_t data) {
-    inst.format = DecodedInstruction::Format::S_TYPE;
+[[gnu::always_inline]] void RV32::decode_s_type(DecodedInstruction &inst, const uint32_t data) {
     const uint32_t imm_4_0 = get_bits(data, 7, 11);
     inst.funct3 = static_cast<Funct3>(get_bits(data, 12, 14));
     inst.rs1 = get_bits(data, 15, 19);
@@ -969,8 +1062,7 @@ void RV32::decode_s_type(DecodedInstruction &inst, const uint32_t data) {
     inst.imm = sign_extend(imm, 12);
 }
 
-void RV32::decode_b_type(DecodedInstruction &inst, const uint32_t data) {
-    inst.format = DecodedInstruction::Format::B_TYPE;
+[[gnu::always_inline]] void RV32::decode_b_type(DecodedInstruction &inst, const uint32_t data) {
     const uint32_t imm_11 = get_bits(data, 7, 7);
     const uint32_t imm_4_1 = get_bits(data, 8, 11);
     inst.funct3 = static_cast<Funct3>(get_bits(data, 12, 14));
@@ -982,15 +1074,13 @@ void RV32::decode_b_type(DecodedInstruction &inst, const uint32_t data) {
     inst.imm = sign_extend(imm, 13);
 }
 
-void RV32::decode_u_type(DecodedInstruction &inst, const uint32_t data) {
-    inst.format = DecodedInstruction::Format::U_TYPE;
+[[gnu::always_inline]] void RV32::decode_u_type(DecodedInstruction &inst, const uint32_t data) {
     inst.rd = get_bits(data, 7, 11);
     const uint32_t imm_31_12 = get_bits(data, 12, 31);
     inst.imm = static_cast<int32_t>(imm_31_12 << 12);
 }
 
-void RV32::decode_j_type(DecodedInstruction &inst, const uint32_t data) {
-    inst.format = DecodedInstruction::Format::J_TYPE;
+[[gnu::always_inline]] void RV32::decode_j_type(DecodedInstruction &inst, const uint32_t data) {
     inst.rd = get_bits(data, 7, 11);
     const uint32_t imm_19_12 = get_bits(data, 12, 19);
     const uint32_t imm_11 = get_bits(data, 20, 20);
@@ -1017,9 +1107,9 @@ uint8_t RV32::read_u8(const uint32_t address) {
 }
 
 std::vector<uint8_t> RV32::read_bytes(uint32_t address, size_t size) {
-    const uint32_t upper_address = address + size;
-    if (!(g_config.ram_origin <= address && upper_address <= g_config.ram_end)) {
-        trigger_trap(TrapReason::MemFault, "READ_BYTES: address " + std::to_string(address) + " out of range");
+    if (!is_in_ram(address, size)) {
+        trigger_trap(TrapReason::MemFault, "RV32::read_bytes()",
+            "Address: " + std::to_string(address) + " not in RAM");
         return {};
     }
 
@@ -1029,9 +1119,9 @@ std::vector<uint8_t> RV32::read_bytes(uint32_t address, size_t size) {
 
 template<typename T>
 T RV32::read_value(uint32_t address) {
-    const uint32_t upper_address = address + sizeof(T);
-    if (!(g_config.ram_origin <= address && upper_address <= g_config.ram_end)) {
-        trigger_trap(TrapReason::MemFault, "READ_VALUE: address " + std::to_string(address) + " out of range");
+    if (!is_in_ram(address, sizeof(T))) {
+        trigger_trap(TrapReason::MemFault, "RV32::read_value()",
+            "Address: " + std::to_string(address) + " not in RAM");
         return {};
     }
 
@@ -1041,8 +1131,8 @@ T RV32::read_value(uint32_t address) {
     std::copy_n(
         ram.begin() + address,
         sizeof(T),
-        reinterpret_cast<uint8_t*>(&value)
-        );
+        reinterpret_cast<uint8_t *>(&value)
+    );
     return value;
 }
 
@@ -1063,38 +1153,36 @@ void RV32::write_u8(const uint32_t address, const uint8_t value) {
 }
 
 void RV32::write_bytes(uint32_t address, const std::vector<uint8_t> &value) {
-    const uint32_t upper_address = address + value.size();
-    if (text_start <= address && upper_address < text_end) {
-        trigger_trap(TrapReason::MemFault, "WRITE_BYTES: address overwrites program code");
+    if (!is_in_ram(address, value.size())) {
+        trigger_trap(TrapReason::MemFault, "RV32::write_bytes()",
+            "Address: " + std::to_string(address) + " not in RAM");
         return;
     }
-    if (!(g_config.ram_origin <= address && upper_address <= g_config.ram_end)) {
-        trigger_trap(TrapReason::MemFault, "WRITE_BYTES: address out of range");
+    if (is_read_only(address)) {
+        trigger_trap(TrapReason::MemFault, "RV32::write_bytes()",
+                     "Address: " + std::to_string(address) + " is Read Only");
         return;
     }
-
     address -= g_config.ram_origin;
     std::copy(value.begin(), value.end(), ram.begin() + address);
 }
 
 template<typename T>
 void RV32::write_value(uint32_t address, T value) {
-    const uint32_t upper_address = address + sizeof(T);
-
-    if (text_start <= address && upper_address < text_end) {
-        trigger_trap(TrapReason::MemFault, "WRITE_VALUE: address overwrites program code");
+    if (!is_in_ram(address, sizeof(T))) {
+        trigger_trap(TrapReason::MemFault, "RV32::write_value()",
+            "Address: " + std::to_string(address) + " not in RAM");
         return;
     }
-
-    if (g_config.ram_origin <= address && upper_address <= g_config.ram_end) {
-        address -= g_config.ram_origin;
-        std::copy(reinterpret_cast<const uint8_t*>(&value),
-                  reinterpret_cast<const uint8_t*>(&value) + sizeof(T),
-                  ram.begin() + address);
+    if (is_read_only(address)) {
+        trigger_trap(TrapReason::MemFault, "RV32::write_value()",
+                     "Address: " + std::to_string(address) + " is Read Only");
         return;
     }
-
-    trigger_trap(TrapReason::MemFault, "WRITE_VALUE: address out of range");
+    address -= g_config.ram_origin;
+    std::copy(reinterpret_cast<const uint8_t *>(&value),
+              reinterpret_cast<const uint8_t *>(&value) + sizeof(T),
+              ram.begin() + address);
 }
 
 void inline RV32::init_regs(const bool initRandom) {

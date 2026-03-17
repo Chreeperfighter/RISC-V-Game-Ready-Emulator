@@ -16,7 +16,6 @@ add_subdirectory(../common common)
 set(SRC_DOOM
         main.c
         ${STARTUP_FILES}
-        main.c
 )
 
 add_executable(RV32DOOM ${SRC_DOOM})

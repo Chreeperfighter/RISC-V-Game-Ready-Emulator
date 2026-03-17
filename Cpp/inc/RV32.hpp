@@ -8,10 +8,8 @@
 #include <cstdint>
 #include <random>
 #include <queue>
-#include <set>
-#include <fstream>
-#include <map>
 
+#include "Config.hpp"
 #include "ISA.hpp"
 #include "Registers.hpp"
 #include "ELFLoader.hpp"
@@ -25,15 +23,6 @@ struct DecodedInstruction {
   	Funct3 funct3;
   	Funct7 funct7;
   	int32_t imm;
-
-	enum class Format {
-   		R_TYPE,
-    	I_TYPE,
-    	S_TYPE,
-    	B_TYPE,
-    	U_TYPE,
-    	J_TYPE
-	} format;
 };
 
 enum class TrapReason {
@@ -57,14 +46,6 @@ public:
 	}
 	Registers get_regs() const {
 		return regs;
-	}
-	void set_heap(const uint32_t heap) {
-		heap_start = heap;
-		heap_end = heap;
-	}
-	void set_text_range(const uint32_t start, const uint32_t end) {
-		text_start = start;
-		text_end = end;
 	}
 	void get_transfer_buffer(std::vector<uint8_t>& display_buffer) const {
 		std::lock_guard<std::mutex> lock(transfer_buffer_mtx);
@@ -90,9 +71,12 @@ public:
 		mouse_pos_x = x;
 		mouse_pos_y = y;
 	}
+	uint64_t get_cycles() {
+		return std::atomic_ref<uint64_t>(cycles).load(std::memory_order_relaxed);
+	}
 	std::vector<uint8_t> read_bytes(uint32_t address, size_t size);
 
-	mutable bool running = true;
+	bool running = true;
 	TrapReason trap = TrapReason::None;
 	std::string trap_message;
 
@@ -110,14 +94,14 @@ private:
 	void write_u16(uint32_t address, uint16_t value);
 	void write_u8(uint32_t address, uint8_t value);
 	void write_bytes(uint32_t address, const std::vector<uint8_t> &value);
-	static void decode_r_type(DecodedInstruction &inst, uint32_t data);
-	static void decode_i_type(DecodedInstruction &inst, uint32_t data);
-	static void decode_s_type(DecodedInstruction &inst, uint32_t data);
-	static void decode_b_type(DecodedInstruction &inst, uint32_t data);
-	static void decode_u_type(DecodedInstruction &inst, uint32_t data);
-	static void decode_j_type(DecodedInstruction &inst, uint32_t data);
-	static uint32_t get_bits(uint32_t data, unsigned int start, unsigned int end);
-    void handle_sys_exit(uint32_t exit_code) const;
+	[[gnu::always_inline]] static void decode_r_type(DecodedInstruction &inst, uint32_t data);
+	[[gnu::always_inline]] static void decode_i_type(DecodedInstruction &inst, uint32_t data);
+	[[gnu::always_inline]] static void decode_s_type(DecodedInstruction &inst, uint32_t data);
+	[[gnu::always_inline]] static void decode_b_type(DecodedInstruction &inst, uint32_t data);
+	[[gnu::always_inline]] static void decode_u_type(DecodedInstruction &inst, uint32_t data);
+	[[gnu::always_inline]] static void decode_j_type(DecodedInstruction &inst, uint32_t data);
+	[[gnu::always_inline]] static inline uint32_t get_bits(uint32_t data, unsigned int start, unsigned int end);
+    void handle_sys_exit(uint32_t exit_code);
     void handle_sys_exit_extended(uint32_t parameter);
 	void handle_sys_get_display_info(uint32_t parameter);
 	void handle_sys_show_framebuffer(uint32_t parameter);
@@ -128,50 +112,61 @@ private:
 	void handle_sys_key_available(uint32_t parameter);
 	void handle_sys_get_key(uint32_t parameter);
 	void handle_sys_is_key_down(uint32_t parameter);
+	void handle_sys_opendir(uint32_t parameter);
+	void handle_sys_readdir(uint32_t parameter);
+	void handle_sys_closedir(uint32_t parameter);
+	void handle_sys_mkdir(uint32_t parameter);
+	void handle_sys_rewinddir(uint32_t parameter);
     void handle_sys_flen(uint32_t parameter);
     void handle_sys_istty(uint32_t parameter);
     void handle_sys_write(uint32_t parameter);
     void handle_sys_open(uint32_t parameter);
     void handle_sys_close(uint32_t parameter);
+	void handle_sys_remove(uint32_t parameter);
+	void handle_sys_rename(uint32_t parameter);
 	void handle_sys_seek(uint32_t parameter);
 	void handle_sys_read(uint32_t parameter);
 	void handle_sys_write0(uint32_t parameter);
-	static int32_t sign_extend(uint32_t value, unsigned int fromBits);
-	void print_inst(DecodedInstruction inst);
+	[[gnu::always_inline]] static int32_t sign_extend(uint32_t value, unsigned int fromBits);
 	template<typename T>
 	T read_value(uint32_t address);
 	template<typename T>
 	void write_value(uint32_t address, T value);
+	template<typename T>
+	std::vector<uint8_t> to_bytes(const T &val) {
+		const uint8_t *ptr = reinterpret_cast<const uint8_t *>(&val);
+		return {ptr, ptr + sizeof(T)};
+	}
 	void handle_semihosting();
-	void trigger_trap(TrapReason trap_reason, const std::string &message);
+	void trigger_trap(TrapReason trap_reason, const std::string& function_name, const std::string &message);
 
     bool is_queue_empty() const {
 		std::lock_guard<std::mutex> lock(queue_mtx);
 		return key_queue.empty();
 	}
 	uint32_t pop_from_queue() {
-		std::lock_guard<std::mutex> lock(queue_mtx);
-		if (key_queue.empty()) {
-			return 0;
-		}
-		const uint32_t key = key_queue.front();
-		key_queue.pop();
-		return key;
-	}
+	    std::lock_guard<std::mutex> lock(queue_mtx);
+    	if (key_queue.empty()) {
+    		return 0;
+    	}
+    	const uint32_t key = key_queue.front();
+    	key_queue.pop();
+    	return key;
+    }
 
-    std::mt19937 rng;
-    uint32_t pc;
+	bool is_read_only(uint32_t address) const {
+	    return address < ro_end;
+    }
+
+    std::mt19937 rng{std::random_device{}()};
+	uint64_t cycles = 0;
+    uint32_t pc = 0;
     Registers regs;
-	bool update_pc;
 	std::vector<uint8_t> ram;
 	std::vector<uint8_t> transfer_buffer;
-	uint32_t transfer_buffer_address{};
+	uint32_t transfer_buffer_address = 0;
 	mutable std::mutex transfer_buffer_mtx;
-	uint32_t heap_start{};
-	uint32_t heap_end{};
-	uint32_t text_start{};
-	uint32_t text_end{};
-	uint64_t cycles = 0;
+	uint32_t ro_end = 0;
 	std::queue<uint32_t> key_queue;
 	mutable std::mutex queue_mtx;
 	bool key_state[512] = {false};
@@ -181,7 +176,7 @@ private:
 	int semihosting_step = 0;
 	bool semihosting_instruction = false;
 
-	FileHandleTable* fht;
+	FileHandleTable* fht = nullptr;
 };
 
 

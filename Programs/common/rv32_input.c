@@ -18,18 +18,12 @@ bool is_key_down(SDL_Scancode scancode) {
 
 // Mouse
 void get_mouse_pos(struct MousePos* mouse_pos) {
-    sys_get_mouse_pos(mouse_pos);
+    if (mouse_pos) sys_get_mouse_pos(mouse_pos);
 }
+
 bool is_mouse_button_down(MouseButton button, bool* ok) {
     int32_t ret = sys_is_mouse_button_down(&button);
-    if (ret == 1) {
-        *ok = true;
-        return true;
-    }
-    if (ret == 0) {
-        *ok = true;
-        return false;
-    }
-    *ok = false;
-    return false;
+    bool valid = (ret == 0 || ret == 1);
+    if (ok) *ok = valid;
+    return ret == 1;
 }

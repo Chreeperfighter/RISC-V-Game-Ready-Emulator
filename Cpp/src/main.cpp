@@ -17,23 +17,24 @@
 using namespace std::chrono;
 
 std::atomic<bool> running(true);
-std::atomic<uint64_t> instructions_executed(0);
 
 // ==============================
 //           CPU Thread
 // ==============================
 void step_cpu(RV32 &cpu, RV32Debugger &dbg) {
-    while (cpu.running && running.load()) {
-        cpu.step();
-        if (g_config.perf_monitor) {
-            instructions_executed.fetch_add(1, std::memory_order_relaxed);
-        }
-        if (g_config.debug_enabled) {
+    while (cpu.running && running.load(std::memory_order_relaxed)) {
+        for (int i = 0; i < 1000 && cpu.running; i++) {
+            cpu.step();
+#ifdef EMULATOR_DEBUG
             if (cpu.trap != TrapReason::None || dbg.should_break()) {
-                dbg.on_breakpoint();
+                dbg.on_trap();
                 cpu.trap = TrapReason::None;
             }
+#endif
         }
+    }
+    if (cpu.trap != TrapReason::None) {
+        std::cerr << cpu.trap_message << "\n";
     }
     running.store(false);
 }
@@ -52,14 +53,14 @@ int main() {
     RV32Debugger debugger(cpu);
     std::vector<ELFSection> sections = elf_loader.get_sections();
     for (const auto& section : sections) {
-        if (g_config.debug_enabled) {
-            std::cout <<
-               "Name: " << section.name <<
-                   ", Adress: " << section.address <<
-                       ", Type: " << section.type <<
-                           ", Size: " << section.size <<
-                               std::endl;
-        }
+#ifdef EMULATOR_DEBUG
+        std::cout <<
+           "Name: " << section.name <<
+               ", Adress: " << section.address <<
+                   ", Type: " << section.type <<
+                       ", Size: " << section.size <<
+                           std::endl;
+#endif
         cpu.load_section(section);
     }
     cpu.set_entry(elf_loader.get_entry());
@@ -68,11 +69,12 @@ int main() {
     auto last_frame = steady_clock::now();
     auto perf_start = steady_clock::now();
     uint64_t last_inst_count = 0;
+    const auto frame_duration = microseconds(1000000 / g_config.fps);
 
     // ==============================
     //          Main Thread
     // ==============================
-    while (running.load()) {
+    while (running.load(std::memory_order_relaxed)) {
         SDL_Event event;
         while (SDL_PollEvent(&event)) {
             if (event.type == SDL_QUIT) {
@@ -82,7 +84,7 @@ int main() {
             input.process_event(event);
         }
         auto current_time = steady_clock::now();
-        auto next_frame = last_frame + microseconds(1000000 / g_config.fps);
+        auto next_frame = last_frame + frame_duration;
         if (current_time >= next_frame) {
             last_frame = next_frame;
             display.update_display();
@@ -91,7 +93,7 @@ int main() {
             if (g_config.perf_monitor) {
                 auto elapsed = duration_cast<milliseconds>(current_time - perf_start).count();
                 if (elapsed >= 1000) {
-                    uint64_t current_inst = instructions_executed.load(std::memory_order_relaxed);
+                    uint64_t current_inst = cpu.get_cycles();
                     uint64_t inst_delta = current_inst - last_inst_count;
                     double mips = inst_delta / (elapsed / 1000.0) / 1000000.0;
                     std::cout << "MIPS: " << mips << " (" << inst_delta << " inst in " << elapsed << "ms)" << std::endl;

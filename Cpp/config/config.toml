@@ -1,8 +1,8 @@
 [binary]
-path = "/Users/mark.verbeek/Data/Projects/RISC-V-Game-Ready-Emulator/Programs/Peanut-GB-RV32/cmake-build-release-rv32im/Peanut_GB_RV32"
+path = "/Users/mark.verbeek/Data/Projects/RISC-V-Game-Ready-Emulator/Programs/retro-go/cmake-build-release-rv32im/retro_go"
 
 [storage]
-path = "/Users/mark.verbeek/Data/Projects/RISC-V-Game-Ready-Emulator/rv32_rootfs/Peanut_GB_RV32"
+path = "/Users/mark.verbeek/Data/Projects/RISC-V-Game-Ready-Emulator/rv32_rootfs/retro_go"
 
 [ram]
 ram_origin = 0x00000000
@@ -10,21 +10,20 @@ ram_size_mb = 32
 stack_margin_mb = 2
 
 [framebuffer]
-width = 160
-height = 144
+width = 320
+height = 240
 format = "RGB565"
 
 [debug]
-enabled = false
 perf_monitor = false
 fps = 60
 
 # [[debug.breakpoint]]
-# address = 0xb4
+# address = 0x65428
 
 # [[debug.breakpoint]]
-# file = "/Users/mark.verbeek/Data/Projects/RISC-V-Game-Ready-Emulator/Programs/Peanut-GB-RV32/main.c"
-# line = 394
+# file = "/Users/mark.verbeek/Data/Projects/RISC-V-Game-Ready-Emulator/Programs/RV32DOOM/main.c"
+# line = 318
 
 [init]
 randomize_registers = true

@@ -1,6 +1,33 @@
 #include "FileHandle.hpp"
 #include <cstring>
 
+DirHandle::DirHandle(const std::filesystem::path &path) {
+    if (std::filesystem::is_directory(path)) {
+        for (auto& entry : std::filesystem::directory_iterator(path)) {
+            entries.push_back(entry);
+        }
+        open = true;
+    }
+}
+
+bool DirHandle::isOpen() const {
+    return open;
+}
+
+void DirHandle::close() {
+    entries.clear();
+    open = false;
+}
+
+const std::filesystem::directory_entry* DirHandle::readNext() {
+    if (index >= entries.size()) return nullptr;
+    return &entries[index++];
+}
+
+void DirHandle::rewind() {
+    index = 0;
+}
+
 // RegularFile implementation
 RegularFile::RegularFile(const std::string& filename, std::ios::openmode mode)
     : filename(filename) {
@@ -185,40 +212,28 @@ ssize_t StandardStream::seek(ssize_t offset) {
 }
 
 // FileHandleTable implementation
-FileHandleTable::FileHandleTable(const std::string& base_directory) : next_fd(3), base_dir(base_directory) {
-    handles[0] = std::make_unique<StandardStream>(&std::cin);
-    handles[1] = std::make_unique<StandardStream>(&std::cout);
-    handles[2] = std::make_unique<StandardStream>(&std::cerr);
+FileHandleTable::FileHandleTable(const std::string& base_directory) : next_fd(3), next_dd(0), base_dir(base_directory) {
+    std::filesystem::create_directories(base_directory);
+    file_handles[0] = std::make_unique<StandardStream>(&std::cin);
+    file_handles[1] = std::make_unique<StandardStream>(&std::cout);
+    file_handles[2] = std::make_unique<StandardStream>(&std::cerr);
+}
+
+static std::string sanitize_path(const std::string& path) {
+    std::string s = std::filesystem::path(path).lexically_normal().string();
+    if (!s.empty() && s[0] == '/') s = s.substr(1);
+    return s;
 }
 
 bool FileHandleTable::isPathSafe(const std::string& path) const {
-    // Check for absolute paths
-    if (path.find("/") == 0 || path.find("\\") == 0) {
-        return false;
-    }
+    auto full = std::filesystem::weakly_canonical(std::filesystem::path(base_dir) / path);
+    auto base = std::filesystem::weakly_canonical(base_dir);
 
-    // Check for drive letters (Windows)
-    if (path.length() >= 2 && path[1] == ':') {
-        return false;
-    }
-
-    // Resolve the path and check if it stays within base_dir
-    std::filesystem::path full_path = std::filesystem::path(base_dir) / path;
-    std::filesystem::path canonical = std::filesystem::weakly_canonical(full_path);
-
-    // Check if canonical path starts with base_dir
-    std::string canonical_str = canonical.string();
-    std::string base_str = base_dir;
-
-    // Make sure we're comparing full directory components
-    if (!base_str.empty() && base_str.back() != std::filesystem::path::preferred_separator) {
-        base_str += std::filesystem::path::preferred_separator;
-    }
-
-    return canonical_str.find(base_str) == 0;
+    auto [a, b] = std::mismatch(base.begin(), base.end(), full.begin(), full.end());
+    return a == base.end();
 }
 
-int FileHandleTable::open(const std::string& filename, std::ios::openmode mode) {
+int FileHandleTable::openFile(const std::string& filename, std::ios::openmode mode) {
     int fd;
     if (filename == ":tt") {
         if (mode == std::ios::app) {
@@ -232,19 +247,21 @@ int FileHandleTable::open(const std::string& filename, std::ios::openmode mode) 
         }
         return fd;
     }
+    std::string safe_path = sanitize_path(filename);
+
     // Check if path is safe
-    if (!isPathSafe(filename)) {
+    if (!isPathSafe(safe_path)) {
         errno = EACCES;
         return -1;
     }
 
     // Build full path
-    std::filesystem::path full_path = std::filesystem::path(base_dir) / filename;
+    std::filesystem::path full_path = std::filesystem::path(base_dir) / safe_path;
     fd = next_fd++;
-    handles[fd] = std::make_unique<RegularFile>(full_path, mode);
+    file_handles[fd] = std::make_unique<RegularFile>(full_path, mode);
 
-    if (!handles[fd]->isOpen()) {
-        handles.erase(fd);
+    if (!file_handles[fd]->isOpen()) {
+        file_handles.erase(fd);
         // errno already set by RegularFile
         return -1;
     }
@@ -252,51 +269,157 @@ int FileHandleTable::open(const std::string& filename, std::ios::openmode mode) 
     return fd;
 }
 
-ssize_t FileHandleTable::read(int fd, char* buffer, size_t count) {
-    if (handles.find(fd) == handles.end()) {
+ssize_t FileHandleTable::readFile(int fd, char* buffer, size_t count) {
+    if (file_handles.find(fd) == file_handles.end()) {
         errno = EBADF;
         return -1;
     }
-    return handles[fd]->read(buffer, count);
+    return file_handles[fd]->read(buffer, count);
 }
 
-ssize_t FileHandleTable::write(int fd, const char* buffer, size_t count) {
-    if (handles.find(fd) == handles.end()) {
+ssize_t FileHandleTable::writeFile(int fd, const char* buffer, size_t count) {
+    if (file_handles.find(fd) == file_handles.end()) {
         errno = EBADF;
         return -1;
     }
-    return handles[fd]->write(buffer, count);
+    return file_handles[fd]->write(buffer, count);
 }
 
-int FileHandleTable::close(int fd) {
+int FileHandleTable::closeFile(int fd) {
     if (fd <= 2) {
         // Can close, but just no-op for standard streams
         // Some programs try to close stdout/stderr
         return 0;
     }
 
-    if (handles.find(fd) == handles.end()) {
+    if (file_handles.find(fd) == file_handles.end()) {
         errno = EBADF;
         return -1;
     }
 
-    handles[fd]->close();
-    handles.erase(fd);
+    file_handles[fd]->close();
+    file_handles.erase(fd);
     return 0;
 }
 
-ssize_t FileHandleTable::getLength(int fd) {
-    if (handles.find(fd) == handles.end()) {
+ssize_t FileHandleTable::getFileLength(int fd) {
+    if (file_handles.find(fd) == file_handles.end()) {
         errno = EBADF;
         return -1;
     }
-    return handles[fd]->getLength();
+    return file_handles[fd]->getLength();
 }
 
-ssize_t FileHandleTable::seek(int fd, ssize_t offset) {
-    if (handles.find(fd) == handles.end()) {
+ssize_t FileHandleTable::seekFile(int fd, ssize_t offset) {
+    if (file_handles.find(fd) == file_handles.end()) {
         errno = EBADF;
         return -1;
     }
-    return handles[fd]->seek(offset);
+    return file_handles[fd]->seek(offset);
+}
+
+int FileHandleTable::removeFile(const std::string &path) {
+    std::string safe_path = sanitize_path(path);
+    // Check if path is safe
+    if (!isPathSafe(safe_path)) {
+        errno = EACCES;
+        return -1;
+    }
+    std::filesystem::path full_path = std::filesystem::path(base_dir) / safe_path;
+    std::error_code ec;
+    if (!std::filesystem::remove(full_path, ec)) {
+        errno = ec ? ec.value() : ENOENT;
+        return -1;
+    }
+    return 0;
+}
+
+int FileHandleTable::renameFile(const std::string &old_path, const std::string &new_path) {
+    std::string safe_old = sanitize_path(old_path);
+    std::string safe_new = sanitize_path(new_path);
+
+    if (!isPathSafe(safe_old) || !isPathSafe(safe_new)) {
+        errno = EACCES;
+        return -1;
+    }
+
+    std::error_code ec;
+    std::filesystem::rename(
+        std::filesystem::path(base_dir) / safe_old,
+        std::filesystem::path(base_dir) / safe_new, ec);
+
+    if (ec) {
+        errno = ec.value();
+        return -1;
+    }
+    return 0;
+}
+
+int FileHandleTable::openDir(const std::string &path) {
+    int dd;
+    std::string safe_path = sanitize_path(path);
+    // Check if path is safe
+    if (!isPathSafe(safe_path)) {
+        errno = EACCES;
+        return -1;
+    }
+
+    // Build full path
+    std::filesystem::path full_path = std::filesystem::path(base_dir) / safe_path;
+    dd = next_dd++;
+    dir_handles[dd] = std::make_unique<DirHandle>(full_path);
+
+    if (!dir_handles[dd]->isOpen()) {
+        dir_handles.erase(dd);
+        // errno already set by RegularFile
+        return -1;
+    }
+
+    return dd;
+}
+
+const std::filesystem::directory_entry* FileHandleTable::dirReadNext(int dd) {
+    auto it = dir_handles.find(dd);
+    if (it == dir_handles.end()) {
+        errno = EBADF;
+        return nullptr;
+    }
+    return it->second->readNext();
+}
+
+int FileHandleTable::closeDir(int dd) {
+    auto it = dir_handles.find(dd);
+    if (it == dir_handles.end()) {
+        errno = EBADF;
+        return -1;
+    }
+    dir_handles[dd]->close();
+    dir_handles.erase(dd);
+    return 0;
+}
+
+int FileHandleTable::makeDir(const std::string &path) {
+    std::string safe_path = sanitize_path(path);
+    if (!isPathSafe(safe_path)) {
+        errno = EACCES;
+        return -1;
+    }
+    std::filesystem::path full_path = std::filesystem::path(base_dir) / safe_path;
+    std::error_code ec;
+    std::filesystem::create_directory(full_path, ec);
+    if (ec && ec != std::make_error_code(std::errc::file_exists)) {
+        errno = ec.value();
+        return -1;
+    }
+    return 0;
+}
+
+int FileHandleTable::rewindDir(int dd) {
+    auto it = dir_handles.find(dd);
+    if (it == dir_handles.end()) {
+        errno = EBADF;
+        return -1;
+    }
+    it->second->rewind();
+    return 0;
 }

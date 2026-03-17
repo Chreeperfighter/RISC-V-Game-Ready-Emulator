@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.30)
 project(Cpp)
 
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 20)
 
 # Use ARM Homebrew on Apple Silicon
 if(APPLE)
@@ -17,6 +17,8 @@ if(APPLE)
         link_directories(/usr/local/lib)
     endif()
 endif()
+
+set(EMULATOR_DEBUG OFF CACHE BOOL "Enable source-level debugger" FORCE)
 
 find_package(SDL2 REQUIRED)
 
@@ -42,6 +44,10 @@ target_include_directories(Cpp PRIVATE
         ${LIBDWARF_INCLUDE}
         toml11/include
 )
+
+if(EMULATOR_DEBUG)
+    target_compile_definitions(Cpp PRIVATE EMULATOR_DEBUG)
+endif()
 
 target_link_libraries(Cpp
     ${SDL2_LIBRARIES}

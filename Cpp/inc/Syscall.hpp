@@ -113,6 +113,12 @@ enum class Syscall : uint32_t {
         • -1 if an error occurred.
     */
 
+    SYS_OPENDIR = 0x109,
+    SYS_READDIR = 0x10A,
+    SYS_CLOSEDIR = 0x10B,
+    SYS_MKDIR = 0x10C,
+    SYS_REWINDDIR = 0x10D,
+
     SYS_FLEN = 0x0C,
     /*
     Returns the length of a specified file.
@@ -200,6 +206,8 @@ enum class Syscall : uint32_t {
         • 0 if the call is successful
         • –1 if the call is not successful.
     */
+    SYS_REMOVE = 0x0E,
+    SYS_RENAME = 0x0F,
     SYS_SEEK = 0x0A,
     /*
     Seeks to a specified position in a file using an offset specified from the start of the file.

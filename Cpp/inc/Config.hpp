@@ -37,7 +37,6 @@ struct Config {
     std::string framebuffer_format;
 
     // Debug
-    bool debug_enabled;
     bool perf_monitor;
     int fps;
     std::vector<BreakpointConfig> breakpoints;

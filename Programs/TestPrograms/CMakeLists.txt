@@ -3,9 +3,11 @@ project(TestPrograms C ASM)
 
 set(CMAKE_C_STANDARD 11)
 
+add_subdirectory(../common common)
+
 # Only compile your main.c - PureDOOM.h is header-only
 add_executable(TestPrograms
         main.c
         ${STARTUP_FILES}
 )
-target_link_libraries(TestPrograms m)
+target_link_libraries(TestPrograms rv32_common m)

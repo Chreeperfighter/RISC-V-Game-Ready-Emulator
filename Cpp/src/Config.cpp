@@ -24,7 +24,6 @@ Config Config::defaults() {
     cfg.framebuffer_bpp = 32;
     cfg.framebuffer_format = "ARGB8888";
     cfg.framebuffer_size_bytes = cfg.framebuffer_width * cfg.framebuffer_height * (cfg.framebuffer_bpp / 8);
-    cfg.debug_enabled = false;
     cfg.perf_monitor = false;
     cfg.fps = 60;
     cfg.breakpoints = {};
@@ -85,7 +84,6 @@ Config Config::load(const std::string& path) {
         // Debug
         if (data.contains("debug")) {
             const auto& debug = toml::find(data, "debug");
-            cfg.debug_enabled = toml::find<bool>(debug, "enabled");
             if (debug.contains("perf_monitor"))
                 cfg.perf_monitor = toml::find<bool>(debug, "perf_monitor");
             if (debug.contains("fps"))

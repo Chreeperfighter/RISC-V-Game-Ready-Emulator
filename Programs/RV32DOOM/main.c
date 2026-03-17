@@ -284,6 +284,9 @@ static void run_game_loop(void) {
         fprintf(stderr, "fatal: unsupported display resolution %ux%u, expected 320x200\n", display_info.width, display_info.height);
         exit(1);
     }
+    int32_t fps_last_time = get_us(NULL);
+    int fps_frame_count = 0;
+
     while (1) {
         process_input();
         doom_update();
@@ -291,7 +294,16 @@ static void run_game_loop(void) {
         uint8_t* framebuffer = doom_get_framebuffer(4);
         show_framebuffer(framebuffer);
 
-        limit_frame_rate();
+        fps_frame_count++;
+        int32_t now = get_us(NULL);
+        int32_t elapsed = now - fps_last_time;
+        if (elapsed >= 1000000) {
+            printf("FPS: %d\n", fps_frame_count * 1000000 / elapsed);
+            fps_frame_count = 0;
+            fps_last_time = now;
+        }
+
+        // limit_frame_rate();
     }
 }
 

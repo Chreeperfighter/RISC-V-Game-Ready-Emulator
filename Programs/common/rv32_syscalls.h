@@ -4,6 +4,8 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+#define SYS_RENAME               0x0F
+
 #define SYS_DISPLAY_INFO         0x100
 #define SYS_SHOW_FRAMEBUFFER     0x101
 #define SYS_GET_US               0x102
@@ -13,6 +15,11 @@
 #define SYS_IS_KEY_DOWN          0x106
 #define SYS_GET_MOUSE_POS        0x107
 #define SYS_IS_MOUSE_BUTTON_DOWN 0x108
+#define SYS_OPENDIR              0x109
+#define SYS_READDIR              0x10A
+#define SYS_CLOSEDIR             0x10B
+#define SYS_MKDIR                0x10C
+#define SYS_REWINDDIR            0x10D
 
 static int32_t semihost(uint32_t nr, uint32_t param) {
     register int32_t  a0 asm("a0");
@@ -27,6 +34,10 @@ static int32_t semihost(uint32_t nr, uint32_t param) {
         : "memory"
     );
     return a0;
+}
+
+static int32_t sys_rename(void* buf) {
+    return semihost(SYS_RENAME, (uint32_t)buf);
 }
 
 static int32_t sys_display_info(void* buf) {
@@ -63,6 +74,26 @@ static void sys_get_mouse_pos(void* buf) {
 
 static int32_t sys_is_mouse_button_down(void* buf) {
     return semihost(SYS_IS_MOUSE_BUTTON_DOWN, (uint32_t)buf);
+}
+
+static int32_t sys_opendir(void* buf) {
+    return semihost(SYS_OPENDIR, (uint32_t)buf);
+}
+
+static int32_t sys_readdir(void* buf) {
+    return semihost(SYS_READDIR, (uint32_t)buf);
+}
+
+static int32_t sys_closedir(void* buf) {
+    return semihost(SYS_CLOSEDIR, (uint32_t)buf);
+}
+
+static int32_t sys_mkdir(void* buf) {
+    return semihost(SYS_MKDIR, (uint32_t)buf);
+}
+
+static int32_t sys_rewinddir(void* buf) {
+    return semihost(SYS_REWINDDIR, (uint32_t)buf);
 }
 
 #endif // RV32_SYSCALLS_H
