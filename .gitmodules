@@ -3,4 +3,4 @@
 	url = https://github.com/ToruNiina/toml11.git
 [submodule "Programs/retro-go"]
 	path = Programs/retro-go
-	url = https://github.com/ducalex/retro-go.git
+	url = https://github.com/Chreeperfighter/retro-go.git
