@@ -75,6 +75,10 @@ int main() {
     //          Main Thread
     // ==============================
     while (running.load(std::memory_order_relaxed)) {
+        auto current_time = steady_clock::now();
+        auto next_frame = last_frame + frame_duration;
+
+        // Process all pending SDL events
         SDL_Event event;
         while (SDL_PollEvent(&event)) {
             if (event.type == SDL_QUIT) {
@@ -83,8 +87,7 @@ int main() {
             }
             input.process_event(event);
         }
-        auto current_time = steady_clock::now();
-        auto next_frame = last_frame + frame_duration;
+
         if (current_time >= next_frame) {
             last_frame = next_frame;
             display.update_display();
@@ -103,7 +106,16 @@ int main() {
                 }
             }
         } else {
-            std::this_thread::sleep_until(next_frame);
+            // Sleep in short bursts so SDL events are processed promptly
+            SDL_Event wait_event;
+            auto remaining_ms = duration_cast<milliseconds>(next_frame - current_time).count();
+            if (SDL_WaitEventTimeout(&wait_event, static_cast<int>(remaining_ms))) {
+                if (wait_event.type == SDL_QUIT) {
+                    running.store(false);
+                } else {
+                    input.process_event(wait_event);
+                }
+            }
         }
 
     }
