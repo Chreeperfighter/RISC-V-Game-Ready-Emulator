@@ -3,6 +3,8 @@
 #include "rv32_display.h"
 #include "rv32_input.h"
 #include "rv32_time.h"
+#include "rv32_audio.h"
+
 
 #include <stdio.h>
 #include <stdint.h>
@@ -264,7 +266,7 @@ static void initialize_doom(void) {
     );
     doom_set_gettime(doom_get_time);
     doom_init(argc, argv, 0);
-
+    init_audio(DOOM_SAMPLERATE, 2, 16);
 }
 
 static void initialize_frame_limiter(void) {
@@ -291,6 +293,11 @@ static void run_game_loop(void) {
         process_input();
         doom_update();
 
+        // Submit SFX — only if SDL isn't already too far ahead (3 frames headroom)
+        short* sound = doom_get_sound_buffer();
+        if (get_queued_bytes() < 3 * 2048)
+            submit_audio(sound, 2048);
+
         uint8_t* framebuffer = doom_get_framebuffer(4);
         show_framebuffer(framebuffer);
 
@@ -303,7 +310,7 @@ static void run_game_loop(void) {
             fps_last_time = now;
         }
 
-        // limit_frame_rate();
+        limit_frame_rate();
     }
 }
 

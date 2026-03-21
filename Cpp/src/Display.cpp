@@ -39,10 +39,11 @@ void Display::init_display() {
         SDL_TEXTUREACCESS_STREAMING,
         g_config.framebuffer_width, g_config.framebuffer_height
     );
+
+    framebuffer.resize(g_config.framebuffer_size_bytes);
 }
 
 void Display::update_display() {
-    std::vector<uint8_t> framebuffer(g_config.framebuffer_size_bytes);
     rv32.get_transfer_buffer(framebuffer);
     const uint8_t* framebuffer_addr = framebuffer.data();
     void* pixels;

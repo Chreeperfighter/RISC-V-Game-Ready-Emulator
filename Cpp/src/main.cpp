@@ -8,6 +8,7 @@
 #include "Input.hpp"
 #include "RV32Debugger.hpp"
 #include "Config.hpp"
+#include "Audio.hpp"
 
 #include <atomic>
 #include <thread>
@@ -41,10 +42,12 @@ void step_cpu(RV32 &cpu, RV32Debugger &dbg) {
 
 int main() {
     g_config = Config::load("/Users/mark.verbeek/Data/Projects/RISC-V-Game-Ready-Emulator/Cpp/config/config.toml");
-    std::string base_dir = g_config.storage_path;
-    RV32 cpu(true, true, base_dir);
+
+    RV32 cpu(true, true);
     Display display(cpu);
     display.init_display();
+    Audio audio{};
+    cpu.set_audio(audio);
 
     Input input(cpu, display);
 

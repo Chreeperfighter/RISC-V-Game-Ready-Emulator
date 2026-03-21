@@ -36,6 +36,8 @@ add_executable(Cpp
         src/Display.cpp
         src/FileHandle.cpp
         src/Config.cpp
+        src/Audio.cpp
+        inc/Audio.hpp
 )
 
 target_include_directories(Cpp PRIVATE

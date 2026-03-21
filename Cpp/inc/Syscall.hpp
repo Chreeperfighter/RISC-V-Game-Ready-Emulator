@@ -118,6 +118,9 @@ enum class Syscall : uint32_t {
     SYS_CLOSEDIR = 0x10B,
     SYS_MKDIR = 0x10C,
     SYS_REWINDDIR = 0x10D,
+    SYS_AUDIO_INIT = 0x10E,
+    SYS_AUDIO_SUBMIT = 0x10F,
+    SYS_AUDIO_GET_QUEUED_BYTES = 0x110,
 
     SYS_FLEN = 0x0C,
     /*

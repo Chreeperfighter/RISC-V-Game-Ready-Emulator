@@ -4,22 +4,26 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-#define SYS_RENAME               0x0F
+#define SYS_RENAME                 0x0F
 
-#define SYS_DISPLAY_INFO         0x100
-#define SYS_SHOW_FRAMEBUFFER     0x101
-#define SYS_GET_US               0x102
-#define SYS_SLEEP_US             0x103
-#define SYS_KEY_AVAILABLE        0x104
-#define SYS_GET_KEY              0x105
-#define SYS_IS_KEY_DOWN          0x106
-#define SYS_GET_MOUSE_POS        0x107
-#define SYS_IS_MOUSE_BUTTON_DOWN 0x108
-#define SYS_OPENDIR              0x109
-#define SYS_READDIR              0x10A
-#define SYS_CLOSEDIR             0x10B
-#define SYS_MKDIR                0x10C
-#define SYS_REWINDDIR            0x10D
+#define SYS_DISPLAY_INFO           0x100
+#define SYS_SHOW_FRAMEBUFFER       0x101
+#define SYS_GET_US                 0x102
+#define SYS_SLEEP_US               0x103
+#define SYS_KEY_AVAILABLE          0x104
+#define SYS_GET_KEY                0x105
+#define SYS_IS_KEY_DOWN            0x106
+#define SYS_GET_MOUSE_POS          0x107
+#define SYS_IS_MOUSE_BUTTON_DOWN   0x108
+#define SYS_OPENDIR                0x109
+#define SYS_READDIR                0x10A
+#define SYS_CLOSEDIR               0x10B
+#define SYS_MKDIR                  0x10C
+#define SYS_REWINDDIR              0x10D
+#define SYS_AUDIO_INIT             0x10E
+#define SYS_AUDIO_SUBMIT           0x10F
+#define SYS_AUDIO_GET_QUEUED_BYTES 0x110
+
 
 static int32_t semihost(uint32_t nr, uint32_t param) {
     register int32_t  a0 asm("a0");
@@ -94,6 +98,18 @@ static int32_t sys_mkdir(void* buf) {
 
 static int32_t sys_rewinddir(void* buf) {
     return semihost(SYS_REWINDDIR, (uint32_t)buf);
+}
+
+static int32_t sys_audio_init(void* buf) {
+    return semihost(SYS_AUDIO_INIT, (uint32_t)buf);
+}
+
+static int32_t sys_audio_submit(void* buf) {
+    return semihost(SYS_AUDIO_SUBMIT, (uint32_t)buf);
+}
+
+static uint32_t sys_audio_get_queued_bytes() {
+    return semihost(SYS_AUDIO_GET_QUEUED_BYTES, 0);
 }
 
 #endif // RV32_SYSCALLS_H

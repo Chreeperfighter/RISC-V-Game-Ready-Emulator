@@ -1,102 +1,95 @@
 #include <stdio.h>
+#include <stdint.h>
 #include <string.h>
-#include <sys/stat.h>
-#include "../common/rv32_dirent.h"
+#include <stdbool.h>
+#include "rv32_audio.h"
+#include "rv32_time.h"
 
-static void list_dir(const char* path) {
-    printf("Listing: %s\n", path);
-    DIR* dir = opendir(path);
-    if (!dir) { printf("  opendir failed (expected if not a dir or doesn't exist)\n"); return; }
+#define WAV_PATH      "test2.wav"
+#define CHUNK_SAMPLES 4096
 
-    struct dirent* entry;
-    int count = 0;
-    while ((entry = readdir(dir)) != NULL) {
-        printf("  [%s] %s\n", (entry->d_type == DT_DIR) ? "DIR" : "FILE", entry->d_name);
-        count++;
-    }
-    if (count == 0) printf("  (empty)\n");
-    closedir(dir);
-}
+#define MAX_QUEUE_BYTES(ch) (CHUNK_SAMPLES * 2 * (ch) * 4)
 
-static void write_file(const char* path, const char* content) {
-    FILE* f = fopen(path, "w");
-    if (!f) { printf("  fopen write failed: %s\n", path); return; }
-    int written = fprintf(f, "%s", content);
-    fclose(f);
-    printf("  wrote %d bytes to %s\n", written, path);
-}
+// Minimal PCM WAV parser — scans for "fmt " and "data" chunks
+typedef struct {
+    uint16_t channels;
+    uint32_t sample_rate;
+    uint16_t bits_per_sample;
+} WavInfo;
 
-/* Returns 1 if content matches expected, 0 otherwise */
-static int read_and_verify(const char* path, const char* expected) {
-    FILE* f = fopen(path, "r");
-    if (!f) { printf("  fopen read failed: %s\n", path); return 0; }
+static bool wav_open(FILE* f, WavInfo* out) {
+    char tag[4];
 
-    char buf[128] = {0};
-    char* result = fgets(buf, sizeof(buf), f);
-    fclose(f);
+    // RIFF header
+    if (fread(tag, 1, 4, f) != 4 || memcmp(tag, "RIFF", 4)) return false;
+    fseek(f, 4, SEEK_CUR); // skip file size
+    if (fread(tag, 1, 4, f) != 4 || memcmp(tag, "WAVE", 4)) return false;
 
-    if (!result) {
-        printf("  fgets returned NULL (empty file or error): %s\n", path);
-        return (expected[0] == '\0') ? 1 : 0;
-    }
+    // Scan chunks until we find "fmt " and "data"
+    bool got_fmt = false;
+    while (1) {
+        if (fread(tag, 1, 4, f) != 4) return false;
+        uint32_t chunk_size;
+        if (fread(&chunk_size, 4, 1, f) != 1) return false;
 
-    if (strcmp(buf, expected) == 0) {
-        printf("  OK: content matches \"%s\"\n", buf);
-        return 1;
-    } else {
-        printf("  MISMATCH: got \"%s\", expected \"%s\"\n", buf, expected);
-        return 0;
+        if (!memcmp(tag, "fmt ", 4)) {
+            uint16_t audio_fmt, channels, block_align;
+            uint32_t sample_rate, byte_rate;
+            uint16_t bits;
+            fread(&audio_fmt,   2, 1, f);
+            fread(&channels,    2, 1, f);
+            fread(&sample_rate, 4, 1, f);
+            fread(&byte_rate,   4, 1, f);
+            fread(&block_align, 2, 1, f);
+            fread(&bits,        2, 1, f);
+            if (audio_fmt != 1) { printf("FAIL: not PCM WAV\n"); return false; }
+            out->channels       = channels;
+            out->sample_rate    = sample_rate;
+            out->bits_per_sample = bits;
+            fseek(f, (long)chunk_size - 16, SEEK_CUR); // skip extra fmt bytes
+            got_fmt = true;
+        } else if (!memcmp(tag, "data", 4)) {
+            return got_fmt; // file pointer now at start of PCM data
+        } else {
+            fseek(f, (long)chunk_size, SEEK_CUR); // skip unknown chunk
+        }
     }
 }
 
 int main(void) {
-    int pass = 0, fail = 0;
-#define CHECK(expr, label) do { if (expr) { printf("  PASS: %s\n", label); pass++; } else { printf("  FAIL: %s\n", label); fail++; } } while(0)
+    FILE* f = fopen(WAV_PATH, "rb");
+    if (!f) { printf("FAIL: could not open %s\n", WAV_PATH); return 1; }
 
-    /* --- Initial state --- */
-    printf("=== Listing root ===\n");
-    list_dir("/");
+    WavInfo info;
+    if (!wav_open(f, &info)) {
+        printf("FAIL: invalid WAV file\n");
+        fclose(f); return 1;
+    }
 
-    /* --- Edge: opendir on non-existent path --- */
-    printf("\n=== opendir edge cases ===\n");
-    CHECK(opendir("/does_not_exist") == NULL, "opendir non-existent returns NULL");
-    CHECK(opendir("") == NULL,                "opendir empty string returns NULL");
+    printf("WAV: %lu Hz, %d ch, %d-bit\n",
+           (unsigned long)info.sample_rate, info.channels, info.bits_per_sample);
 
-    /* --- mkdir tests --- */
-    printf("\n=== mkdir ===\n");
-    CHECK(mkdir("/testdir",     0755) == 0, "mkdir /testdir succeeds");
-    CHECK(mkdir("/testdir/sub", 0755) == 0, "mkdir /testdir/sub succeeds");
-    CHECK(mkdir("/testdir",     0755) != 0, "mkdir /testdir again fails (already exists)");
-    CHECK(mkdir("/no_parent/x", 0755) != 0, "mkdir where parent missing fails");
-    CHECK(mkdir("",             0755) != 0, "mkdir empty string fails");
+    if (!init_audio(info.sample_rate, (uint8_t)info.channels, info.bits_per_sample)) {
+        printf("FAIL: init_audio\n");
+        fclose(f); return 1;
+    }
+    printf("PASS: init_audio — playing %s\n", WAV_PATH);
 
-    /* --- Edge: opendir on a regular file --- */
-    printf("\n=== opendir on a file ===\n");
-    write_file("/testdir/hello.txt", "hello world\n");
-    CHECK(opendir("/testdir/hello.txt") == NULL, "opendir on a file returns NULL");
+    int16_t buf[CHUNK_SAMPLES * 2]; // *2 for stereo
+    size_t  frames;
+    size_t  frame_bytes = info.channels * (info.bits_per_sample / 8);
 
-    /* --- File write/read-back --- */
-    printf("\n=== file write + verify ===\n");
-    write_file("/testdir/sub/data.txt", "nested file\n");
-    CHECK(read_and_verify("/testdir/hello.txt",    "hello world\n"), "hello.txt content correct");
-    CHECK(read_and_verify("/testdir/sub/data.txt", "nested file\n"), "data.txt content correct");
+    while ((frames = fread(buf, frame_bytes, CHUNK_SAMPLES, f)) > 0) {
+        while (get_queued_bytes() > (uint32_t)MAX_QUEUE_BYTES(info.channels))
+            sleep_us(2000);
+        submit_audio(buf, (uint32_t)(frames * frame_bytes));
+    }
 
-    /* --- Edge: read non-existent file --- */
-    printf("\n=== fopen edge cases ===\n");
-    CHECK(fopen("/testdir/ghost.txt", "r") == NULL, "fopen read non-existent returns NULL");
-    CHECK(fopen("", "r")                  == NULL,  "fopen empty path returns NULL");
+    // Let SDL finish draining before exit
+    while (get_queued_bytes() > 0)
+        sleep_us(5000);
 
-    /* --- Empty file --- */
-    printf("\n=== empty file ===\n");
-    write_file("/testdir/empty.txt", "");
-    CHECK(read_and_verify("/testdir/empty.txt", ""), "empty file: fgets returns NULL or empty");
-
-    /* --- Directory listing after setup --- */
-    printf("\n=== directory listings ===\n");
-    list_dir("/testdir");
-    list_dir("/testdir/sub");
-
-    /* --- Summary --- */
-    printf("\n=== Results: %d passed, %d failed ===\n", pass, fail);
-    return (fail == 0) ? 0 : 1;
+    printf("PASS: playback complete\n");
+    fclose(f);
+    return 0;
 }

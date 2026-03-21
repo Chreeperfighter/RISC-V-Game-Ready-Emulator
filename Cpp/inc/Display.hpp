@@ -25,6 +25,7 @@ public:
 private:
     DisplayContext context{};
     RV32 &rv32;
+    std::vector<uint8_t> framebuffer;
 };
 
 

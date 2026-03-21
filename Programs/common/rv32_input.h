@@ -4,6 +4,8 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+#define KEY_UP 0x8000
+
 typedef enum SDL_Scancode
 {
     SDL_SCANCODE_UNKNOWN = 0,

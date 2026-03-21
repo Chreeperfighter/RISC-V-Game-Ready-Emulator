@@ -10,5 +10,7 @@ add_library(rv32_common STATIC
         rv32_dirent.c
         rv32_file.c
         rv32_file.h
+        rv32_audio.c
+        rv32_audio.h
 )
 target_include_directories(rv32_common PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})

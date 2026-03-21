@@ -14,10 +14,10 @@
 #include <thread>
 #include <fstream>
 
-RV32::RV32(bool randomizeRegs, bool randomizeMemory, std::string base_dir)
+RV32::RV32(bool randomizeRegs, bool randomizeMemory)
     : ram(g_config.ram_size_bytes, 0),
       transfer_buffer(g_config.framebuffer_size_bytes) {
-    fht = new FileHandleTable(base_dir);
+    fht = new FileHandleTable(g_config.storage_path);
     init_regs(randomizeRegs);
     if (randomizeMemory) {
         for (auto &byte: ram) {
@@ -585,6 +585,18 @@ void RV32::handle_semihosting() {
             handle_sys_rewinddir(parameter);
             break;
 
+        case Syscall::SYS_AUDIO_INIT:
+            handle_sys_audio_init(parameter);
+            break;
+
+        case Syscall::SYS_AUDIO_SUBMIT:
+            handle_sys_audio_submit(parameter);
+            break;
+
+        case Syscall::SYS_AUDIO_GET_QUEUED_BYTES:
+            handle_sys_audio_get_queued_bytes(parameter);
+            break;
+
         case Syscall::SYS_FLEN:
             handle_sys_flen(parameter);
             break;
@@ -686,7 +698,8 @@ void RV32::handle_sys_show_framebuffer(uint32_t parameter) {
     }
 
     std::lock_guard<std::mutex> lock(transfer_buffer_mtx);
-    transfer_buffer = read_bytes(transfer_buffer_address, g_config.framebuffer_size_bytes);
+    memcpy(transfer_buffer.data(), read_raw(parameter, g_config.framebuffer_size_bytes),
+           g_config.framebuffer_size_bytes);
 }
 
 void RV32::handle_sys_get_mouse_pos(uint32_t parameter) {
@@ -824,6 +837,49 @@ void RV32::handle_sys_rewinddir(uint32_t parameter) {
     memcpy(&args, raw.data(), sizeof(RewinddirArgs));
 
     regs.write(Register::a0, fht->rewindDir(args.handle));
+}
+
+void RV32::handle_sys_audio_init(uint32_t parameter) {
+    struct AudioInitArgs {
+        uint32_t sample_rate;
+        uint32_t channels;
+        uint32_t bits_per_sample;
+    } args{};
+    const std::vector<uint8_t> raw = read_bytes(parameter, sizeof(AudioInitArgs));
+    memcpy(&args, raw.data(), sizeof(AudioInitArgs));
+    if (!audio || !audio->init(args.sample_rate, args.channels, args.bits_per_sample)) {
+        regs.write(Register::a0, -1);
+        return;
+    }
+    regs.write(Register::a0, 0);
+}
+
+void RV32::handle_sys_audio_submit(uint32_t parameter) {
+    struct AudioSubmitArgs {
+        uint32_t buffer_ptr;
+        uint32_t len;
+    } args{};
+    const std::vector<uint8_t> raw = read_bytes(parameter, sizeof(AudioSubmitArgs));
+    memcpy(&args, raw.data(), sizeof(AudioSubmitArgs));
+    if (args.len == 0) {
+        regs.write(Register::a0, -1);
+        return;
+    }
+    const uint8_t* buffer = read_raw(args.buffer_ptr, args.len);
+    if (!audio || !buffer) {
+        regs.write(Register::a0, -1);
+        return;
+    }
+    audio->submit(buffer, args.len);
+    regs.write(Register::a0, 0);
+}
+
+void RV32::handle_sys_audio_get_queued_bytes(uint32_t parameter) {
+    if (!audio) {
+        regs.write(Register::a0, -1);
+        return;
+    }
+    regs.write(Register::a0, audio->get_queued_bytes());
 }
 
 void RV32::handle_sys_exit_extended(const uint32_t parameter) {
@@ -1104,6 +1160,17 @@ uint16_t RV32::read_u16(const uint32_t address) {
 
 uint8_t RV32::read_u8(const uint32_t address) {
     return read_value<uint8_t>(address);
+}
+
+const uint8_t * RV32::read_raw(uint32_t address, size_t size) {
+    if (!is_in_ram(address, size)) {
+        trigger_trap(TrapReason::MemFault, "RV32::read_raw()",
+            "Address: " + std::to_string(address) + " not in RAM");
+        return {};
+    }
+
+    address -= g_config.ram_origin;
+    return ram.data() + address;
 }
 
 std::vector<uint8_t> RV32::read_bytes(uint32_t address, size_t size) {

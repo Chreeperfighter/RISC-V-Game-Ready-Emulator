@@ -9,11 +9,13 @@
 #include <random>
 #include <queue>
 
+#include "Audio.hpp"
 #include "Config.hpp"
 #include "ISA.hpp"
 #include "Registers.hpp"
 #include "ELFLoader.hpp"
 #include "FileHandle.hpp"
+#include "Audio.hpp"
 
 struct DecodedInstruction {
   	Opcode opcode;
@@ -34,10 +36,13 @@ enum class TrapReason {
 
 class RV32 {
 public:
-    RV32(bool randomizeRegs, bool randomizeMemory, std::string base_dir);
+    RV32(bool randomizeRegs, bool randomizeMemory);
     void step();
 	void load_section(const ELFSection &section);
 	void set_entry(uint32_t entry);
+	void set_audio(Audio& ad) {
+		audio = &ad;
+	}
 	uint32_t get_pc() const {
 		return pc;
 	}
@@ -89,6 +94,7 @@ private:
 	uint32_t read_u32(uint32_t address);
 	uint16_t read_u16(uint32_t address);
 	uint8_t read_u8(uint32_t address);
+	const uint8_t* read_raw(uint32_t address, size_t size);
 	void write_u64(uint32_t address, uint64_t value);
 	void write_u32(uint32_t address, uint32_t value);
 	void write_u16(uint32_t address, uint16_t value);
@@ -117,6 +123,9 @@ private:
 	void handle_sys_closedir(uint32_t parameter);
 	void handle_sys_mkdir(uint32_t parameter);
 	void handle_sys_rewinddir(uint32_t parameter);
+	void handle_sys_audio_init(uint32_t parameter);
+	void handle_sys_audio_submit(uint32_t parameter);
+	void handle_sys_audio_get_queued_bytes(uint32_t parameter);
     void handle_sys_flen(uint32_t parameter);
     void handle_sys_istty(uint32_t parameter);
     void handle_sys_write(uint32_t parameter);
@@ -175,6 +184,7 @@ private:
 	int32_t mouse_pos_y = 0;
 	int semihosting_step = 0;
 	bool semihosting_instruction = false;
+	Audio* audio = nullptr;
 
 	FileHandleTable* fht = nullptr;
 };
