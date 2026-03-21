@@ -3,7 +3,7 @@
 
 DirHandle::DirHandle(const std::filesystem::path &path) {
     if (std::filesystem::is_directory(path)) {
-        for (auto& entry : std::filesystem::directory_iterator(path)) {
+        for (auto &entry: std::filesystem::directory_iterator(path)) {
             entries.push_back(entry);
         }
         open = true;
@@ -19,7 +19,7 @@ void DirHandle::close() {
     open = false;
 }
 
-const std::filesystem::directory_entry* DirHandle::readNext() {
+const std::filesystem::directory_entry *DirHandle::readNext() {
     if (index >= entries.size()) return nullptr;
     return &entries[index++];
 }
@@ -29,16 +29,16 @@ void DirHandle::rewind() {
 }
 
 // RegularFile implementation
-RegularFile::RegularFile(const std::string& filename, std::ios::openmode mode)
+RegularFile::RegularFile(const std::string &filename, std::ios::openmode mode)
     : filename(filename) {
     file.open(filename, mode | std::ios::binary);
     if (!file.is_open()) {
         // errno already set (hopefully), but we can try to be more specific
-        errno = ENOENT;  // Most common case
+        errno = ENOENT; // Most common case
     }
 }
 
-ssize_t RegularFile::read(char* buffer, size_t count) {
+ssize_t RegularFile::read(char *buffer, size_t count) {
     if (!file.is_open()) {
         errno = EBADF;
         return -1;
@@ -56,7 +56,7 @@ ssize_t RegularFile::read(char* buffer, size_t count) {
     return bytes_read;
 }
 
-ssize_t RegularFile::write(const char* buffer, size_t count) {
+ssize_t RegularFile::write(const char *buffer, size_t count) {
     if (!file.is_open()) {
         errno = EBADF;
         return -1;
@@ -153,13 +153,15 @@ ssize_t RegularFile::seek(ssize_t offset) {
 }
 
 // StandardStream implementation
-StandardStream::StandardStream(std::istream* input)
-    : in(input), out(nullptr) {}
+StandardStream::StandardStream(std::istream *input)
+    : in(input), out(nullptr) {
+}
 
-StandardStream::StandardStream(std::ostream* output)
-    : in(nullptr), out(output) {}
+StandardStream::StandardStream(std::ostream *output)
+    : in(nullptr), out(output) {
+}
 
-ssize_t StandardStream::read(char* buffer, size_t count) {
+ssize_t StandardStream::read(char *buffer, size_t count) {
     if (!in) {
         errno = EBADF;
         return -1;
@@ -176,7 +178,7 @@ ssize_t StandardStream::read(char* buffer, size_t count) {
     return bytes_read;
 }
 
-ssize_t StandardStream::write(const char* buffer, size_t count) {
+ssize_t StandardStream::write(const char *buffer, size_t count) {
     if (!out) {
         errno = EBADF;
         return -1;
@@ -202,30 +204,30 @@ bool StandardStream::isOpen() const {
 }
 
 ssize_t StandardStream::getLength() {
-    errno = ESPIPE;  // Illegal seek on pipe/stream
+    errno = ESPIPE; // Illegal seek on pipe/stream
     return -1;
 }
 
 ssize_t StandardStream::seek(ssize_t offset) {
-    errno = ESPIPE;  // Can't seek on standard streams
+    errno = ESPIPE; // Can't seek on standard streams
     return -1;
 }
 
 // FileHandleTable implementation
-FileHandleTable::FileHandleTable(const std::string& base_directory) : next_fd(3), next_dd(0), base_dir(base_directory) {
+FileHandleTable::FileHandleTable(const std::string &base_directory) : next_fd(3), next_dd(0), base_dir(base_directory) {
     std::filesystem::create_directories(base_directory);
-    file_handles[0] = std::make_unique<StandardStream>(&std::cin);
-    file_handles[1] = std::make_unique<StandardStream>(&std::cout);
-    file_handles[2] = std::make_unique<StandardStream>(&std::cerr);
+    file_handles[0] = std::make_unique < StandardStream > (&std::cin);
+    file_handles[1] = std::make_unique < StandardStream > (&std::cout);
+    file_handles[2] = std::make_unique < StandardStream > (&std::cerr);
 }
 
-static std::string sanitize_path(const std::string& path) {
+static std::string sanitize_path(const std::string &path) {
     std::string s = std::filesystem::path(path).lexically_normal().string();
     if (!s.empty() && s[0] == '/') s = s.substr(1);
     return s;
 }
 
-bool FileHandleTable::isPathSafe(const std::string& path) const {
+bool FileHandleTable::isPathSafe(const std::string &path) const {
     auto full = std::filesystem::weakly_canonical(std::filesystem::path(base_dir) / path);
     auto base = std::filesystem::weakly_canonical(base_dir);
 
@@ -233,16 +235,14 @@ bool FileHandleTable::isPathSafe(const std::string& path) const {
     return a == base.end();
 }
 
-int FileHandleTable::openFile(const std::string& filename, std::ios::openmode mode) {
+int FileHandleTable::openFile(const std::string &filename, std::ios::openmode mode) {
     int fd;
     if (filename == ":tt") {
         if (mode == std::ios::app) {
             fd = 2;
-        }
-        else if (mode == std::ios::trunc) {
+        } else if (mode == std::ios::trunc) {
             fd = 1;
-        }
-        else {
+        } else {
             fd = 0;
         }
         return fd;
@@ -258,7 +258,7 @@ int FileHandleTable::openFile(const std::string& filename, std::ios::openmode mo
     // Build full path
     std::filesystem::path full_path = std::filesystem::path(base_dir) / safe_path;
     fd = next_fd++;
-    file_handles[fd] = std::make_unique<RegularFile>(full_path, mode);
+    file_handles[fd] = std::make_unique < RegularFile > (full_path, mode);
 
     if (!file_handles[fd]->isOpen()) {
         file_handles.erase(fd);
@@ -269,7 +269,7 @@ int FileHandleTable::openFile(const std::string& filename, std::ios::openmode mo
     return fd;
 }
 
-ssize_t FileHandleTable::readFile(int fd, char* buffer, size_t count) {
+ssize_t FileHandleTable::readFile(int fd, char *buffer, size_t count) {
     if (file_handles.find(fd) == file_handles.end()) {
         errno = EBADF;
         return -1;
@@ -277,7 +277,7 @@ ssize_t FileHandleTable::readFile(int fd, char* buffer, size_t count) {
     return file_handles[fd]->read(buffer, count);
 }
 
-ssize_t FileHandleTable::writeFile(int fd, const char* buffer, size_t count) {
+ssize_t FileHandleTable::writeFile(int fd, const char *buffer, size_t count) {
     if (file_handles.find(fd) == file_handles.end()) {
         errno = EBADF;
         return -1;
@@ -367,7 +367,7 @@ int FileHandleTable::openDir(const std::string &path) {
     // Build full path
     std::filesystem::path full_path = std::filesystem::path(base_dir) / safe_path;
     dd = next_dd++;
-    dir_handles[dd] = std::make_unique<DirHandle>(full_path);
+    dir_handles[dd] = std::make_unique < DirHandle > (full_path);
 
     if (!dir_handles[dd]->isOpen()) {
         dir_handles.erase(dd);
@@ -378,7 +378,7 @@ int FileHandleTable::openDir(const std::string &path) {
     return dd;
 }
 
-const std::filesystem::directory_entry* FileHandleTable::dirReadNext(int dd) {
+const std::filesystem::directory_entry *FileHandleTable::dirReadNext(int dd) {
     auto it = dir_handles.find(dd);
     if (it == dir_handles.end()) {
         errno = EBADF;

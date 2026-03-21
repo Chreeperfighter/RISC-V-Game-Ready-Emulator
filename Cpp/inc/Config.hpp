@@ -26,8 +26,8 @@ struct Config {
     // RAM
     uint32_t ram_origin;
     uint32_t ram_end;
-    uint32_t ram_size_bytes;  // convert from MB
-    uint32_t stack_margin_bytes;  // convert from MB
+    uint32_t ram_size_bytes; // convert from MB
+    uint32_t stack_margin_bytes; // convert from MB
 
     // Framebuffer
     int framebuffer_width;
@@ -47,7 +47,7 @@ struct Config {
     bool zero_bss;
 
     // Load from TOML file
-    static Config load(const std::string& path);
+    static Config load(const std::string &path);
 
     // Get default config
     static Config defaults();

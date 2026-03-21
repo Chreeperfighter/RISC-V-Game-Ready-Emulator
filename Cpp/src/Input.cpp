@@ -17,12 +17,12 @@ bool Input::process_event(const SDL_Event &event) {
     }
     if (event.type == SDL_WINDOWEVENT && event.window.event == SDL_WINDOWEVENT_RESIZED) {
         int scale = std::max(1, std::min(
-            event.window.data1 / g_config.framebuffer_width,
-            event.window.data2 / g_config.framebuffer_height
-        ));
+                                 event.window.data1 / g_config.framebuffer_width,
+                                 event.window.data2 / g_config.framebuffer_height
+                             ));
         SDL_SetWindowSize(context.window,
-            g_config.framebuffer_width  * scale,
-            g_config.framebuffer_height * scale);
+                          g_config.framebuffer_width * scale,
+                          g_config.framebuffer_height * scale);
     }
     if (event.type == SDL_MOUSEMOTION) {
         const int32_t mouse_x = event.motion.x;

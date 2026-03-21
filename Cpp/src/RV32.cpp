@@ -44,7 +44,7 @@ void RV32::step() {
 void RV32::load_section(const ELFSection &section) {
     if (!is_in_ram(section.address, section.size)) {
         trigger_trap(TrapReason::MemFault, "RV32::load_section()",
-            "Section: " + section.name + " doesn't fit in RAM");
+                     "Section: " + section.name + " doesn't fit in RAM");
         return;
     }
 
@@ -76,7 +76,7 @@ void RV32::set_entry(const uint32_t entry) {
 }
 
 uint32_t RV32::fetch() {
-    return *reinterpret_cast<const uint32_t*>(ram.data() + (pc - g_config.ram_origin));
+    return *reinterpret_cast<const uint32_t *>(ram.data() + (pc - g_config.ram_origin));
 }
 
 DecodedInstruction RV32::decode(const uint32_t data) {
@@ -203,8 +203,7 @@ void RV32::execute(const DecodedInstruction inst) {
                                      "Unknown funct3: " + std::to_string(static_cast<int>(inst.funct3)));
                         break;
                 }
-            }
-            else {
+            } else {
                 switch (inst.funct3) {
                     case Funct3::ADD_SUB: {
                         switch (inst.funct7) {
@@ -693,7 +692,7 @@ void RV32::handle_sys_show_framebuffer(uint32_t parameter) {
     // Check if the address is valid
     if (!is_in_ram(parameter, g_config.framebuffer_size_bytes)) {
         trigger_trap(TrapReason::MemFault, "RV32::handle_sys_show_framebuffer()",
-             "Invalid Framebuffer address: " + std::to_string(parameter));
+                     "Invalid Framebuffer address: " + std::to_string(parameter));
         return;
     }
 
@@ -766,11 +765,12 @@ void RV32::handle_sys_opendir(uint32_t parameter) {
         uint32_t len;
     } args{};
 
-    const std::vector<uint8_t> raw = read_bytes(parameter, sizeof(OpendirArgs));
-
-    memcpy(&args, raw.data(), sizeof(OpendirArgs));
+    if (!get_args(parameter, args)) {
+        regs.write(Register::a0, -1);
+        return;
+    }
     const std::vector<uint8_t> path_buffer = read_bytes(args.path_ptr, args.len + 1);
-    const std::string path(reinterpret_cast<const char*>(path_buffer.data()));
+    const std::string path(reinterpret_cast<const char *>(path_buffer.data()));
 
     int handle = fht->openDir(path);
     regs.write(Register::a0, handle);
@@ -787,9 +787,11 @@ void RV32::handle_sys_readdir(uint32_t parameter) {
         char d_name[256];
     } dirent{};
 
-    const std::vector<uint8_t> raw = read_bytes(parameter, sizeof(ReaddirArgs));
-    memcpy(&args, raw.data(), sizeof(ReaddirArgs));
-    const std::filesystem::directory_entry* entry = fht->dirReadNext(args.handle);
+    if (!get_args(parameter, args)) {
+        regs.write(Register::a0, -1);
+        return;
+    }
+    const std::filesystem::directory_entry *entry = fht->dirReadNext(args.handle);
     if (entry == nullptr) {
         regs.write(Register::a0, -1);
         return;
@@ -807,8 +809,10 @@ void RV32::handle_sys_closedir(uint32_t parameter) {
         uint32_t handle;
     } args{};
 
-    const std::vector<uint8_t> raw = read_bytes(parameter, sizeof(ClosedirArgs));
-    memcpy(&args, raw.data(), sizeof(ClosedirArgs));
+    if (!get_args(parameter, args)) {
+        regs.write(Register::a0, -1);
+        return;
+    }
 
     regs.write(Register::a0, fht->closeDir(args.handle));
 }
@@ -819,11 +823,13 @@ void RV32::handle_sys_mkdir(uint32_t parameter) {
         uint32_t len;
     } args{};
 
-    const std::vector<uint8_t> raw = read_bytes(parameter, sizeof(MkdirArgs));
-    memcpy(&args, raw.data(), sizeof(MkdirArgs));
+    if (!get_args(parameter, args)) {
+        regs.write(Register::a0, -1);
+        return;
+    }
 
     const std::vector<uint8_t> path_buffer = read_bytes(args.path_ptr, args.len + 1);
-    const std::string path(reinterpret_cast<const char*>(path_buffer.data()));
+    const std::string path(reinterpret_cast<const char *>(path_buffer.data()));
 
     regs.write(Register::a0, fht->makeDir(path));
 }
@@ -833,8 +839,10 @@ void RV32::handle_sys_rewinddir(uint32_t parameter) {
         uint32_t handle;
     } args{};
 
-    const std::vector<uint8_t> raw = read_bytes(parameter, sizeof(RewinddirArgs));
-    memcpy(&args, raw.data(), sizeof(RewinddirArgs));
+    if (!get_args(parameter, args)) {
+        regs.write(Register::a0, -1);
+        return;
+    }
 
     regs.write(Register::a0, fht->rewindDir(args.handle));
 }
@@ -845,8 +853,10 @@ void RV32::handle_sys_audio_init(uint32_t parameter) {
         uint32_t channels;
         uint32_t bits_per_sample;
     } args{};
-    const std::vector<uint8_t> raw = read_bytes(parameter, sizeof(AudioInitArgs));
-    memcpy(&args, raw.data(), sizeof(AudioInitArgs));
+    if (!get_args(parameter, args)) {
+        regs.write(Register::a0, -1);
+        return;
+    }
     if (!audio || !audio->init(args.sample_rate, args.channels, args.bits_per_sample)) {
         regs.write(Register::a0, -1);
         return;
@@ -859,13 +869,15 @@ void RV32::handle_sys_audio_submit(uint32_t parameter) {
         uint32_t buffer_ptr;
         uint32_t len;
     } args{};
-    const std::vector<uint8_t> raw = read_bytes(parameter, sizeof(AudioSubmitArgs));
-    memcpy(&args, raw.data(), sizeof(AudioSubmitArgs));
+    if (!get_args(parameter, args)) {
+        regs.write(Register::a0, -1);
+        return;
+    }
     if (args.len == 0) {
         regs.write(Register::a0, -1);
         return;
     }
-    const uint8_t* buffer = read_raw(args.buffer_ptr, args.len);
+    const uint8_t *buffer = read_raw(args.buffer_ptr, args.len);
     if (!audio || !buffer) {
         regs.write(Register::a0, -1);
         return;
@@ -888,9 +900,10 @@ void RV32::handle_sys_exit_extended(const uint32_t parameter) {
         uint32_t subcode;
     } args{};
 
-    const std::vector<uint8_t> raw = read_bytes(parameter, sizeof(ExitArgs));
-
-    memcpy(&args, raw.data(), sizeof(ExitArgs));
+    if (!get_args(parameter, args)) {
+        regs.write(Register::a0, -1);
+        return;
+    }
 
     if (args.reason_code == 0x20026) {
         std::cout << "Process finished with exit code "
@@ -915,9 +928,10 @@ void RV32::handle_sys_write(uint32_t parameter) {
         uint32_t buffer_ptr;
         uint32_t length;
     } args{};
-    const std::vector<uint8_t> raw = read_bytes(parameter, sizeof(WriteArgs));
-
-    memcpy(&args, raw.data(), sizeof(WriteArgs));
+    if (!get_args(parameter, args)) {
+        regs.write(Register::a0, -1);
+        return;
+    }
     const std::vector<uint8_t> buffer = read_bytes(args.buffer_ptr, args.length);
     fht->writeFile(args.handle, reinterpret_cast<const char *>(buffer.data()), buffer.size());
     regs.write(Register::a0, 0);
@@ -930,12 +944,13 @@ void RV32::handle_sys_open(uint32_t parameter) {
         uint32_t filename_length;
     } args{};
 
-    const std::vector<uint8_t> raw = read_bytes(parameter, sizeof(OpenArgs));
-
-    memcpy(&args, raw.data(), sizeof(OpenArgs));
+    if (!get_args(parameter, args)) {
+        regs.write(Register::a0, -1);
+        return;
+    }
     const std::vector<uint8_t> filename_buffer = read_bytes(args.filename_ptr, args.filename_length + 1);
     const std::vector<uint8_t> path_buffer = read_bytes(args.filename_ptr, args.filename_length + 1);
-    const std::string filename(reinterpret_cast<const char*>(path_buffer.data()));
+    const std::string filename(reinterpret_cast<const char *>(path_buffer.data()));
 
     // Map semihosting mode to C++ fstream flags
     std::ios_base::openmode mode;
@@ -999,10 +1014,12 @@ void RV32::handle_sys_remove(uint32_t parameter) {
         uint32_t length;
     } args{};
 
-    const std::vector<uint8_t> raw = read_bytes(parameter, sizeof(RemoveArgs));
-    memcpy(&args, raw.data(), sizeof(RemoveArgs));
+    if (!get_args(parameter, args)) {
+        regs.write(Register::a0, -1);
+        return;
+    }
     const std::vector<uint8_t> path_buffer = read_bytes(args.buffer_ptr, args.length + 1);
-    const std::string path(reinterpret_cast<const char*>(path_buffer.data()));
+    const std::string path(reinterpret_cast<const char *>(path_buffer.data()));
     regs.write(Register::a0, fht->removeFile(path));
 }
 
@@ -1013,15 +1030,16 @@ void RV32::handle_sys_rename(uint32_t parameter) {
         uint32_t new_ptr;
         uint32_t new_length;
     } args{};
-    
-    const std::vector<uint8_t> raw = read_bytes(parameter, sizeof(RenameArgs));
-    memcpy(&args, raw.data(), sizeof(RenameArgs));
+
+    if (!get_args(parameter, args)) {
+        regs.write(Register::a0, -1);
+        return;
+    }
     const std::vector<uint8_t> old_path_buffer = read_bytes(args.old_ptr, args.old_length + 1);
-    const std::string old_path(reinterpret_cast<const char*>(old_path_buffer.data()));
+    const std::string old_path(reinterpret_cast<const char *>(old_path_buffer.data()));
     const std::vector<uint8_t> new_path_buffer = read_bytes(args.new_ptr, args.new_length + 1);
-    const std::string new_path(reinterpret_cast<const char*>(new_path_buffer.data()));
+    const std::string new_path(reinterpret_cast<const char *>(new_path_buffer.data()));
     regs.write(Register::a0, fht->renameFile(old_path, new_path));
-    
 }
 
 void RV32::handle_sys_seek(uint32_t parameter) {
@@ -1029,9 +1047,10 @@ void RV32::handle_sys_seek(uint32_t parameter) {
         uint32_t handle;
         uint32_t abs_position;
     } args{};
-    const std::vector<uint8_t> raw = read_bytes(parameter, sizeof(SeekArgs));
-
-    memcpy(&args, raw.data(), sizeof(SeekArgs));
+    if (!get_args(parameter, args)) {
+        regs.write(Register::a0, -1);
+        return;
+    }
 
     if (fht->seekFile(args.handle, args.abs_position) != -1) {
         regs.write(Register::a0, 0);
@@ -1046,9 +1065,11 @@ void RV32::handle_sys_read(uint32_t parameter) {
         uint32_t buffer_ptr;
         uint32_t count;
     } args{};
-    const std::vector<uint8_t> raw = read_bytes(parameter, sizeof(ReadArgs));
 
-    memcpy(&args, raw.data(), sizeof(ReadArgs));
+    if (!get_args(parameter, args)) {
+        regs.write(Register::a0, -1);
+        return;
+    }
 
     // Allocate a host buffer to read into
     std::vector<uint8_t> host_buffer(args.count);
@@ -1162,10 +1183,10 @@ uint8_t RV32::read_u8(const uint32_t address) {
     return read_value<uint8_t>(address);
 }
 
-const uint8_t * RV32::read_raw(uint32_t address, size_t size) {
+const uint8_t *RV32::read_raw(uint32_t address, size_t size) {
     if (!is_in_ram(address, size)) {
         trigger_trap(TrapReason::MemFault, "RV32::read_raw()",
-            "Address: " + std::to_string(address) + " not in RAM");
+                     "Address: " + std::to_string(address) + " not in RAM");
         return {};
     }
 
@@ -1176,7 +1197,7 @@ const uint8_t * RV32::read_raw(uint32_t address, size_t size) {
 std::vector<uint8_t> RV32::read_bytes(uint32_t address, size_t size) {
     if (!is_in_ram(address, size)) {
         trigger_trap(TrapReason::MemFault, "RV32::read_bytes()",
-            "Address: " + std::to_string(address) + " not in RAM");
+                     "Address: " + std::to_string(address) + " not in RAM");
         return {};
     }
 
@@ -1188,7 +1209,7 @@ template<typename T>
 T RV32::read_value(uint32_t address) {
     if (!is_in_ram(address, sizeof(T))) {
         trigger_trap(TrapReason::MemFault, "RV32::read_value()",
-            "Address: " + std::to_string(address) + " not in RAM");
+                     "Address: " + std::to_string(address) + " not in RAM");
         return {};
     }
 
@@ -1222,7 +1243,7 @@ void RV32::write_u8(const uint32_t address, const uint8_t value) {
 void RV32::write_bytes(uint32_t address, const std::vector<uint8_t> &value) {
     if (!is_in_ram(address, value.size())) {
         trigger_trap(TrapReason::MemFault, "RV32::write_bytes()",
-            "Address: " + std::to_string(address) + " not in RAM");
+                     "Address: " + std::to_string(address) + " not in RAM");
         return;
     }
     if (is_read_only(address)) {
@@ -1238,7 +1259,7 @@ template<typename T>
 void RV32::write_value(uint32_t address, T value) {
     if (!is_in_ram(address, sizeof(T))) {
         trigger_trap(TrapReason::MemFault, "RV32::write_value()",
-            "Address: " + std::to_string(address) + " not in RAM");
+                     "Address: " + std::to_string(address) + " not in RAM");
         return;
     }
     if (is_read_only(address)) {
@@ -1250,6 +1271,16 @@ void RV32::write_value(uint32_t address, T value) {
     std::copy(reinterpret_cast<const uint8_t *>(&value),
               reinterpret_cast<const uint8_t *>(&value) + sizeof(T),
               ram.begin() + address);
+}
+
+template<typename T>
+bool RV32::get_args(uint32_t address, T &args) {
+    const uint8_t *raw = read_raw(address, sizeof(T));
+    if (!raw) {
+        return false;
+    }
+    memcpy(&args, raw, sizeof(T));
+    return true;
 }
 
 void inline RV32::init_regs(const bool initRandom) {

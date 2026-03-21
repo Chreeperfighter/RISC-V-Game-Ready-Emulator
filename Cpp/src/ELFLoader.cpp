@@ -7,7 +7,7 @@
 
 #include <fstream>
 
-void ELFLoader::parse(std::string& path) {
+void ELFLoader::parse(std::string &path) {
     std::ifstream file(path, std::ios::binary);
     if (!file) {
         emulator_error("ELFLoader::parse() --> failed to open: " + path);
@@ -18,7 +18,7 @@ void ELFLoader::parse(std::string& path) {
     file.seekg(0, std::ios::beg);
 
     elf.resize(size);
-    file.read(reinterpret_cast<char*>(elf.data()), static_cast<long>(size));
+    file.read(reinterpret_cast<char *>(elf.data()), static_cast<long>(size));
 
     ehdr = *reinterpret_cast<const Elf32_Ehdr *>(elf.data());
 
@@ -43,7 +43,7 @@ void ELFLoader::parse(std::string& path) {
         elf.data() + shstrtab_section.sh_offset,
         shstrtab_section.sh_size,
         shstrtab.begin()
-        );
+    );
 
     parse_sections();
 }
@@ -74,8 +74,7 @@ void ELFLoader::parse_sections() {
                     shdr.sh_size,
                     section.data.begin()
                 );
-            }
-            else {
+            } else {
                 section.data.clear();
             }
 
@@ -83,4 +82,3 @@ void ELFLoader::parse_sections() {
         }
     }
 }
-

@@ -16,8 +16,8 @@ Config Config::defaults() {
     cfg.binary_path = "";
     cfg.storage_path = "./storage";
     cfg.ram_origin = 0x00000000;
-    cfg.ram_size_bytes = 32 * 1024 * 1024;  // 32MB
-    cfg.stack_margin_bytes = 2 * 1024 * 1024;  // 2MB
+    cfg.ram_size_bytes = 32 * 1024 * 1024; // 32MB
+    cfg.stack_margin_bytes = 2 * 1024 * 1024; // 2MB
     cfg.ram_end = cfg.ram_origin + cfg.ram_size_bytes;
     cfg.framebuffer_width = 320;
     cfg.framebuffer_height = 200;
@@ -33,27 +33,27 @@ Config Config::defaults() {
     return cfg;
 }
 
-Config Config::load(const std::string& path) {
-    Config cfg = defaults();  // Start with defaults
+Config Config::load(const std::string &path) {
+    Config cfg = defaults(); // Start with defaults
 
     try {
         const auto data = toml::parse(path);
 
         // Binary
         if (data.contains("binary")) {
-            const auto& binary = toml::find(data, "binary");
+            const auto &binary = toml::find(data, "binary");
             cfg.binary_path = toml::find<std::string>(binary, "path");
         }
 
         // Storage
         if (data.contains("storage")) {
-            const auto& storage = toml::find(data, "storage");
+            const auto &storage = toml::find(data, "storage");
             cfg.storage_path = toml::find<std::string>(storage, "path");
         }
 
         // RAM
         if (data.contains("ram")) {
-            const auto& ram = toml::find(data, "ram");
+            const auto &ram = toml::find(data, "ram");
             cfg.ram_origin = toml::find<uint32_t>(ram, "ram_origin");
             cfg.ram_size_bytes = toml::find<uint32_t>(ram, "ram_size_mb") * 1024 * 1024;
             cfg.ram_end = cfg.ram_origin + cfg.ram_size_bytes;
@@ -62,7 +62,7 @@ Config Config::load(const std::string& path) {
 
         // Framebuffer
         if (data.contains("framebuffer")) {
-            const auto& fb = toml::find(data, "framebuffer");
+            const auto &fb = toml::find(data, "framebuffer");
             cfg.framebuffer_width = toml::find<int>(fb, "width");
             cfg.framebuffer_height = toml::find<int>(fb, "height");
             cfg.framebuffer_format = toml::find<std::string>(fb, "format");
@@ -83,15 +83,15 @@ Config Config::load(const std::string& path) {
 
         // Debug
         if (data.contains("debug")) {
-            const auto& debug = toml::find(data, "debug");
+            const auto &debug = toml::find(data, "debug");
             if (debug.contains("perf_monitor"))
                 cfg.perf_monitor = toml::find<bool>(debug, "perf_monitor");
             if (debug.contains("fps"))
                 cfg.fps = toml::find<int>(debug, "fps");
 
             if (debug.contains("breakpoint")) {
-                const auto& bps = toml::find(debug, "breakpoint");
-                for (const auto& bp : bps.as_array()) {
+                const auto &bps = toml::find(debug, "breakpoint");
+                for (const auto &bp: bps.as_array()) {
                     BreakpointConfig bpc;
                     if (bp.contains("address")) {
                         bpc.address = toml::find<int>(bp, "address");
@@ -107,7 +107,7 @@ Config Config::load(const std::string& path) {
 
         // Init
         if (data.contains("init")) {
-            const auto& init = toml::find(data, "init");
+            const auto &init = toml::find(data, "init");
             cfg.randomize_registers = toml::find<bool>(init, "randomize_registers");
             cfg.randomize_ram = toml::find<bool>(init, "randomize_ram");
             cfg.zero_bss = toml::find<bool>(init, "zero_bss");
@@ -120,8 +120,7 @@ Config Config::load(const std::string& path) {
         if (cfg.framebuffer_width <= 0 || cfg.framebuffer_height <= 0) {
             throw std::runtime_error("Framebuffer dimensions must be > 0");
         }
-
-    } catch (const std::exception& e) {
+    } catch (const std::exception &e) {
         emulator_error("Config::load() --> " + std::string(e.what()));
     }
 

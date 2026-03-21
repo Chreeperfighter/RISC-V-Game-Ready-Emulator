@@ -55,14 +55,14 @@ int main() {
     elf_loader.parse(g_config.binary_path);
     RV32Debugger debugger(cpu);
     std::vector<ELFSection> sections = elf_loader.get_sections();
-    for (const auto& section : sections) {
+    for (const auto &section: sections) {
 #ifdef EMULATOR_DEBUG
         std::cout <<
-           "Name: " << section.name <<
-               ", Adress: " << section.address <<
-                   ", Type: " << section.type <<
-                       ", Size: " << section.size <<
-                           std::endl;
+                "Name: " << section.name <<
+                ", Adress: " << section.address <<
+                ", Type: " << section.type <<
+                ", Size: " << section.size <<
+                std::endl;
 #endif
         cpu.load_section(section);
     }
@@ -120,7 +120,6 @@ int main() {
                 }
             }
         }
-
     }
     cpu_thread.join();
     display.cleanup_display();

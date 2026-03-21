@@ -20,11 +20,14 @@ typedef struct {
 
 class ELFLoader {
 public:
-    void parse(std::string& path);
+    void parse(std::string &path);
+
     uint32_t get_entry() const;
+
     std::vector<ELFSection> get_sections() const {
         return elf_sections;
     }
+
 private:
     void parse_sections();
 
@@ -35,7 +38,6 @@ private:
     std::vector<char> shstrtab{};
     std::vector<ELFSection> elf_sections{};
 };
-
 
 
 #endif //ELFLOADER_HPP

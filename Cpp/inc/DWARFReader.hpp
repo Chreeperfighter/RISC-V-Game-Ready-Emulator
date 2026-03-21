@@ -23,6 +23,7 @@ public:
     void parse(const std::string &elf_path);
 
     std::optional<LineEntry> lookup_line(uint32_t pc) const;
+
     std::optional<uint32_t> lookup_address(const std::string &file, uint32_t line) const;
 
 private:

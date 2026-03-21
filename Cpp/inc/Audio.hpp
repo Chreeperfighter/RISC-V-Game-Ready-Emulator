@@ -11,8 +11,11 @@
 class Audio {
 public:
     ~Audio();
+
     bool init(uint32_t sample_rate, uint8_t channels, uint8_t bits_per_sample);
-    void submit(const void* data, uint32_t len);
+
+    void submit(const void *data, uint32_t len);
+
     uint32_t get_queued_bytes() const;
 
 private:

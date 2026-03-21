@@ -11,12 +11,12 @@
 
 #include "Config.hpp"
 
-[[noreturn]] inline void emulator_error(const std::string& msg) {
+[[noreturn]] inline void emulator_error(const std::string &msg) {
     std::cerr << "[EMULATOR] error: " << msg << "\n";
     std::exit(1);
 }
 
-inline void emulator_warn(const std::string& msg) {
+inline void emulator_warn(const std::string &msg) {
     std::cerr << "[EMULATOR] warning: " << msg << "\n";
 }
 
