@@ -23,3 +23,17 @@ __pycache__/
 *.raw
 *.map
 *.hex
+
+# --- ROM Files ---
+*.sfc
+*.smc
+*.nes
+*.gb
+*.gbc
+*.gba
+*.n64
+*.z64
+*.v64
+*.nds
+*.iso
+*.rom
