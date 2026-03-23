@@ -70,20 +70,23 @@ public:
 		key_queue.push(key);
 	}
 
-	void add_key_state(const uint32_t key) {
-		key_state[key] = true;
+	void set_key_state(SDL_Scancode key, bool state) {
+		std::lock_guard<std::mutex> lock(input_state_mtx);
+		key_state[key] = state;
 	}
 
-	void remove_key_state(const uint32_t key) {
-		key_state[key] = false;
+	void set_controller_button(SDL_GameControllerButton button, bool state) {
+		std::lock_guard<std::mutex> lock(input_state_mtx);
+		controller_button_state[button] = state;
 	}
 
-	void add_mouse_button_state(const uint32_t mouse_button) {
-		mouse_button_state[mouse_button] = true;
+	void set_controller_axis(SDL_GameControllerAxis axis, int16_t value) {
+		std::lock_guard<std::mutex> lock(input_state_mtx);
+		controller_axes[axis] = value;
 	}
 
-	void remove_mouse_button_state(const uint32_t mouse_button) {
-		mouse_button_state[mouse_button] = false;
+	void set_mouse_button(uint32_t button, bool state) {
+		mouse_button_state[button] = state;
 	}
 
 	void set_mouse_pos(const int32_t x, const int32_t y) {
@@ -182,6 +185,10 @@ private:
 
 	void handle_sys_audio_get_queued_bytes(uint32_t parameter);
 
+	void handle_sys_is_controller_button_down(uint32_t parameter);
+
+	void handle_sys_get_controller_axis(uint32_t parameter);
+
 	void handle_sys_flen(uint32_t parameter);
 
 	void handle_sys_istty(uint32_t parameter);
@@ -253,8 +260,11 @@ private:
 	uint32_t ro_end = 0;
 	std::queue<uint32_t> key_queue;
 	mutable std::mutex queue_mtx;
+	mutable std::mutex input_state_mtx;
 	bool key_state[512] = {false};
 	bool mouse_button_state[3] = {false};
+	int16_t controller_axes[SDL_CONTROLLER_AXIS_MAX]{};
+	bool controller_button_state[SDL_CONTROLLER_BUTTON_MAX]{};
 	int32_t mouse_pos_x = 0;
 	int32_t mouse_pos_y = 0;
 	int semihosting_step = 0;

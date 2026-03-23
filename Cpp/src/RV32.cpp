@@ -596,6 +596,14 @@ void RV32::handle_semihosting() {
             handle_sys_audio_get_queued_bytes(parameter);
             break;
 
+        case Syscall::SYS_IS_CONTROLLER_BUTTON_DOWN:
+            handle_sys_is_controller_button_down(parameter);
+            break;
+
+        case Syscall::SYS_GET_CONTROLLER_AXIS:
+            handle_sys_get_controller_axis(parameter);
+            break;
+
         case Syscall::SYS_FLEN:
             handle_sys_flen(parameter);
             break;
@@ -737,7 +745,13 @@ void RV32::handle_sys_sleep_us(uint32_t parameter) {
         return;
     }
     const uint32_t time_us = read_u32(parameter);
-    std::this_thread::sleep_for(std::chrono::microseconds(time_us));
+    // Hybrid sleep: OS sleep for most of the interval, busy-wait the last 1500us
+    // so the OS scheduler doesn't overshoot into the next tick.
+    auto deadline = std::chrono::high_resolution_clock::now() + std::chrono::microseconds(time_us);
+    if (time_us > 1500) {
+        std::this_thread::sleep_for(std::chrono::microseconds(time_us - 1500));
+    }
+    while (std::chrono::high_resolution_clock::now() < deadline) { /* busy-wait */ }
     regs.write(Register::a0, 0);
 }
 
@@ -756,6 +770,7 @@ void RV32::handle_sys_get_key(uint32_t parameter) {
 
 void RV32::handle_sys_is_key_down(uint32_t parameter) {
     uint32_t key = parameter;
+    std::lock_guard<std::mutex> lock(input_state_mtx);
     regs.write(Register::a0, key_state[key] ? 1 : 0);
 }
 
@@ -892,6 +907,26 @@ void RV32::handle_sys_audio_get_queued_bytes(uint32_t parameter) {
         return;
     }
     regs.write(Register::a0, audio->get_queued_bytes());
+}
+
+void RV32::handle_sys_is_controller_button_down(uint32_t parameter) {
+    auto button = static_cast<SDL_GameControllerButton>(parameter);
+    if (button >= SDL_CONTROLLER_BUTTON_MAX) {
+        regs.write(Register::a0, -1);
+        return;
+    }
+    std::lock_guard<std::mutex> lock(input_state_mtx);
+    regs.write(Register::a0, controller_button_state[button] ? 1 : 0);
+}
+
+void RV32::handle_sys_get_controller_axis(uint32_t parameter) {
+    auto axis = static_cast<SDL_GameControllerAxis>(parameter);
+    if (axis >= SDL_CONTROLLER_AXIS_MAX) {
+        regs.write(Register::a0, 0);
+        return;
+    }
+    std::lock_guard<std::mutex> lock(input_state_mtx);
+    regs.write(Register::a0, controller_axes[axis]);
 }
 
 void RV32::handle_sys_exit_extended(const uint32_t parameter) {

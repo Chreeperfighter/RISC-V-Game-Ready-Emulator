@@ -69,55 +69,40 @@ int main() {
     cpu.set_entry(elf_loader.get_entry());
     std::thread cpu_thread(step_cpu, std::ref(cpu), std::ref(debugger));
 
-    auto last_frame = steady_clock::now();
     auto perf_start = steady_clock::now();
     uint64_t last_inst_count = 0;
-    const auto frame_duration = microseconds(1000000 / g_config.fps);
 
     // ==============================
     //          Main Thread
     // ==============================
-    while (running.load(std::memory_order_relaxed)) {
-        auto current_time = steady_clock::now();
-        auto next_frame = last_frame + frame_duration;
-
-        // Process all pending SDL events
+    // Vsync (SDL_RENDERER_PRESENTVSYNC) drives the frame rate — update_display()
+    // blocks until the next vertical blank. We drain the SDL event queue both
+    // before and after the present so events that arrived during the vsync wait
+    // are picked up immediately rather than sitting until the next frame.
+    auto poll_events = [&]() {
         SDL_Event event;
         while (SDL_PollEvent(&event)) {
-            if (event.type == SDL_QUIT) {
+            if (input.process_event(event)) {
                 running.store(false);
-                break;
             }
-            input.process_event(event);
         }
+    };
 
-        if (current_time >= next_frame) {
-            last_frame = next_frame;
-            display.update_display();
+    while (running.load(std::memory_order_relaxed)) {
+        poll_events();                // drain before render
+        display.update_display();    // blocks on vsync ~16ms
+        poll_events();                // drain events that arrived during vsync
 
-            // Performance monitoring (once per second)
-            if (g_config.perf_monitor) {
-                auto elapsed = duration_cast<milliseconds>(current_time - perf_start).count();
-                if (elapsed >= 1000) {
-                    uint64_t current_inst = cpu.get_cycles();
-                    uint64_t inst_delta = current_inst - last_inst_count;
-                    double mips = inst_delta / (elapsed / 1000.0) / 1000000.0;
-                    std::cout << "MIPS: " << mips << " (" << inst_delta << " inst in " << elapsed << "ms)" << std::endl;
-
-                    last_inst_count = current_inst;
-                    perf_start = current_time;
-                }
-            }
-        } else {
-            // Sleep in short bursts so SDL events are processed promptly
-            SDL_Event wait_event;
-            auto remaining_ms = duration_cast<milliseconds>(next_frame - current_time).count();
-            if (SDL_WaitEventTimeout(&wait_event, static_cast<int>(remaining_ms))) {
-                if (wait_event.type == SDL_QUIT) {
-                    running.store(false);
-                } else {
-                    input.process_event(wait_event);
-                }
+        if (g_config.perf_monitor) {
+            auto now = steady_clock::now();
+            auto elapsed = duration_cast<milliseconds>(now - perf_start).count();
+            if (elapsed >= 1000) {
+                uint64_t current_inst = cpu.get_cycles();
+                uint64_t inst_delta = current_inst - last_inst_count;
+                double mips = inst_delta / (elapsed / 1000.0) / 1000000.0;
+                std::cout << "MIPS: " << mips << " (" << inst_delta << " inst in " << elapsed << "ms)" << std::endl;
+                last_inst_count = current_inst;
+                perf_start = now;
             }
         }
     }

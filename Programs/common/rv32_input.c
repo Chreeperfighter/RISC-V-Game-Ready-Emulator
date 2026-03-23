@@ -27,3 +27,14 @@ bool is_mouse_button_down(MouseButton button, bool* ok) {
     if (ok) *ok = valid;
     return ret == 1;
 }
+
+bool is_controller_button_down(SDL_GameControllerButton button, bool *ok) {
+    int32_t ret = sys_is_controller_button_down(button);
+    bool valid = (ret == 0 || ret == 1);
+    if (ok) *ok = valid;
+    return ret == 1;
+}
+
+int32_t get_controller_axis(SDL_GameControllerAxis axis) {
+    return sys_get_controller_axis(axis);
+}

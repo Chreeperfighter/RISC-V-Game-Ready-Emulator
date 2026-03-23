@@ -23,6 +23,8 @@
 #define SYS_AUDIO_INIT             0x10E
 #define SYS_AUDIO_SUBMIT           0x10F
 #define SYS_AUDIO_GET_QUEUED_BYTES 0x110
+#define SYS_IS_CONTROLLER_BUTTON_DOWN 0x111
+#define SYS_GET_CONTROLLER_AXIS 0x112
 
 
 static int32_t semihost(uint32_t nr, uint32_t param) {
@@ -110,6 +112,14 @@ static int32_t sys_audio_submit(void* buf) {
 
 static uint32_t sys_audio_get_queued_bytes() {
     return semihost(SYS_AUDIO_GET_QUEUED_BYTES, 0);
+}
+
+static int32_t sys_is_controller_button_down(uint32_t button) {
+    return semihost(SYS_IS_CONTROLLER_BUTTON_DOWN, button);
+}
+
+static int32_t sys_get_controller_axis(uint32_t axis) {
+    return semihost(SYS_GET_CONTROLLER_AXIS, axis);
 }
 
 #endif // RV32_SYSCALLS_H

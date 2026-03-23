@@ -23,7 +23,7 @@ void Display::init_display() {
     );
     context.renderer = SDL_CreateRenderer(
         context.window, -1,
-        SDL_RENDERER_ACCELERATED
+        SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC
     );
 
     SDL_PixelFormatEnum sdl_format;
