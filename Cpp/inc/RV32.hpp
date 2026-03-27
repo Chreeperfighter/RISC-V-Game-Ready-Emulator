@@ -5,6 +5,8 @@
 #ifndef CPU_HPP
 #define CPU_HPP
 
+#define MAX_CONTROLLERS 4
+
 #include <cstdint>
 #include <random>
 #include <queue>
@@ -75,14 +77,33 @@ public:
 		key_state[key] = state;
 	}
 
-	void set_controller_button(SDL_GameControllerButton button, bool state) {
+	void set_controller_button(int slot, SDL_GameControllerButton button, bool state) {
+		if (slot < 0 || slot >= MAX_CONTROLLERS) {
+			return;
+		}
 		std::lock_guard<std::mutex> lock(input_state_mtx);
-		controller_button_state[button] = state;
+		controller_button_state[slot][button] = state;
 	}
 
-	void set_controller_axis(SDL_GameControllerAxis axis, int16_t value) {
+	void set_controller_axis(int slot, SDL_GameControllerAxis axis, int16_t value) {
+		if (slot < 0 || slot >= MAX_CONTROLLERS) {
+			return;
+		}
 		std::lock_guard<std::mutex> lock(input_state_mtx);
-		controller_axes[axis] = value;
+		controller_axes[slot][axis] = value;
+	}
+
+	void clear_controller_slot(int slot) {
+		if (slot < 0 || slot >= MAX_CONTROLLERS) {
+			return;
+		}
+		std::lock_guard<std::mutex> lock(input_state_mtx);
+		for (int i = 0; i < SDL_CONTROLLER_BUTTON_MAX; i++) {
+			controller_button_state[slot][i] = false;
+		}
+		for (int i = 0; i < SDL_CONTROLLER_AXIS_MAX; i++) {
+			controller_axes[slot][i] = 0;
+		}
 	}
 
 	void set_mouse_button(uint32_t button, bool state) {
@@ -263,8 +284,8 @@ private:
 	mutable std::mutex input_state_mtx;
 	bool key_state[512] = {false};
 	bool mouse_button_state[3] = {false};
-	int16_t controller_axes[SDL_CONTROLLER_AXIS_MAX]{};
-	bool controller_button_state[SDL_CONTROLLER_BUTTON_MAX]{};
+	int16_t controller_axes[MAX_CONTROLLERS][SDL_CONTROLLER_AXIS_MAX]{};
+	bool controller_button_state[MAX_CONTROLLERS][SDL_CONTROLLER_BUTTON_MAX]{};
 	int32_t mouse_pos_x = 0;
 	int32_t mouse_pos_y = 0;
 	int semihosting_step = 0;

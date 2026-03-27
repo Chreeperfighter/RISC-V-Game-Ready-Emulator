@@ -28,13 +28,28 @@ bool is_mouse_button_down(MouseButton button, bool* ok) {
     return ret == 1;
 }
 
-bool is_controller_button_down(SDL_GameControllerButton button, bool *ok) {
-    int32_t ret = sys_is_controller_button_down(button);
+bool is_controller_button_down(int32_t id, SDL_GameControllerButton button, bool* ok) {
+    struct IsControllerButtonDownArgs {
+        int32_t id;
+        uint32_t button;
+    } args = {
+        id, button
+    };
+    int32_t ret = sys_is_controller_button_down(&args);
     bool valid = (ret == 0 || ret == 1);
     if (ok) *ok = valid;
     return ret == 1;
 }
 
-int32_t get_controller_axis(SDL_GameControllerAxis axis) {
-    return sys_get_controller_axis(axis);
+int32_t get_controller_axis(int32_t id, SDL_GameControllerAxis axis, bool* ok) {
+    struct GetControllerAxisArgs {
+        int32_t id;
+        uint32_t axis;
+        int32_t value;
+    } args = {
+        id, axis
+    };
+    int32_t ret = sys_get_controller_axis(&args);
+    if (ok) *ok = (ret == 0);
+    return args.value;
 }

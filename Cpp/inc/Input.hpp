@@ -19,6 +19,8 @@ public:
 
     bool process_event(const SDL_Event &event);
 
+
+
 private:
     void open_controller(int device_index);
 
@@ -27,6 +29,7 @@ private:
     RV32 &rv32;
     Display &display;
     std::unordered_map<SDL_JoystickID, SDL_GameController *> controllers;
+    std::unordered_map<SDL_JoystickID, int> controller_slots;
 };
 
 

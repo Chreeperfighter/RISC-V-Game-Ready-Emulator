@@ -38,7 +38,6 @@ struct Config {
 
     // Debug
     bool perf_monitor;
-    int fps;
     std::vector<BreakpointConfig> breakpoints;
 
     // Init

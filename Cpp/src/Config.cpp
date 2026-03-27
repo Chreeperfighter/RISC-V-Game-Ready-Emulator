@@ -25,7 +25,6 @@ Config Config::defaults() {
     cfg.framebuffer_format = "ARGB8888";
     cfg.framebuffer_size_bytes = cfg.framebuffer_width * cfg.framebuffer_height * (cfg.framebuffer_bpp / 8);
     cfg.perf_monitor = false;
-    cfg.fps = 60;
     cfg.breakpoints = {};
     cfg.randomize_registers = true;
     cfg.randomize_ram = true;
@@ -86,8 +85,6 @@ Config Config::load(const std::string &path) {
             const auto &debug = toml::find(data, "debug");
             if (debug.contains("perf_monitor"))
                 cfg.perf_monitor = toml::find<bool>(debug, "perf_monitor");
-            if (debug.contains("fps"))
-                cfg.fps = toml::find<int>(debug, "fps");
 
             if (debug.contains("breakpoint")) {
                 const auto &bps = toml::find(debug, "breakpoint");

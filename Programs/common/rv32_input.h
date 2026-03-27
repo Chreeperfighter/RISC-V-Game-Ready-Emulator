@@ -458,7 +458,7 @@ void get_mouse_pos(struct MousePos* mouse_pos);
 bool is_mouse_button_down(MouseButton button, bool* ok);
 
 // Controller
-bool is_controller_button_down(SDL_GameControllerButton button, bool* ok);
-int32_t get_controller_axis(SDL_GameControllerAxis axis);
+bool is_controller_button_down(int32_t id, SDL_GameControllerButton button, bool* ok);
+int32_t get_controller_axis(int32_t id, SDL_GameControllerAxis axis, bool* ok);
 
 #endif //RV32_INPUT_H

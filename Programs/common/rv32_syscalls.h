@@ -114,12 +114,12 @@ static uint32_t sys_audio_get_queued_bytes() {
     return semihost(SYS_AUDIO_GET_QUEUED_BYTES, 0);
 }
 
-static int32_t sys_is_controller_button_down(uint32_t button) {
-    return semihost(SYS_IS_CONTROLLER_BUTTON_DOWN, button);
+static int32_t sys_is_controller_button_down(void* buf) {
+    return semihost(SYS_IS_CONTROLLER_BUTTON_DOWN, (uint32_t)buf);
 }
 
-static int32_t sys_get_controller_axis(uint32_t axis) {
-    return semihost(SYS_GET_CONTROLLER_AXIS, axis);
+static int32_t sys_get_controller_axis(void* buf) {
+    return semihost(SYS_GET_CONTROLLER_AXIS, (uint32_t)buf);
 }
 
 #endif // RV32_SYSCALLS_H

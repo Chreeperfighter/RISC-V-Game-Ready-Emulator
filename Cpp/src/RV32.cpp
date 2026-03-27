@@ -910,23 +910,51 @@ void RV32::handle_sys_audio_get_queued_bytes(uint32_t parameter) {
 }
 
 void RV32::handle_sys_is_controller_button_down(uint32_t parameter) {
-    auto button = static_cast<SDL_GameControllerButton>(parameter);
-    if (button >= SDL_CONTROLLER_BUTTON_MAX) {
+    struct IsControllerButtonDownArgs {
+        int32_t id;
+        uint32_t button;
+    } args{};
+    if (!get_args(parameter, args)) {
+        regs.write(Register::a0, -1);
+        return;
+    }
+    if (args.id >= MAX_CONTROLLERS) {
+        regs.write(Register::a0, -1);
+        return;
+    }
+    if (args.button >= SDL_CONTROLLER_BUTTON_MAX) {
         regs.write(Register::a0, -1);
         return;
     }
     std::lock_guard<std::mutex> lock(input_state_mtx);
-    regs.write(Register::a0, controller_button_state[button] ? 1 : 0);
+    regs.write(Register::a0, controller_button_state[args.id][args.button] ? 1 : 0);
 }
 
 void RV32::handle_sys_get_controller_axis(uint32_t parameter) {
-    auto axis = static_cast<SDL_GameControllerAxis>(parameter);
-    if (axis >= SDL_CONTROLLER_AXIS_MAX) {
-        regs.write(Register::a0, 0);
+    struct GetControllerAxisArgs {
+        int32_t id;
+        uint32_t axis;
+        int32_t value;
+    } args{};
+    if (!get_args(parameter, args)) {
+        regs.write(Register::a0, -1);
         return;
     }
-    std::lock_guard<std::mutex> lock(input_state_mtx);
-    regs.write(Register::a0, controller_axes[axis]);
+    if (args.id >= MAX_CONTROLLERS) {
+        regs.write(Register::a0, -1);
+        return;
+    }
+    if (args.axis >= SDL_CONTROLLER_AXIS_MAX) {
+        regs.write(Register::a0, -1);
+        return;
+    }
+    int32_t val;
+    {
+        std::lock_guard<std::mutex> lock(input_state_mtx);
+        val = controller_axes[args.id][args.axis];
+    }
+    write_u32(parameter + offsetof(GetControllerAxisArgs, value), val);
+    regs.write(Register::a0, 0);
 }
 
 void RV32::handle_sys_exit_extended(const uint32_t parameter) {

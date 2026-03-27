@@ -43,6 +43,13 @@ void step_cpu(RV32 &cpu, RV32Debugger &dbg) {
 int main() {
     g_config = Config::load("/Users/mark.verbeek/Data/Projects/RISC-V-Game-Ready-Emulator/Cpp/config/config.toml");
 
+    // Set joystick hints before any SDL_Init call — HIDAPI reads them at
+    // subsystem init time, which can happen implicitly via SDL_INIT_VIDEO.
+    SDL_SetHint(SDL_HINT_JOYSTICK_HIDAPI, "1");
+    SDL_SetHint(SDL_HINT_JOYSTICK_HIDAPI_XBOX, "1");
+    SDL_SetHint(SDL_HINT_JOYSTICK_HIDAPI_XBOX_ONE, "1");
+    SDL_SetHint(SDL_HINT_JOYSTICK_MFI, "1"); // required for wired Xbox on macOS (GIP protocol)
+
     RV32 cpu(true, true);
     Display display(cpu);
     display.init_display();

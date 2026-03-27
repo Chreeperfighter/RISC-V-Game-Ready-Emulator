@@ -1,8 +1,10 @@
 [binary]
 path = "/Users/mark.verbeek/Data/Projects/RISC-V-Game-Ready-Emulator/Programs/retro-go/cmake-build-release-rv32im/retro_go"
+# path = "/Users/mark.verbeek/Data/Projects/RISC-V-Game-Ready-Emulator/Programs/TestPrograms/cmake-build-release-rv32im/TestPrograms"
 
 [storage]
 path = "/Users/mark.verbeek/Data/Projects/RISC-V-Game-Ready-Emulator/rv32_rootfs/retro_go"
+# path = "/Users/mark.verbeek/Data/Projects/RISC-V-Game-Ready-Emulator/rv32_rootfs/TestPrograms"
 
 [ram]
 ram_origin = 0x00000000
@@ -16,7 +18,6 @@ format = "RGB565"
 
 [debug]
 perf_monitor = false
-fps = 60
 
 # [[debug.breakpoint]]
 # address = 0x65428

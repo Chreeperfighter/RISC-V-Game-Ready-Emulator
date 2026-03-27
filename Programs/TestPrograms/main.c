@@ -697,113 +697,129 @@ static void page_mouse(void) {
     draw_circle(dot_x, dot_y, 3, left ? C_RED : C_ACCENT);
 }
 
-// ─── PAGE 4: Controller Live View ─────────────────────────────────────────────
-static void page_controller(void) {
-    // Background pad outline
-    int cx = W/2, cy = H/2 + 10;
+// ─── PAGE 4: Controller Live View (up to 4 controllers) ──────────────────────
 
-    fill_rect(cx-90, cy-40, 180, 80, C_PANEL);
-    // Pad shape outline
-    outline_rect(cx-90, cy-40, 180, 80, C_BORDER);
+// Draws a full controller panel for controller `id` in the rect (px,py,pw,ph).
+static void draw_controller_panel(int id, int px, int py, int pw, int ph) {
+    // Probe connection: ok is true only if the controller exists
+    bool connected = false;
+    is_controller_button_down(id, SDL_CONTROLLER_BUTTON_A, &connected);
 
-    // === Left stick ===
-    int ls_cx = cx - 52, ls_cy = cy + 12;
-    int32_t lx = get_controller_axis(SDL_CONTROLLER_AXIS_LEFTX);
-    int32_t ly = get_controller_axis(SDL_CONTROLLER_AXIS_LEFTY);
-    draw_circle_ring(ls_cx, ls_cy, 18, C_DGRAY);
-    int lsx = ls_cx + (int)((float)lx / 32767 * 14);
-    int lsy = ls_cy + (int)((float)ly / 32767 * 14);
-    draw_circle(lsx, lsy, 7, C_BLUE);
-    draw_circle_ring(lsx, lsy, 7, C_ACCENT);
+    // Panel background + border
+    fill_rect(px, py, pw, ph, C_PANEL);
+    outline_rect(px, py, pw, ph, C_BORDER);
 
-    // === Right stick ===
-    int rs_cx = cx + 26, rs_cy = cy + 12;
-    int32_t rx = get_controller_axis(SDL_CONTROLLER_AXIS_RIGHTX);
-    int32_t ry = get_controller_axis(SDL_CONTROLLER_AXIS_RIGHTY);
-    draw_circle_ring(rs_cx, rs_cy, 18, C_DGRAY);
-    int rsx = rs_cx + (int)((float)rx / 32767 * 14);
-    int rsy = rs_cy + (int)((float)ry / 32767 * 14);
-    draw_circle(rsx, rsy, 7, C_BLUE);
-    draw_circle_ring(rsx, rsy, 7, C_ACCENT);
+    // Mini header
+    uint32_t hdr = connected ? C_HDR : RGB(0x2A, 0x10, 0x10);
+    fill_rect(px, py, pw, 13, hdr);
+    char title[16];
+    sprintf(title, "CTRL %d", id + 1);
+    draw_str(px + 4, py + 3, title, C_WHITE, 1);
+    const char *status = connected ? "CONNECTED" : "NO DEVICE";
+    uint32_t sc = connected ? C_GREEN : C_FAIL;
+    draw_str(px + pw - (int)(strlen(status)*8) - 4, py + 3, status, sc, 1);
+
+    if (!connected) return;
+
+    // Gamepad body center within panel
+    int cx = px + pw / 2;
+    int cy = py + 13 + (ph - 13 - 36) / 2 + 4;  // center in usable area
+
+    fill_rect(cx-78, cy-32, 156, 64, RGB(0x16, 0x16, 0x24));
+    outline_rect(cx-78, cy-32, 156, 64, C_BORDER);
+
+    // === LB / LT ===
+    bool lb = is_controller_button_down(id, SDL_CONTROLLER_BUTTON_LEFTSHOULDER, NULL);
+    bool rb = is_controller_button_down(id, SDL_CONTROLLER_BUTTON_RIGHTSHOULDER, NULL);
+    int32_t lt = get_controller_axis(id, SDL_CONTROLLER_AXIS_TRIGGERLEFT,  NULL);
+    int32_t rt = get_controller_axis(id, SDL_CONTROLLER_AXIS_TRIGGERRIGHT, NULL);
+    int bar_y = cy - 34;
+
+    fill_rect(cx-76, bar_y-11, 32, 8, lb ? C_KEY_ON : C_KEY_OFF);
+    outline_rect(cx-76, bar_y-11, 32, 8, C_BORDER);
+    draw_str(cx-70, bar_y-10, "LB", C_WHITE, 1);
+
+    fill_rect(cx-76, bar_y, 32, 4, C_DGRAY);
+    fill_rect(cx-76, bar_y, (int)(32.0f * lt / 32767), 4, C_ORANGE);
+    draw_str(cx-68, bar_y+6, "LT", C_GRAY, 1);
+
+    fill_rect(cx+44, bar_y-11, 32, 8, rb ? C_KEY_ON : C_KEY_OFF);
+    outline_rect(cx+44, bar_y-11, 32, 8, C_BORDER);
+    draw_str(cx+50, bar_y-10, "RB", C_WHITE, 1);
+
+    fill_rect(cx+44, bar_y, 32, 4, C_DGRAY);
+    fill_rect(cx+44, bar_y, (int)(32.0f * rt / 32767), 4, C_ORANGE);
+    draw_str(cx+52, bar_y+6, "RT", C_GRAY, 1);
 
     // === D-Pad ===
-    int dp_cx = cx - 68, dp_cy = cy - 10;
-    bool dp_up    = is_controller_button_down(SDL_CONTROLLER_BUTTON_DPAD_UP,    NULL);
-    bool dp_down  = is_controller_button_down(SDL_CONTROLLER_BUTTON_DPAD_DOWN,  NULL);
-    bool dp_left  = is_controller_button_down(SDL_CONTROLLER_BUTTON_DPAD_LEFT,  NULL);
-    bool dp_right = is_controller_button_down(SDL_CONTROLLER_BUTTON_DPAD_RIGHT, NULL);
+    int dp_cx = cx - 54, dp_cy = cy - 4;
+    bool dp_u = is_controller_button_down(id, SDL_CONTROLLER_BUTTON_DPAD_UP,    NULL);
+    bool dp_d = is_controller_button_down(id, SDL_CONTROLLER_BUTTON_DPAD_DOWN,  NULL);
+    bool dp_l = is_controller_button_down(id, SDL_CONTROLLER_BUTTON_DPAD_LEFT,  NULL);
+    bool dp_r = is_controller_button_down(id, SDL_CONTROLLER_BUTTON_DPAD_RIGHT, NULL);
+    fill_rect(dp_cx-4, dp_cy-12, 8, 8, dp_u ? C_KEY_ON : C_KEY_OFF);
+    fill_rect(dp_cx-4, dp_cy+  4, 8, 8, dp_d ? C_KEY_ON : C_KEY_OFF);
+    fill_rect(dp_cx-12,dp_cy-  4, 8, 8, dp_l ? C_KEY_ON : C_KEY_OFF);
+    fill_rect(dp_cx+  4,dp_cy- 4, 8, 8, dp_r ? C_KEY_ON : C_KEY_OFF);
+    fill_rect(dp_cx-4, dp_cy-  4, 8, 8, C_DGRAY);
 
-    fill_rect(dp_cx-5, dp_cy-15, 10, 10, dp_up    ? C_KEY_ON : C_KEY_OFF); // up
-    fill_rect(dp_cx-5, dp_cy+ 5, 10, 10, dp_down  ? C_KEY_ON : C_KEY_OFF); // down
-    fill_rect(dp_cx-15,dp_cy- 5, 10, 10, dp_left  ? C_KEY_ON : C_KEY_OFF); // left
-    fill_rect(dp_cx+ 5,dp_cy- 5, 10, 10, dp_right ? C_KEY_ON : C_KEY_OFF); // right
-    fill_rect(dp_cx-5, dp_cy- 5, 10, 10, C_DGRAY);                          // center
-
-    // === ABXY Buttons ===
-    int btn_cx = cx + 60, btn_cy = cy - 10;
-    struct { SDL_GameControllerButton sc; int dx, dy; const char *lbl; uint32_t col; } abxy[4] = {
-        {SDL_CONTROLLER_BUTTON_A,  0, 10, "A", C_GREEN},
-        {SDL_CONTROLLER_BUTTON_B, 10,  0, "B", C_RED},
-        {SDL_CONTROLLER_BUTTON_X,-10,  0, "X", C_BLUE},
-        {SDL_CONTROLLER_BUTTON_Y,  0,-10, "Y", C_YELLOW},
+    // === ABXY ===
+    int btn_cx = cx + 54, btn_cy = cy - 4;
+    struct { SDL_GameControllerButton sc; int dx, dy; char lbl; uint32_t col; } abxy[4] = {
+        {SDL_CONTROLLER_BUTTON_A,  0,  9, 'A', C_GREEN},
+        {SDL_CONTROLLER_BUTTON_B,  9,  0, 'B', C_RED},
+        {SDL_CONTROLLER_BUTTON_X, -9,  0, 'X', C_BLUE},
+        {SDL_CONTROLLER_BUTTON_Y,  0, -9, 'Y', C_YELLOW},
     };
     for (int i = 0; i < 4; i++) {
-        bool down = is_controller_button_down(abxy[i].sc, NULL);
+        bool down = is_controller_button_down(id, abxy[i].sc, NULL);
         uint32_t c = down ? abxy[i].col : lerp_color(abxy[i].col, C_PANEL, 0.7f);
-        draw_circle(btn_cx + abxy[i].dx, btn_cy + abxy[i].dy, 6, c);
-        draw_circle_ring(btn_cx + abxy[i].dx, btn_cy + abxy[i].dy, 6, abxy[i].col);
-        draw_char(btn_cx + abxy[i].dx - 4, btn_cy + abxy[i].dy - 4, abxy[i].lbl[0], C_WHITE, 1);
+        draw_circle(btn_cx + abxy[i].dx, btn_cy + abxy[i].dy, 5, c);
+        draw_circle_ring(btn_cx + abxy[i].dx, btn_cy + abxy[i].dy, 5, abxy[i].col);
+        draw_char(btn_cx + abxy[i].dx - 4, btn_cy + abxy[i].dy - 4, abxy[i].lbl, C_WHITE, 1);
     }
 
-    // === Shoulder / Trigger ===
-    int32_t lt = get_controller_axis(SDL_CONTROLLER_AXIS_TRIGGERLEFT);
-    int32_t rt_ax = get_controller_axis(SDL_CONTROLLER_AXIS_TRIGGERRIGHT);
-    bool lb = is_controller_button_down(SDL_CONTROLLER_BUTTON_LEFTSHOULDER,  NULL);
-    bool rb = is_controller_button_down(SDL_CONTROLLER_BUTTON_RIGHTSHOULDER, NULL);
+    // === Left stick ===
+    int32_t lx = get_controller_axis(id, SDL_CONTROLLER_AXIS_LEFTX, NULL);
+    int32_t ly = get_controller_axis(id, SDL_CONTROLLER_AXIS_LEFTY, NULL);
+    int ls_cx = cx - 30, ls_cy = cy + 18;
+    draw_circle_ring(ls_cx, ls_cy, 13, C_DGRAY);
+    draw_circle(ls_cx + (int)((float)lx / 32767 * 9), ls_cy + (int)((float)ly / 32767 * 9), 6, C_BLUE);
+    draw_circle_ring(ls_cx + (int)((float)lx / 32767 * 9), ls_cy + (int)((float)ly / 32767 * 9), 6, C_ACCENT);
 
-    // LT/RT bars
-    int bar_y = cy - 42;
-    fill_rect(cx-88, bar_y, 40, 6, C_DGRAY);
-    fill_rect(cx-88, bar_y, (int)(40.0f * lt / 32767), 6, C_ORANGE);
-    draw_str(cx-88, bar_y-10, "LT", C_GRAY, 1);
-
-    fill_rect(cx+48, bar_y, 40, 6, C_DGRAY);
-    fill_rect(cx+48, bar_y, (int)(40.0f * rt_ax / 32767), 6, C_ORANGE);
-    draw_str(cx+48, bar_y-10, "RT", C_GRAY, 1);
-
-    // LB/RB
-    fill_rect(cx-88, bar_y-18, 38, 10, lb ? C_KEY_ON : C_KEY_OFF);
-    outline_rect(cx-88, bar_y-18, 38, 10, C_BORDER);
-    draw_str(cx-80, bar_y-16, "LB", C_WHITE, 1);
-
-    fill_rect(cx+50, bar_y-18, 38, 10, rb ? C_KEY_ON : C_KEY_OFF);
-    outline_rect(cx+50, bar_y-18, 38, 10, C_BORDER);
-    draw_str(cx+58, bar_y-16, "RB", C_WHITE, 1);
+    // === Right stick ===
+    int32_t rx = get_controller_axis(id, SDL_CONTROLLER_AXIS_RIGHTX, NULL);
+    int32_t ry = get_controller_axis(id, SDL_CONTROLLER_AXIS_RIGHTY, NULL);
+    int rs_cx = cx + 18, rs_cy = cy + 18;
+    draw_circle_ring(rs_cx, rs_cy, 13, C_DGRAY);
+    draw_circle(rs_cx + (int)((float)rx / 32767 * 9), rs_cy + (int)((float)ry / 32767 * 9), 6, C_BLUE);
+    draw_circle_ring(rs_cx + (int)((float)rx / 32767 * 9), rs_cy + (int)((float)ry / 32767 * 9), 6, C_ACCENT);
 
     // === Select / Start / Guide ===
-    bool sel   = is_controller_button_down(SDL_CONTROLLER_BUTTON_BACK,  NULL);
-    bool start = is_controller_button_down(SDL_CONTROLLER_BUTTON_START, NULL);
-    bool guide = is_controller_button_down(SDL_CONTROLLER_BUTTON_GUIDE, NULL);
+    bool sel   = is_controller_button_down(id, SDL_CONTROLLER_BUTTON_BACK,  NULL);
+    bool start = is_controller_button_down(id, SDL_CONTROLLER_BUTTON_START, NULL);
+    bool guide = is_controller_button_down(id, SDL_CONTROLLER_BUTTON_GUIDE, NULL);
+    fill_rect(cx-14, cy-6, 12, 8, sel   ? C_KEY_ON : C_KEY_OFF); outline_rect(cx-14, cy-6, 12, 8, C_BORDER);
+    draw_str(cx-13, cy-5, "SEL", C_WHITE, 1);
+    fill_rect(cx+ 2, cy-6, 12, 8, start ? C_KEY_ON : C_KEY_OFF); outline_rect(cx+ 2, cy-6, 12, 8, C_BORDER);
+    draw_str(cx+ 3, cy-5, "STA", C_WHITE, 1);
+    draw_circle(cx, cy-15, 5, guide ? C_ACCENT : C_DGRAY);
+    draw_circle_ring(cx, cy-15, 5, C_BORDER);
 
-    fill_rect(cx-18, cy-8, 14, 10, sel   ? C_KEY_ON : C_KEY_OFF);
-    outline_rect(cx-18, cy-8, 14, 10, C_BORDER);
-    draw_str(cx-17, cy-6, "SEL", C_WHITE, 1);
+    // Axis readouts at bottom of panel
+    int ay = py + ph - 34;
+    draw_strf(px+4, ay,    C_DGRAY, 1, "LX:%6d  LY:%6d", lx, ly);    ay += 11;
+    draw_strf(px+4, ay,    C_DGRAY, 1, "RX:%6d  RY:%6d", rx, ry);    ay += 11;
+    draw_strf(px+4, ay,    C_DGRAY, 1, "LT:%5d  RT:%5d", lt, rt);
+}
 
-    fill_rect(cx+4, cy-8, 14, 10, start ? C_KEY_ON : C_KEY_OFF);
-    outline_rect(cx+4, cy-8, 14, 10, C_BORDER);
-    draw_str(cx+5, cy-6, "STA", C_WHITE, 1);
-
-    draw_circle(cx, cy-12, 6, guide ? C_ACCENT : C_DGRAY);
-    draw_circle_ring(cx, cy-12, 6, C_BORDER);
-
-    // Axis readouts
-    int ry2 = 17;
-    draw_strf(4, ry2,    C_GRAY, 1, "L-Stick X: %6d", lx); ry2 += 10;
-    draw_strf(4, ry2,    C_GRAY, 1, "L-Stick Y: %6d", ly); ry2 += 10;
-    draw_strf(4, ry2,    C_GRAY, 1, "R-Stick X: %6d", rx); ry2 += 10;
-    draw_strf(4, ry2,    C_GRAY, 1, "R-Stick Y: %6d", ry); ry2 += 10;
-    draw_strf(4, ry2,    C_GRAY, 1, "LTrigger:  %6d", lt); ry2 += 10;
-    draw_strf(4, ry2,    C_GRAY, 1, "RTrigger:  %6d", rt_ax);
+static void page_controller(void) {
+    int pw = W / 2;
+    int ph = (H - 14 - 9) / 2;   // 14 = global header, 9 = global footer
+    for (int i = 0; i < 4; i++) {
+        int col = i % 2, row = i / 2;
+        draw_controller_panel(i, col * pw, 14 + row * ph, pw, ph);
+    }
 }
 
 // ─── PAGE 5: File I/O Tests ───────────────────────────────────────────────────
@@ -1277,9 +1293,15 @@ int main(void) {
             }
         }
 
-        // Controller quit
-        if (is_controller_button_down(SDL_CONTROLLER_BUTTON_START, NULL) &&
-            is_controller_button_down(SDL_CONTROLLER_BUTTON_BACK,  NULL))
+        // Controller quit (check all 4 controllers)
+        if ((is_controller_button_down(0, SDL_CONTROLLER_BUTTON_START, NULL) &&
+             is_controller_button_down(0, SDL_CONTROLLER_BUTTON_BACK,  NULL)) ||
+            (is_controller_button_down(1, SDL_CONTROLLER_BUTTON_START, NULL) &&
+             is_controller_button_down(1, SDL_CONTROLLER_BUTTON_BACK,  NULL)) ||
+            (is_controller_button_down(2, SDL_CONTROLLER_BUTTON_START, NULL) &&
+             is_controller_button_down(2, SDL_CONTROLLER_BUTTON_BACK,  NULL)) ||
+            (is_controller_button_down(3, SDL_CONTROLLER_BUTTON_START, NULL) &&
+             is_controller_button_down(3, SDL_CONTROLLER_BUTTON_BACK,  NULL)))
             return 0;
 
         // ── Render ──

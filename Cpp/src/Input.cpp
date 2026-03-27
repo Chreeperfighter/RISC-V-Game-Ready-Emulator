@@ -4,20 +4,17 @@
 
 #include "Input.hpp"
 
-#include <iostream>
-
 #include "Config.hpp"
+#include "Utils.hpp"
 
 Input::Input(RV32 &cpu, Display &dsp) : rv32(cpu), display(dsp) {
-    // Force HIDAPI for Xbox controllers — required on macOS for BT Xbox controllers
-    // to generate SDL_CONTROLLERBUTTONDOWN events instead of generic HID events.
-    SDL_SetHint(SDL_HINT_JOYSTICK_HIDAPI_XBOX, "1");
-    SDL_SetHint(SDL_HINT_JOYSTICK_HIDAPI, "1");
     SDL_Init(SDL_INIT_GAMECONTROLLER);
     // Open any controllers already connected at startup.
     // SDL_CONTROLLERDEVICEADDED is also queued for these during Init, so
     // open_controller guards against opening the same instance twice.
     for (int i = 0; i < SDL_NumJoysticks(); i++) {
+        std::cout << "Joystick " << i << ": " << SDL_JoystickNameForIndex(i)
+          << " isGameController=" << SDL_IsGameController(i) << "\n";
         if (SDL_IsGameController(i)) {
             open_controller(i);
         }
@@ -33,30 +30,45 @@ Input::~Input() {
 void Input::open_controller(int device_index) {
     SDL_GameController *gc = SDL_GameControllerOpen(device_index);
     if (!gc) {
-        std::cerr << "[Input] Failed to open controller " << device_index
-                  << ": " << SDL_GetError() << "\n";
+        emulator_warn("Input::open_controller() --> Failed to open controller " + std::to_string(device_index) + ": " + SDL_GetError());
         return;
     }
     SDL_JoystickID id = SDL_JoystickInstanceID(SDL_GameControllerGetJoystick(gc));
     if (controllers.count(id)) {
-        // Already open (SDL_CONTROLLERDEVICEADDED fires for controllers that
-        // were already connected when SDL_Init ran — don't double-open).
         SDL_GameControllerClose(gc);
         return;
     }
-    std::cout << "[Input] Opened controller " << device_index
-              << " (instance " << id << "): "
-              << SDL_GameControllerName(gc) << "\n";
+    // Find first free slot
+    int slot = -1;
+    for (int i = 0; i < MAX_CONTROLLERS; i++) {
+        bool in_use = false;
+        for (auto &[jid, s] : controller_slots) {
+            if (s == i) { in_use = true; break; }
+        }
+        if (!in_use) { slot = i; break; }
+    }
+    if (slot == -1) {
+        emulator_warn("Input::open_controller() --> No free controller slots");
+        SDL_GameControllerClose(gc);
+        return;
+    }
     controllers[id] = gc;
+    controller_slots[id] = slot;
+    std::cout << "Controller " << id << " opened" << std::endl;
 }
 
 void Input::close_controller(SDL_JoystickID instance_id) {
-    auto it = controllers.find(instance_id);
-    if (it == controllers.end()) {
+    auto cit = controllers.find(instance_id);
+    if (cit == controllers.end()) {
         return;
     }
-    SDL_GameControllerClose(it->second);
-    controllers.erase(it);
+    auto sit = controller_slots.find(instance_id);
+    if (sit != controller_slots.end()) {
+        rv32.clear_controller_slot(sit->second);
+        controller_slots.erase(sit);
+    }
+    SDL_GameControllerClose(cit->second);
+    controllers.erase(cit);
 }
 
 bool Input::process_event(const SDL_Event &event) {
@@ -100,15 +112,24 @@ bool Input::process_event(const SDL_Event &event) {
         rv32.add_key_to_queue(scancode | 0x8000);
         rv32.set_key_state(scancode, false);
     } else if (event.type == SDL_CONTROLLERBUTTONDOWN) {
-        const auto button = static_cast<SDL_GameControllerButton>(event.cbutton.button);
-        rv32.set_controller_button(button, true);
+        auto it = controller_slots.find(event.cbutton.which);
+        if (it != controller_slots.end()) {
+            rv32.set_controller_button(it->second,
+                static_cast<SDL_GameControllerButton>(event.cbutton.button), true);
+        }
     } else if (event.type == SDL_CONTROLLERBUTTONUP) {
-        const auto button = static_cast<SDL_GameControllerButton>(event.cbutton.button);
-        rv32.set_controller_button(button, false);
+        auto it = controller_slots.find(event.cbutton.which);
+        if (it != controller_slots.end()) {
+            rv32.set_controller_button(it->second,
+                static_cast<SDL_GameControllerButton>(event.cbutton.button), false);
+        }
     } else if (event.type == SDL_CONTROLLERAXISMOTION) {
-        const auto axis = static_cast<SDL_GameControllerAxis>(event.caxis.axis);
-        const auto value = static_cast<int16_t>(event.caxis.value);
-        rv32.set_controller_axis(axis, value);
+        auto it = controller_slots.find(event.caxis.which);
+        if (it != controller_slots.end()) {
+            rv32.set_controller_axis(it->second,
+                static_cast<SDL_GameControllerAxis>(event.caxis.axis),
+                static_cast<int16_t>(event.caxis.value));
+        }
     }
     return false;
 }
