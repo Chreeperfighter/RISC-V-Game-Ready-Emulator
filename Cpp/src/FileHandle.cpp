@@ -7,6 +7,8 @@ DirHandle::DirHandle(const std::filesystem::path &path) {
             entries.push_back(entry);
         }
         open = true;
+    } else {
+        errno = std::filesystem::exists(path) ? ENOTDIR : ENOENT;
     }
 }
 
@@ -32,10 +34,7 @@ void DirHandle::rewind() {
 RegularFile::RegularFile(const std::string &filename, std::ios::openmode mode)
     : filename(filename) {
     file.open(filename, mode | std::ios::binary);
-    if (!file.is_open()) {
-        // errno already set (hopefully), but we can try to be more specific
-        errno = ENOENT; // Most common case
-    }
+    // errno is set correctly by the OS on failure — don't overwrite it
 }
 
 ssize_t RegularFile::read(char *buffer, size_t count) {
@@ -70,7 +69,7 @@ ssize_t RegularFile::write(const char *buffer, size_t count) {
     }
 
     if (file.fail()) {
-        errno = ENOSPC;
+        errno = EIO;
         return -1;
     }
 
@@ -187,8 +186,12 @@ ssize_t StandardStream::write(const char *buffer, size_t count) {
     out->write(buffer, count);
     out->flush();
 
-    if (out->bad() || out->fail()) {
+    if (out->bad()) {
         errno = EIO;
+        return -1;
+    }
+    if (out->fail()) {
+        errno = EPIPE;
         return -1;
     }
 
@@ -257,14 +260,15 @@ int FileHandleTable::openFile(const std::string &filename, std::ios::openmode mo
 
     // Build full path
     std::filesystem::path full_path = std::filesystem::path(base_dir) / safe_path;
-    fd = next_fd++;
+    fd = next_fd;
     file_handles[fd] = std::make_unique < RegularFile > (full_path, mode);
 
     if (!file_handles[fd]->isOpen()) {
         file_handles.erase(fd);
-        // errno already set by RegularFile
+        // errno already set by the OS via RegularFile
         return -1;
     }
+    next_fd++;
 
     return fd;
 }
@@ -371,7 +375,7 @@ int FileHandleTable::openDir(const std::string &path) {
 
     if (!dir_handles[dd]->isOpen()) {
         dir_handles.erase(dd);
-        // errno already set by RegularFile
+        // errno already set by DirHandle constructor
         return -1;
     }
 

@@ -810,6 +810,7 @@ void RV32::handle_sys_opendir(uint32_t parameter) {
     } args{};
 
     if (!get_args(parameter, args)) {
+        errno = EINVAL;
         regs.write(Register::a0, -1);
         return;
     }
@@ -832,6 +833,7 @@ void RV32::handle_sys_readdir(uint32_t parameter) {
     } dirent{};
 
     if (!get_args(parameter, args)) {
+        errno = EINVAL;
         regs.write(Register::a0, -1);
         return;
     }
@@ -854,6 +856,7 @@ void RV32::handle_sys_closedir(uint32_t parameter) {
     } args{};
 
     if (!get_args(parameter, args)) {
+        errno = EINVAL;
         regs.write(Register::a0, -1);
         return;
     }
@@ -868,6 +871,7 @@ void RV32::handle_sys_mkdir(uint32_t parameter) {
     } args{};
 
     if (!get_args(parameter, args)) {
+        errno = EINVAL;
         regs.write(Register::a0, -1);
         return;
     }
@@ -884,6 +888,7 @@ void RV32::handle_sys_rewinddir(uint32_t parameter) {
     } args{};
 
     if (!get_args(parameter, args)) {
+        errno = EINVAL;
         regs.write(Register::a0, -1);
         return;
     }
@@ -1021,12 +1026,14 @@ void RV32::handle_sys_write(uint32_t parameter) {
         uint32_t length;
     } args{};
     if (!get_args(parameter, args)) {
+        errno = EINVAL;
         regs.write(Register::a0, -1);
         return;
     }
     const std::vector<uint8_t> buffer = read_bytes(args.buffer_ptr, args.length);
-    fht->writeFile(args.handle, reinterpret_cast<const char *>(buffer.data()), buffer.size());
-    regs.write(Register::a0, 0);
+    ssize_t written = fht->writeFile(args.handle, reinterpret_cast<const char *>(buffer.data()), buffer.size());
+    // semihosting SYS_WRITE: return 0 on success, bytes not written on failure
+    regs.write(Register::a0, written == -1 ? static_cast<uint32_t>(args.length) : 0);
 }
 
 void RV32::handle_sys_open(uint32_t parameter) {
@@ -1037,6 +1044,7 @@ void RV32::handle_sys_open(uint32_t parameter) {
     } args{};
 
     if (!get_args(parameter, args)) {
+        errno = EINVAL;
         regs.write(Register::a0, -1);
         return;
     }
@@ -1107,6 +1115,7 @@ void RV32::handle_sys_remove(uint32_t parameter) {
     } args{};
 
     if (!get_args(parameter, args)) {
+        errno = EINVAL;
         regs.write(Register::a0, -1);
         return;
     }
@@ -1124,6 +1133,7 @@ void RV32::handle_sys_rename(uint32_t parameter) {
     } args{};
 
     if (!get_args(parameter, args)) {
+        errno = EINVAL;
         regs.write(Register::a0, -1);
         return;
     }
@@ -1140,6 +1150,7 @@ void RV32::handle_sys_seek(uint32_t parameter) {
         uint32_t abs_position;
     } args{};
     if (!get_args(parameter, args)) {
+        errno = EINVAL;
         regs.write(Register::a0, -1);
         return;
     }
@@ -1159,6 +1170,7 @@ void RV32::handle_sys_read(uint32_t parameter) {
     } args{};
 
     if (!get_args(parameter, args)) {
+        errno = EINVAL;
         regs.write(Register::a0, -1);
         return;
     }
