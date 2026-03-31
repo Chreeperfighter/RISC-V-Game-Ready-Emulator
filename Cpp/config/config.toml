@@ -1,20 +1,35 @@
 [binary]
-path = "/Users/mark.verbeek/Data/Projects/RISC-V-Game-Ready-Emulator/Programs/retro-go/cmake-build-release-rv32im/retro_go"
-# path = "/Users/mark.verbeek/Data/Projects/RISC-V-Game-Ready-Emulator/Programs/TestPrograms/cmake-build-release-rv32im/TestPrograms"
+# path = "/Users/mark.verbeek/Data/Projects/RISC-V-Game-Ready-Emulator/Programs/retro-go/cmake-build-release-rv32im/retro_go"
+# path = "/Users/mark.verbeek/Data/Projects/RISC-V-Game-Ready-Emulator/Programs/RV32_C64/cmake-build-release-rv32im/RV32_C64"
+path = "/Users/mark.verbeek/Data/Projects/RISC-V-Game-Ready-Emulator/Programs/TestPrograms/cmake-build-release-rv32im/TestPrograms"
+# path = "/Users/mark.verbeek/Data/Projects/RISC-V-Game-Ready-Emulator/Programs/RV32_Retro/cmake-build-release-rv32im/RV32_Retro"
+# path = "/Users/mark.verbeek/Data/Projects/RISC-V-Game-Ready-Emulator/Programs/TestPrograms/cmake-build-release-rv32im/TimingTest"
 
 [storage]
-path = "/Users/mark.verbeek/Data/Projects/RISC-V-Game-Ready-Emulator/rv32_rootfs/retro_go"
-# path = "/Users/mark.verbeek/Data/Projects/RISC-V-Game-Ready-Emulator/rv32_rootfs/TestPrograms"
+# path = "/Users/mark.verbeek/Data/Projects/RISC-V-Game-Ready-Emulator/rv32_rootfs/retro_go"
+# path = "/Users/mark.verbeek/Data/Projects/RISC-V-Game-Ready-Emulator/rv32_rootfs/RV32_C64"
+path = "/Users/mark.verbeek/Data/Projects/RISC-V-Game-Ready-Emulator/rv32_rootfs/TestPrograms"
+# path = "/Users/mark.verbeek/Data/Projects/RISC-V-Game-Ready-Emulator/rv32_rootfs/RV32_Retro"
+# path = "/Users/mark.verbeek/Data/Projects/RISC-V-Game-Ready-Emulator/rv32_rootfs/TimingTest"
 
 [ram]
 ram_origin = 0x00000000
-ram_size_mb = 32
-stack_margin_mb = 2
+ram_size_mb = 64
+stack_margin_mb = 4
 
 [framebuffer]
-width = 320
-height = 240
-format = "RGB565"
+# width = 320
+# height = 240
+# format = "RGB565"
+width = 640
+height = 480
+format = "RGBA8888"
+# width = 384
+# height = 272
+# format = "RGBA8888"
+# width = 256
+# height = 224
+# format = "RGB565"
 
 [debug]
 perf_monitor = false

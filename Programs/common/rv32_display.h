@@ -17,7 +17,15 @@ enum DisplayFormat {
     FORMAT_RGBA8888 = 3,
 };
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 struct DisplayInfo get_display_info(bool *ok);
 void show_framebuffer(void *framebuffer);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif //RV32_DISPLAY_H

@@ -448,6 +448,10 @@ struct MousePos {
     uint32_t x, y;
 };
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 // Keyboard
 bool key_available();
 SDL_Scancode pop_key();
@@ -460,5 +464,9 @@ bool is_mouse_button_down(MouseButton button, bool* ok);
 // Controller
 bool is_controller_button_down(int32_t id, SDL_GameControllerButton button, bool* ok);
 int32_t get_controller_axis(int32_t id, SDL_GameControllerAxis axis, bool* ok);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif //RV32_INPUT_H

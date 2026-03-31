@@ -7,8 +7,16 @@
 
 #include "rv32_syscalls.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 bool init_audio(uint32_t sample_rate, uint8_t channels, uint8_t bits_per_sample);
 bool submit_audio(void* buffer, uint32_t len);
 uint32_t get_queued_bytes();
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif //COMMON_RV32_AUDIO_H

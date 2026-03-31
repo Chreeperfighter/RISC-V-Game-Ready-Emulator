@@ -19,11 +19,19 @@ typedef struct {
     struct dirent entry;   /* storage for current entry, returned by readdir() */
 } DIR;
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 DIR*           opendir(const char* path);
 struct dirent* readdir(DIR* dir);
 int            closedir(DIR* dir);
 void           rewinddir(DIR* dir);
 int            access(const char *path, int mode);
 int            rmdir(const char *path);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif //COMMON_RV32_DIRENT_H

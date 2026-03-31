@@ -73,6 +73,9 @@ void RV32::load_section(const ELFSection &section) {
 
 void RV32::set_entry(const uint32_t entry) {
     pc = entry;
+    if (!is_in_ram(pc)) {
+        trigger_trap(TrapReason::MemFault, "Rv32::set_entry()", "Entry out of RAM");
+    }
 }
 
 uint32_t RV32::fetch() {
@@ -352,6 +355,9 @@ void RV32::execute(const DecodedInstruction inst) {
             const uint32_t address = static_cast<uint32_t>(rs1_value + inst.imm) & 0xFFFFFFFE;
             regs.write(inst.rd, pc + 4);
             pc = address - 4;
+            if (!is_in_ram(pc)) {
+                trigger_trap(TrapReason::MemFault, "Rv32::execute()", "JALR: PC out of RAM");
+            }
             break;
         }
 
@@ -442,36 +448,54 @@ void RV32::execute(const DecodedInstruction inst) {
                 case Funct3::BEQ: {
                     if (rs1_value == rs2_value) {
                         pc += inst.imm - 4;
+                        if (!is_in_ram(pc)) {
+                            trigger_trap(TrapReason::MemFault, "Rv32::execute()", "BEQ: PC out of RAM");
+                        }
                     }
                     break;
                 }
                 case Funct3::BNE: {
                     if (rs1_value != rs2_value) {
                         pc += inst.imm - 4;
+                        if (!is_in_ram(pc)) {
+                            trigger_trap(TrapReason::MemFault, "Rv32::execute()", "BNE: PC out of RAM");
+                        }
                     }
                     break;
                 }
                 case Funct3::BLT: {
                     if (rs1_value < rs2_value) {
                         pc += inst.imm - 4;
+                        if (!is_in_ram(pc)) {
+                            trigger_trap(TrapReason::MemFault, "Rv32::execute()", "BLT: PC out of RAM");
+                        }
                     }
                     break;
                 }
                 case Funct3::BLTU: {
                     if (static_cast<uint32_t>(rs1_value) < static_cast<uint32_t>(rs2_value)) {
                         pc += inst.imm - 4;
+                        if (!is_in_ram(pc)) {
+                            trigger_trap(TrapReason::MemFault, "Rv32::execute()", "BLTU: PC out of RAM");
+                        }
                     }
                     break;
                 }
                 case Funct3::BGE: {
                     if (rs1_value >= rs2_value) {
                         pc += inst.imm - 4;
+                        if (!is_in_ram(pc)) {
+                            trigger_trap(TrapReason::MemFault, "Rv32::execute()", "BGE: PC out of RAM");
+                        }
                     }
                     break;
                 }
                 case Funct3::BGEU: {
                     if (static_cast<uint32_t>(rs1_value) >= static_cast<uint32_t>(rs2_value)) {
                         pc += inst.imm - 4;
+                        if (!is_in_ram(pc)) {
+                            trigger_trap(TrapReason::MemFault, "Rv32::execute()", "BGEU: PC out of RAM");
+                        }
                     }
                     break;
                 }
@@ -497,6 +521,9 @@ void RV32::execute(const DecodedInstruction inst) {
         case Opcode::JAL: {
             regs.write(inst.rd, pc + 4);
             pc += inst.imm - 4;
+            if (!is_in_ram(pc)) {
+                trigger_trap(TrapReason::MemFault, "Rv32::execute()", "JAL: PC out of RAM");
+            }
             break;
         }
 
@@ -745,11 +772,13 @@ void RV32::handle_sys_sleep_us(uint32_t parameter) {
         return;
     }
     const uint32_t time_us = read_u32(parameter);
-    // Hybrid sleep: OS sleep for most of the interval, busy-wait the last 1500us
-    // so the OS scheduler doesn't overshoot into the next tick.
+    // Hybrid sleep: OS sleep for most of the interval, busy-wait the tail.
+    // On macOS the scheduler overshoot for ~15ms sleeps can reach ~3.8ms, so
+    // the busy-wait reserve must cover that. 4000us keeps all durations < 50us error.
+    static constexpr uint32_t BUSY_RESERVE_US = 4000;
     auto deadline = std::chrono::high_resolution_clock::now() + std::chrono::microseconds(time_us);
-    if (time_us > 1500) {
-        std::this_thread::sleep_for(std::chrono::microseconds(time_us - 1500));
+    if (time_us > BUSY_RESERVE_US) {
+        std::this_thread::sleep_for(std::chrono::microseconds(time_us - BUSY_RESERVE_US));
     }
     while (std::chrono::high_resolution_clock::now() < deadline) { /* busy-wait */ }
     regs.write(Register::a0, 0);
